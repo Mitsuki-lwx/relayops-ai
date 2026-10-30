@@ -50,6 +50,15 @@ server:
         http-only: true
         same-site: lax
 relayops:
+  model:
+    mode: ${RELAYOPS_MODEL_MODE:fake}
+    endpoint: ${RELAYOPS_MODEL_ENDPOINT:}
+    api-key: ${RELAYOPS_MODEL_API_KEY:}
+    name: ${RELAYOPS_MODEL_NAME:}
+    timeout-seconds: ${RELAYOPS_MODEL_TIMEOUT_SECONDS:60}
+    max-tokens: ${RELAYOPS_MODEL_MAX_TOKENS:4096}
+    token-parameter: ${RELAYOPS_MODEL_TOKEN_PARAMETER:max_tokens}
+    json-mode: ${RELAYOPS_MODEL_JSON_MODE:true}
   master-key: ${RELAYOPS_MASTER_KEY}
   demo-password: ${RELAYOPS_DEMO_PASSWORD}
   worker-enabled: ${RELAYOPS_WORKER_ENABLED:true}

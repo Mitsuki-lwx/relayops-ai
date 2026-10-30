@@ -1,16 +1,16 @@
-# 第三阶段任务
+# 第四阶段任务
 
-登录到结果、Outbox/RabbitMQ、Docker F 盘迁移与本批排队取消/明确重跑已完成。下列 8 项任务均已实施并验收，证据见 verification.md。
+前三阶段及初次发布完成。本批8项任务已实施并验证，接入用户选择的 OpenAI 兼容接口；证据见 verification.md。
 
 | 编号 | 任务 | 影响文件 | 依赖 | 参考 |
 | --- | --- | --- | --- | --- |
-| 01 | 确定状态、幂等与锁顺序 | docs/spec.md、checklist.md、adr/0003* | 无 | BR05/08/14，FR05/07 |
-| 02 | 追加来源和成功响应迁移 | db/migration/V3* | 01 | INV01/06/08，V1/V2 不改 |
-| 03 | 提取事务内公共受理步骤 | job/JobService.java | 02 | 当前 create、OutboxStore.enqueue |
-| 04 | 实现取消与明确重跑命令 | job/JobService.java、JobController.java | 03 | ADR 0003，预算→Job 顺序 |
-| 05 | 查询当前配置与来源元数据 | job/JobService.java、JobController.java | 04 | BR03 冻结配置，BR08 新 Job |
-| 06 | 实现界面与原意图恢复 | frontend/src/App.vue、style.css | 05 | 设计 §10，UNKNOWN 风险确认 |
-| 07 | 接入主流程 | 后端控制器、工作台、README.md | 06 | 排队→取消；未知→确认→新结果→来源 |
-| 08 | 端到端验证 | backend/src/test/*、frontend/tests/*、docs/verification.md | 07 | MySQL/MQ 竞争、撤权、TTL、旧消息与响应丢失 |
+| 01 | 协议、边界与验证设计 | docs/spec.md、checklist.md、adr/0004* | 无 | Chat Completions/JSON 官方文档 |
+| 02 | 提取公共结果与验证器 | job/DocumentResult.java、FakeModel.java | 01 | 原引用精确匹配规则 |
+| 03 | 模型配置和配置派生标识 | job/ModelGateway.java、application.yml | 02 | 已有 model_profile/prompt_version/schema_version |
+| 04 | HTTP 调用和有界响应 | job/ModelGateway.java | 03 | JDK HttpClient、单次应用调用与总时限 |
+| 05 | 任务路由与心跳 | job/JobWorker.java、LeaseHeartbeat.java、JobService.java | 04 | SENT 边界、旧 token/代次/到期保护 |
+| 06 | 配置加载与隔离测试模式 | scripts/*backend.ps1、ops/.env.example | 05 | 测试脚本强制 Fake，防止使用真实密钥 |
+| 07 | 接入主流程 | frontend/src/App.vue、README.md | 06 | 当前配置、外发确认、结果和重跑 |
+| 08 | 端到端验证 | backend/src/test/*、frontend/tests/*、docs/verification.md | 07 | 本机供应商故障、真实 MySQL/MQ、浏览器、无重复调用 |
 
-后续继续真实模型的受控接入和长请求心跳，再做回调与补投；当前不声明完整 P0 已完成。
+后续增加供应商专项效果评估、组织隔离、交付回调与补投；当前不声明完整 P0 已完成。

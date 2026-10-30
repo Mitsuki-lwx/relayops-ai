@@ -46,7 +46,7 @@ class DocumentPipelineTest {
         var model = new FakeModel();
         var paragraphs = DocumentInput.paragraphs("只有事务提交后才能返回已受理。\n\n回调失败不重新执行模型。");
         var result = model.extract("可靠性约束", paragraphs, "zh-CN");
-        FakeModel.validate(result, paragraphs);
+        DocumentResult.validate(result, paragraphs);
         assertEquals(1, model.callCount());
         assertEquals("p0001", result.summary().evidence().getFirst().paragraphId());
     }
@@ -54,9 +54,9 @@ class DocumentPipelineTest {
     @Test
     void fabricatedQuotesCannotBeSaved() {
         var paragraphs = DocumentInput.paragraphs("原文没有性能承诺");
-        var forged = new FakeModel.Claim("性能提高十倍", List.of(new FakeModel.Evidence("p0001", "性能提高十倍")));
-        var result = new FakeModel.Result("document.extract.result.v1", "标题", forged, List.of(), List.of(), List.of(), "fake-extract-v1");
-        assertEquals("EVIDENCE_INVALID", assertThrows(IllegalStateException.class, () -> FakeModel.validate(result, paragraphs)).getMessage());
+        var forged = new DocumentResult.Claim("性能提高十倍", List.of(new DocumentResult.Evidence("p0001", "性能提高十倍")));
+        var result = new DocumentResult("document.extract.result.v1", "标题", forged, List.of(), List.of(), List.of(), "fake-extract-v1");
+        assertEquals("EVIDENCE_INVALID", assertThrows(IllegalStateException.class, () -> DocumentResult.validate(result, paragraphs)).getMessage());
     }
 
     @Test

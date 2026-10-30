@@ -96,3 +96,50 @@ test("lost acceptance response retries the same intent after reload", async ({
   expect(keys).toHaveLength(2);
   expect(keys[0]).toBe(keys[1]);
 });
+
+test("external consent is explicit and retained only with the pending intent", async ({ page }) => {
+  // Metadata fixture exercises browser gating; execution still uses the real backend's FakeModel.
+  // Compatible HTTP execution and billing fences are covered separately by ModelExecutionTest.
+  const modelName = "compatible-model-" + "x".repeat(100);
+  await page.route("**/model-profile", async route => {
+    const response = await route.fetch();
+    await route.fulfill({ response, json: { ...await response.json(), billable: true, provider: "openai-compatible", modelName } });
+  });
+  await page.setViewportSize({ width: 390, height: 1000 });
+  await login(page);
+  await expect(page.locator(".metrics .model")).toContainText(modelName);
+  await page.getByLabel("任务标题").fill(`外发确认验收 ${Date.now()}`);
+  await page.getByLabel("技术文档").fill("请求确认与原幂等意图一同保存，响应丢失后不得创建额外任务。");
+  const submit = page.getByRole("button", { name: "提交任务", exact: false });
+  const consent = page.getByLabel("我同意将本文档发送给已配置的模型供应商", { exact: false });
+  await expect(submit).toBeDisabled();
+  await expect(consent).not.toBeChecked();
+  await consent.focus();
+  await page.keyboard.press("Space");
+  await expect(submit).toBeEnabled();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: "../artifacts/compatible-consent-mobile.png", fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: "../artifacts/compatible-consent-desktop.png", fullPage: true });
+  const requests: { key: string; body: string | null; jobId: string }[] = [];
+  await page.route("**/api/v1/workspaces/*/jobs", async route => {
+    if (route.request().method() !== "POST") return route.continue();
+    const response = await route.fetch();
+    expect(response.status()).toBe(202);
+    requests.push({ key: route.request().headers()["idempotency-key"], body: route.request().postData(), jobId: (await response.json()).jobId });
+    if (requests.length === 1) await route.abort("failed");
+    else await route.fulfill({ response });
+  });
+  await submit.click();
+  await expect(page.getByRole("button", { name: "使用原幂等键重试" })).toBeVisible();
+  await page.reload();
+  await expect(consent).not.toBeChecked();
+  await page.getByRole("button", { name: "使用原幂等键重试" }).click();
+  await expect(page.getByRole("button", { name: "查看结果与原文依据" })).toBeVisible({ timeout: 20000 });
+  expect(requests).toHaveLength(2);
+  expect(requests[1]).toEqual(requests[0]);
+  expect(JSON.parse(requests[0].body!).acknowledgeExternalProcessing).toBe(true);
+  await expect(consent).not.toBeChecked();
+  await expect(submit).toBeDisabled();
+});

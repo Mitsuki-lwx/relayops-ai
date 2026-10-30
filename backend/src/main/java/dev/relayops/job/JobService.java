@@ -26,15 +26,19 @@ public class JobService {
     private final PayloadCipher cipher;
     private final JsonMapper json;
     private final OutboxStore outbox;
-    private static final String MODEL_PROFILE = "fake-extract-v1";
-    private static final String PROMPT_VERSION = "extract.v1";
-    private static final String SCHEMA_VERSION = "document.extract.result.v1";
+    private final ModelGateway models;
 
-    public JobService(JdbcTemplate jdbc, Access access, PayloadCipher cipher, JsonMapper json, OutboxStore outbox) {
+    public JobService(JdbcTemplate jdbc, Access access, PayloadCipher cipher, JsonMapper json, OutboxStore outbox, ModelGateway models) {
         this.jdbc = jdbc; this.access = access; this.cipher = cipher; this.json = json; this.outbox = outbox;
+        this.models = models;
     }
 
-    public record CreateJob(String applicationId, String title, String inputText, List<String> destinationIds, String outputLanguage) {}
+    public record CreateJob(String applicationId, String title, String inputText, List<String> destinationIds, String outputLanguage,
+                            @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL) Boolean acknowledgeExternalProcessing) {
+        public CreateJob(String applicationId, String title, String inputText, List<String> destinationIds, String outputLanguage) {
+            this(applicationId, title, inputText, destinationIds, outputLanguage, null);
+        }
+    }
     public record Accepted(String jobId, String status, long version, Instant payloadExpiresAt) {}
     public record CancelJob(Long expectedVersion) {}
     public record RetryJob(Long expectedVersion, String reason, Boolean acknowledgeDuplicateCost) {}
@@ -63,6 +67,8 @@ public class JobService {
         String fingerprint = DocumentInput.hash(json.writeValueAsString(normalized));
         Accepted previous = replay(member, workspaceId, "CREATE_JOB", key, fingerprint);
         if (previous != null) return previous;
+        if (models.currentProfile().billable() && !Boolean.TRUE.equals(normalized.acknowledgeExternalProcessing()))
+            throw DocumentInput.invalid("请确认将文档发送给已配置的模型供应商及可能的费用");
         LocalDate date = lockAdmission(workspaceId, normalized.applicationId());
         Accepted response = admit(member, workspaceId, date, normalized, null);
         remember(member, workspaceId, "CREATE_JOB", key, fingerprint, response);
@@ -81,7 +87,8 @@ public class JobService {
         if (!List.of("zh-CN", "en-US").contains(language)) throw DocumentInput.invalid("语言只支持 zh-CN 或 en-US");
         String input = DocumentInput.normalize(request.inputText());
         DocumentInput.paragraphs(input);
-        return new CreateJob(request.applicationId(), request.title().strip(), input, List.of(), language);
+        return new CreateJob(request.applicationId(), request.title().strip(), input, List.of(), language,
+                Boolean.TRUE.equals(request.acknowledgeExternalProcessing()) ? true : null);
     }
 
     private Accepted replay(Access.Member member, String workspaceId, String operation, String key, String fingerprint) {
@@ -114,13 +121,14 @@ public class JobService {
                 """, workspaceId, date);
         if (reserved == 0) throw new ApiException(429, "QUOTA_EXCEEDED", "本空间当日调用额度已用尽");
         String id = UUID.randomUUID().toString();
+        var profile = models.currentProfile();
         jdbc.update("""
                 INSERT INTO ai_job(id, workspace_id, application_id, actor_id, title, status, input_cipher, input_hash,
                   accepted_date, output_language, parent_job_id, model_profile, prompt_version, schema_version, queue_expires_at, payload_expires_at)
                 VALUES (?, ?, ?, ?, ?, 'QUEUED', ?, ?, ?, ?, ?, ?, ?, ?, DATE_ADD(CURRENT_TIMESTAMP(3), INTERVAL 10 MINUTE), DATE_ADD(CURRENT_TIMESTAMP(3), INTERVAL 7 DAY))
                 """, id, workspaceId, request.applicationId(), member.userId(), request.title(),
                 cipher.encrypt(request.inputText(), workspaceId + ":" + id + ":input"), DocumentInput.hash(request.inputText()), date,
-                request.outputLanguage(), parentJobId, MODEL_PROFILE, PROMPT_VERSION, SCHEMA_VERSION);
+                request.outputLanguage(), parentJobId, profile.profileId(), profile.promptVersion(), profile.schemaVersion());
         jdbc.update("INSERT INTO budget_entry(job_id, workspace_id, accepted_date, state) VALUES (?, ?, ?, 'RESERVED')", id, workspaceId, date);
         outbox.enqueue(workspaceId, id, 1);
         audit(workspaceId, member.userId(), id, "JOB_ACCEPTED");
@@ -216,14 +224,14 @@ public class JobService {
         Accepted response = admit(member, workspaceId, date, normalized, jobId);
         jdbc.update("INSERT INTO audit_event(workspace_id, actor_id, resource_id, operation, detail_json) VALUES (?, ?, ?, 'JOB_RERUN_REQUESTED', ?)",
                 workspaceId, member.userId(), jobId, json.writeValueAsString(Map.of("reason", reason, "newJobId", response.jobId(),
-                        "acknowledgeDuplicateCost", true, "previousModelProfile", current.modelProfile(), "newModelProfile", MODEL_PROFILE)));
+                        "acknowledgeDuplicateCost", true, "previousModelProfile", current.modelProfile(), "newModelProfile", models.currentProfile().profileId())));
         remember(member, workspaceId, "RERUN_JOB", key, fingerprint, response);
         return response;
     }
 
-    public Map<String, Object> modelProfile(String username, String workspaceId) {
+    public ModelGateway.Profile modelProfile(String username, String workspaceId) {
         access.require(username, workspaceId, false, false, false);
-        return Map.of("profileId", MODEL_PROFILE, "promptVersion", PROMPT_VERSION, "schemaVersion", SCHEMA_VERSION, "billable", false, "creditsPerJob", 1);
+        return models.currentProfile();
     }
 
     public List<Job> list(String username, String workspaceId) {

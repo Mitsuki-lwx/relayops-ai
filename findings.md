@@ -1,6 +1,8 @@
 # Findings & Decisions
 
 ## Requirements
+- 2026-10-30 用户选择 OpenAI 兼容接口。新增服务端环境配置，默认 Fake；本次无需真实密钥或收费调用，必须用本机 HTTP 服务验证适配器，不宣称已验证所有供应商。
+- 当前 Job 已冻结 model_profile/prompt_version/schema_version，可用配置派生 profileId 避免新增迁移。旧 Fake Job 始终可执行；不匹配当前兼容配置的旧任务在 SENT 前失败并释放预留。
 - 用户新授权：迁移完成后直接继续项目。下一阶段实现取消与明确重跑及界面/验证，不接真实付费模型，不请求重复权限。
 - 2026-10-29 用户明确要求 Docker 容器/镜像存储改为 F 盘；若原本在 F 则不动。本机实际在 C，授权迁移整个 Docker 数据存储。
 - 用户要求继续 RelayOps，并询问是否需要手动下载 RabbitMQ；授权继续实现和配置本地依赖。

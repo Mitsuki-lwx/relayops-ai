@@ -2,7 +2,7 @@
 
 AI 技术文档任务与结果交付平台。当前链路：登录 → 空间权限 → 幂等受理与事务 Outbox → RabbitMQ → 假模型执行 → 结果与原文依据。
 
-这是一份逐步实现中的开发版本。假模型仅摘录段落，不调用真实供应商，不产生模型费用。Outbox、RabbitMQ、手动确认、分发恢复、排队取消和明确重跑已接入；回调与补投在后续迭代实现。当前不可作为完整 P0 或生产版发布。
+这是一份逐步实现中的开发版本。默认假模型仅摘录段落，不调用真实供应商，不产生模型费用。可显式配置 OpenAI 兼容接口进行文档分析；工作台和服务端要求外发确认。Outbox、RabbitMQ、手动确认、分发恢复、排队取消和明确重跑已接入；回调与补投在后续迭代实现。当前不可作为完整 P0 或生产版发布。
 
 ## 开始阅读
 
@@ -14,6 +14,7 @@ AI 技术文档任务与结果交付平台。当前链路：登录 → 空间权
 - [首阶段决策](docs/adr/0001-first-slice.md)：先打通纵向链路的取舍。
 - [消息分发决策](docs/adr/0002-outbox-rabbitmq.md)：确认、重发、代次和隔离边界。
 - [取消与重跑决策](docs/adr/0003-job-lifecycle.md)：原日额度释放、来源保留与成功响应快照。
+- [兼容模型决策](docs/adr/0004-compatible-model.md)：配置绑定、外发确认、总时限与心跳。
 - [原理与代码导读](docs/walkthrough.md)：202、事务和 SENT 边界。
 - [验证记录](docs/verification.md)：实际命令、结果及限制。
 
@@ -89,13 +90,38 @@ npx playwright test
 
 浏览器测试默认使用已安装的 Microsoft Edge（无头模式），并自动启动 Vite；后端需要已启动。截图与测试输出放在被 Git 忽略的 `artifacts/`。真实浏览器测试使用真实后端和 MySQL。命令用例短暂停止并恢复本项目 RabbitMQ；重跑用例仅将自己新建的任务设为 UNKNOWN/UNCERTAIN 测试夹具，子任务通过真实消费者执行假模型，不伪造结果。
 
+浏览器回归应使用默认 Fake 后端，避免测试产生供应商费用。外发确认用例只替换配置元数据以验证页面确认和刷新恢复；真实HTTP协议、超时与心跳在后端测试中由本机模拟供应商验证。
+
 原有提交用例默认账号为 owner.a，命令用例默认为 owner.b；可在当前终端设置 `$env:RELAYOPS_BROWSER_USER='owner.b'` 统一账号。测试消耗少量演示额度。不要把压力测试流量发向演示额度配置。
+
+## 配置真实文档分析
+
+本地默认 `RELAYOPS_MODEL_MODE=fake`。要启用兼容接口，在忽略的 `ops/.env` 中填写下列变量，再重启后端：
+
+```dotenv
+RELAYOPS_MODEL_MODE=compatible
+RELAYOPS_MODEL_ENDPOINT=https://your-provider.example/v1/chat/completions
+RELAYOPS_MODEL_NAME=your-model-name
+RELAYOPS_MODEL_API_KEY=fill_your_key_locally
+RELAYOPS_MODEL_TIMEOUT_SECONDS=60
+RELAYOPS_MODEL_MAX_TOKENS=4096
+RELAYOPS_MODEL_TOKEN_PARAMETER=max_tokens
+RELAYOPS_MODEL_JSON_MODE=true
+```
+
+地址必须是完整 HTTPS Chat Completions 端点，路径可能因供应商而不同。此处域名和模型只是占位符。某些模型要求 `max_completion_tokens`；不支持 JSON 模式的兼容端点可将 JSON_MODE 设为 false，但仍须返回约定 JSON，结果验证不放宽。当前实现非流式响应，不做工具调用或自动切换/重试。
+
+工作台展示服务端模型名，并要求提交者确认文档外发和潜在费用；API 新建兼容任务要求 `acknowledgeExternalProcessing=true`。密钥不返回前端、不写任务或审计。配置为所有空间共享的本地管理员配置，尚无按租户管理供应商密钥的界面。
+
+超时允许 1–300 秒，输出 token 上限允许 256–16384；完整 HTTP 响应体上限 128 KiB。默认租约 120 秒，执行中每 40 秒按 token/代次续租，续租最多持续调用时限加 30 秒；响应超时、断连或不明服务端故障最终进入 UNKNOWN，不再次调用供应商。平台调用额度不是实际供应商账单。
+
+配置标识绑定地址、模型、提示、超时和输出参数；更改后旧兼容排队任务以 MODEL_CONFIG_CHANGED 在发送前失败并释放预留。旧 Fake 任务仍可处理，明确重跑使用当前配置。已受理请求的幂等重放仍返回原任务。真实供应商效果和收费未在本次自动测试中验证；本机模拟供应商覆盖协议与故障。
 
 ## 取消与明确重跑
 
 OWNER/OPERATOR 可在详情取消 QUEUED 任务，成功后释放原受理日的预留额度。消费者已领取的 RUNNING 任务及终态不能取消，返回 409。
 
-FAILED/UNKNOWN 详情提供明确重跑：填写原因并确认新调用风险后，创建独立的新任务，使用来源文本和当前假模型配置，来源状态与用量保留。新详情可跳回来源；正文过期则返回 410。每次命令要求 Idempotency-Key 和 expectedVersion，重跑还要求 reason 和 acknowledgeDuplicateCost=true。
+FAILED/UNKNOWN 详情提供明确重跑：填写原因并确认新调用风险后，创建独立的新任务，使用来源文本和当前模型配置，来源状态与用量保留。新详情可跳回来源；正文过期则返回 410。每次命令要求 Idempotency-Key 和 expectedVersion，重跑还要求 reason 和 acknowledgeDuplicateCost=true。
 
 命令响应丢失时，页面保留原操作、版本和键；刷新后点击“沿用原操作重试”。409 时先核对当前状态，若要发起新意图则先放弃本地操作记录。放弃记录不撤销已经提交的服务端操作。
 

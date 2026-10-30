@@ -188,7 +188,7 @@ class MessagingTest {
     void preparedLeaseRecoveryRejectsOldGenerationAndLateWriter() {
         String id = create(), oldToken = UUID.randomUUID().toString();
         var row = jdbc.queryForMap("SELECT * FROM ai_job WHERE id = ?", id);
-        var oldWork = new JobWorker.Work(id, workspaceId, ((java.sql.Date) row.get("accepted_date")).toLocalDate(), "旧执行器", (byte[]) row.get("input_cipher"), "zh-CN", oldToken, 1);
+        var oldWork = new JobWorker.Work(id, workspaceId, ((java.sql.Date) row.get("accepted_date")).toLocalDate(), "旧执行器", (byte[]) row.get("input_cipher"), "zh-CN", oldToken, 1, "fake-extract-v1");
         jdbc.update("UPDATE ai_job SET status = 'RUNNING', lease_token = ?, lease_until = DATE_SUB(CURRENT_TIMESTAMP(3), INTERVAL 1 SECOND) WHERE id = ?", oldToken, id);
         jdbc.update("INSERT INTO ai_attempt(id,workspace_id,job_id,lease_token,status) VALUES (?,?,?,?,'PREPARED')", UUID.randomUUID().toString(), workspaceId, id, oldToken);
         worker.recover(); worker.recover();

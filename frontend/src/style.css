@@ -259,6 +259,7 @@ p {
 .metrics .model {
   font-size: 21px;
   padding: 4px 0;
+  overflow-wrap: anywhere;
 }
 .work-grid {
   display: grid;
@@ -579,7 +580,9 @@ footer {
     grid-template-columns: 1fr 1fr;
   }
   .metrics > div:last-child {
-    display: none;
+    grid-column: 1 / -1;
+    border-left: 0;
+    border-top: 1px solid #d9e2d4;
   }
   .metrics strong {
     font-size: 24px;

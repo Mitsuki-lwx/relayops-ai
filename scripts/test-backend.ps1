@@ -9,6 +9,8 @@ $previousDatabaseTests = $env:RELAYOPS_DATABASE_TESTS
 $previousMessagingTests = $env:RELAYOPS_MESSAGING_TESTS
 $previousVhost = $env:RABBITMQ_VHOST
 $previousDbUrl = $env:DB_URL
+$previousModelMode = $env:RELAYOPS_MODEL_MODE
+$env:RELAYOPS_MODEL_MODE = 'fake'
 $env:RELAYOPS_DATABASE_TESTS = 'true'
 $env:RELAYOPS_MESSAGING_TESTS = 'true'
 $env:DB_URL = 'jdbc:mysql://127.0.0.1:3307/relayops_test?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true'
@@ -22,5 +24,6 @@ try {
     $env:RELAYOPS_MESSAGING_TESTS = $previousMessagingTests
     $env:RABBITMQ_VHOST = $previousVhost
     $env:DB_URL = $previousDbUrl
+    $env:RELAYOPS_MODEL_MODE = $previousModelMode
     Pop-Location
 }

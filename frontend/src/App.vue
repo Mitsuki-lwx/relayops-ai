@@ -22,6 +22,8 @@ type Profile = {
   schemaVersion: string;
   billable: boolean;
   creditsPerJob: number;
+  provider: string;
+  modelName: string;
 };
 type Command = {
   workspaceId: string;
@@ -57,6 +59,7 @@ type Draft = {
     inputText: string;
     destinationIds: string[];
     outputLanguage: string;
+    acknowledgeExternalProcessing?: boolean;
   };
 };
 
@@ -79,6 +82,7 @@ const pending = ref<Draft | null>(null),
   resultBusy = ref(false);
 const commandPending = ref<Command | null>(null);
 const profile = ref<Profile | null>(null);
+const externalAcknowledged = ref(false);
 const retryReason = ref(""),
   retryAcknowledged = ref(false);
 const reasonLength = computed(
@@ -122,6 +126,8 @@ function showError(ex: unknown) {
     input.value = "";
     retryReason.value = "";
     retryAcknowledged.value = false;
+    externalAcknowledged.value = false;
+    profile.value = null;
   }
 }
 function path(suffix: string) {
@@ -212,6 +218,7 @@ async function switchWorkspace() {
   result.value = null;
   jobs.value = [];
   profile.value = null;
+  externalAcknowledged.value = false;
   error.value = "";
   traceId.value = "";
   const current = generation;
@@ -309,6 +316,8 @@ async function logout() {
     retryAcknowledged.value = false;
     input.value = "";
     password.value = "";
+    externalAcknowledged.value = false;
+    profile.value = null;
     await refreshCsrf();
   } catch (ex) {
     showError(ex);
@@ -330,6 +339,7 @@ async function submit() {
           inputText: input.value,
           destinationIds: [],
           outputLanguage: "zh-CN",
+          acknowledgeExternalProcessing: externalAcknowledged.value,
         },
       };
       sessionStorage.setItem(
@@ -351,6 +361,7 @@ async function submit() {
     );
     pending.value = null;
     sessionStorage.removeItem(`relayops.pending.${me.value!.username}`);
+    externalAcknowledged.value = false;
     await refreshList();
     const job = jobs.value.find((j) => j.jobId === accepted.jobId);
     if (job) await select(job);
@@ -521,7 +532,7 @@ onUnmounted(() => {
             <span>提交文档</span><span>→</span><span>后台处理</span
             ><span>→</span><span>验证结果</span>
           </div>
-          <p class="muted">当前阶段使用确定性假模型，不发起真实 AI 调用。</p>
+          <p class="muted">登录后可查看当前模型模式及文档处理范围。</p>
         </div>
         <form class="panel login" @submit.prevent="login">
           <p class="eyebrow">工作台登录</p>
@@ -590,7 +601,7 @@ onUnmounted(() => {
           </div>
           <div>
             <span>模型配置</span
-            ><strong class="model">Fake Extract <small>v1</small></strong>
+            ><strong class="model">{{ profile?.modelName ?? "加载中…" }} <small>{{ profile?.billable ? "供应商模型" : "开发假模型" }}</small></strong>
           </div>
         </div>
         <div class="work-grid">
@@ -636,9 +647,13 @@ onUnmounted(() => {
                 </div>
               </fieldset>
               <p class="muted">
-                每个任务预留 1 次额度。假模型只摘录原文；输入和结果保留 7 天。
+                每个任务预留 1 次额度。{{ profile?.billable ? "文档将发送给服务端配置的模型供应商，可能产生费用。" : "假模型只摘录原文，不发起外部模型调用。" }}输入和结果保留 7 天。
               </p>
+              <label v-if="profile?.billable" class="risk-check" for="external-ack"><input
+                id="external-ack" v-model="externalAcknowledged" type="checkbox" :disabled="busy || !!pending || !!commandPending"
+              />我同意将本文档发送给已配置的模型供应商，并理解可能产生费用。</label>
               <div v-if="pending" class="notice">
+                <!-- The stored request retains its original external-processing acknowledgement. -->
                 已有待确认的提交意图。重试将沿用原始请求及幂等键。
               </div>
               <button
@@ -647,7 +662,9 @@ onUnmounted(() => {
                   busy ||
                   !!commandPending ||
                   (!pending &&
-                    (!input.trim() ||
+                    (!profile ||
+                      (profile.billable && !externalAcknowledged) ||
+                      !input.trim() ||
                       !applicationId ||
                       characters > 6000 ||
                       bytes > 24576))
@@ -798,7 +815,7 @@ onUnmounted(() => {
                       v-model="retryAcknowledged"
                       type="checkbox"
                       required
-                    />我确认这是一次新的模型调用，理解再次执行可能产生额外费用。</label
+                    />我确认这是一次新的模型调用，同意按新配置处理和外发文档，理解再次执行可能产生额外费用。</label
                   >
                 </fieldset>
                 <button
@@ -875,7 +892,7 @@ onUnmounted(() => {
       </template>
     </main>
     <footer>
-      RelayOps · 任务工作台 <span>开发假模型 · 仅工作台结果</span>
+      RelayOps · 任务工作台 <span>{{ profile?.billable ? "供应商模型 · 注意外发与费用" : "开发预览" }} · 仅工作台结果</span>
     </footer>
   </div>
 </template>

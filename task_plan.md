@@ -4,10 +4,10 @@
 完成 Outbox/RabbitMQ、Docker 存储迁移到 F 盘，并继续实现排队取消与明确重跑；以真实数据库、Broker 和浏览器验证责任与用量边界。
 
 ## Next Step
-本批交付完成。后续按 docs/tasks.md 的边界推进真实模型与长请求心跳，再做交付回调。
+实现 OpenAI 兼容 Chat Completions、配置冻结和有界心跳，接入工作台并验证后提交推送。
 
 ## Current Phase
-Phase 9
+Phase 11
 
 ## Phases
 
@@ -55,6 +55,15 @@ Phase 9
 - [x] 真实 MySQL/RabbitMQ 的竞争、幂等、撤权与 TTL 用例。
 - [x] 浏览器操作与响应丢失恢复，自审与文档更新。
 - **Status:** complete
+
+### Phase 10: Compatible model design and implementation
+- [x] 规范、协议核对、结果 DTO、模型配置/适配器、任务路由和心跳。
+- **Status:** complete
+
+### Phase 11: Compatible model verification and publication
+- [x] 本机 HTTP 故障、真实数据库/消息和浏览器验证，自审与文档。
+- [ ] 自动提交推送并核对远程。
+- **Status:** in_progress
 
 ## Git follow-up
 2026-10-29 用户提供 relayops-ai 远程。已初始化仓库，保留远程 8923f53 初始历史，本地 main 追踪 origin/main。

@@ -22,16 +22,18 @@ public class JobWorker {
     private final TransactionTemplate tx;
     private final PayloadCipher cipher;
     private final JsonMapper json;
-    private final FakeModel model;
+    private final ModelGateway model;
+    private final LeaseHeartbeat heartbeat;
     private final boolean recoveryEnabled;
     private final OutboxStore outbox;
 
     public JobWorker(JdbcTemplate jdbc, TransactionTemplate tx, PayloadCipher cipher, JsonMapper json,
-                     FakeModel model, OutboxStore outbox, @Value("${relayops.recovery-enabled}") boolean recoveryEnabled) {
+                     ModelGateway model, LeaseHeartbeat heartbeat, OutboxStore outbox, @Value("${relayops.recovery-enabled}") boolean recoveryEnabled) {
         this.jdbc = jdbc; this.tx = tx; this.cipher = cipher; this.json = json; this.model = model; this.outbox = outbox; this.recoveryEnabled = recoveryEnabled;
+        this.heartbeat = heartbeat;
     }
 
-    record Work(String id, String workspaceId, LocalDate date, String title, byte[] input, String language, String token, long generation) {}
+    record Work(String id, String workspaceId, LocalDate date, String title, byte[] input, String language, String token, long generation, String modelProfile) {}
 
     @Scheduled(fixedDelay = 5000)
     public void tick() {
@@ -45,36 +47,47 @@ public class JobWorker {
             Work work = tx.execute(status -> claim(envelope));
             if (work == null) return true;
             List<DocumentInput.Paragraph> paragraphs;
+            ModelGateway.Prepared prepared;
             try {
                 paragraphs = DocumentInput.paragraphs(cipher.decrypt(work.input(), work.workspaceId() + ":" + work.id() + ":input"));
+                prepared = model.prepare(work.modelProfile(), work.title(), paragraphs, work.language());
+            } catch (ModelGateway.Failure ex) {
+                settle(work, null, ex.code, false);
+                return true;
             } catch (Exception ex) {
                 settle(work, null, "LOCAL_PRECHECK_FAILED", false);
                 return true;
             }
             if (!Boolean.TRUE.equals(tx.execute(status -> markSent(work)))) return true;
-            // The call is deliberately outside any DB transaction. Never retry this line.
-            FakeModel.Result result;
-            try {
-                result = model.extract(work.title(), paragraphs, work.language());
-            } catch (Exception ex) {
-                // A generic adapter exception cannot prove that a request was not executed.
-                // Retain SENT; lease recovery will conservatively classify it UNKNOWN.
-                LOG.warn("operation=model_result_unknown jobId={}", work.id());
+            try (var lease = heartbeat.start(work, prepared.timeoutSeconds())) {
+                // The call is deliberately outside any DB transaction. Never retry this line.
+                DocumentResult result;
+                try {
+                    result = prepared.invoke();
+                } catch (ModelGateway.Failure ex) {
+                    settle(work, null, ex.code, true);
+                    return true;
+                } catch (Exception ex) {
+                    // A generic adapter exception cannot prove that a request was not executed.
+                    // Retain SENT; lease recovery will conservatively classify it UNKNOWN.
+                    LOG.warn("operation=model_result_unknown jobId={}", work.id());
+                    return false;
+                }
+                try {
+                    DocumentResult.validate(result, paragraphs);
+                    if (!work.modelProfile().equals(result.modelProfile())) throw new IllegalStateException("OUTPUT_INVALID");
+                } catch (Exception ex) {
+                    settle(work, null, "EVIDENCE_INVALID".equals(ex.getMessage()) ? "EVIDENCE_INVALID" : "OUTPUT_INVALID", true);
+                    return true;
+                }
+                String response = json.writeValueAsString(result);
+                // Retry persistence of the same response, never the model request.
+                for (int attempt = 0; attempt < 3; attempt++) {
+                    try { settle(work, response, null, true); return true; }
+                    catch (Exception ex) { LOG.warn("operation=result_commit_retry jobId={} saveAttempt={}", work.id(), attempt + 1); }
+                }
                 return false;
             }
-            try {
-                FakeModel.validate(result, paragraphs);
-            } catch (Exception ex) {
-                settle(work, null, "EVIDENCE_INVALID".equals(ex.getMessage()) ? "EVIDENCE_INVALID" : "OUTPUT_INVALID", true);
-                return true;
-            }
-            String response = json.writeValueAsString(result);
-            // Retry persistence of the same response, never the model request.
-            for (int attempt = 0; attempt < 3; attempt++) {
-                try { settle(work, response, null, true); return true; }
-                catch (Exception ex) { LOG.warn("operation=result_commit_retry jobId={} saveAttempt={}", work.id(), attempt + 1); }
-            }
-            return false;
         } catch (ReadyMessage.Invalid ex) { throw ex; }
         catch (Exception ex) {
             LOG.warn("operation=worker_deferred exceptionType={}", ex.getClass().getSimpleName());
@@ -88,7 +101,7 @@ public class JobWorker {
                 SELECT *, (queue_expires_at > CURRENT_TIMESTAMP(3)) AS in_time
                 FROM ai_job WHERE id = ? AND workspace_id = ? FOR UPDATE
                 """, (rs, row) -> new Candidate(new Work(rs.getString("id"), rs.getString("workspace_id"), rs.getDate("accepted_date").toLocalDate(),
-                rs.getString("title"), rs.getBytes("input_cipher"), rs.getString("output_language"), UUID.randomUUID().toString(), rs.getLong("dispatch_generation")),
+                rs.getString("title"), rs.getBytes("input_cipher"), rs.getString("output_language"), UUID.randomUUID().toString(), rs.getLong("dispatch_generation"), rs.getString("model_profile")),
                 rs.getString("status"), rs.getBoolean("in_time")), envelope.aggregateId(), envelope.workspaceId());
         if (jobs.isEmpty()) throw new ReadyMessage.Invalid("AGGREGATE_NOT_FOUND");
         Candidate candidate = jobs.getFirst();
@@ -96,9 +109,9 @@ public class JobWorker {
         if (envelope.dispatchGeneration() > work.generation()) throw new ReadyMessage.Invalid("FUTURE_GENERATION");
         if (envelope.dispatchGeneration() < work.generation() || !candidate.status().equals("QUEUED") || !candidate.inTime()) return null;
         jdbc.update("""
-                UPDATE ai_job SET status = 'RUNNING', lease_token = ?, lease_until = DATE_ADD(CURRENT_TIMESTAMP(3), INTERVAL 120 SECOND), version = version + 1
+                UPDATE ai_job SET status = 'RUNNING', lease_token = ?, lease_until = DATE_ADD(CURRENT_TIMESTAMP(3), INTERVAL ? SECOND), version = version + 1
                 WHERE id = ? AND status = 'QUEUED'
-                """, work.token(), work.id());
+                """, work.token(), heartbeat.leaseSeconds(), work.id());
         jdbc.update("INSERT INTO ai_attempt(id, workspace_id, job_id, lease_token, status) VALUES (?, ?, ?, ?, 'PREPARED')",
                 UUID.randomUUID().toString(), work.workspaceId(), work.id(), work.token());
         return work;
@@ -158,7 +171,7 @@ public class JobWorker {
                 SELECT * FROM ai_job WHERE (status = 'RUNNING' AND lease_until <= CURRENT_TIMESTAMP(3))
                   OR (status = 'QUEUED' AND queue_expires_at <= CURRENT_TIMESTAMP(3)) LIMIT 10
                 """, (rs, row) -> new Work(rs.getString("id"), rs.getString("workspace_id"), rs.getDate("accepted_date").toLocalDate(),
-                null, null, null, rs.getString("lease_token"), rs.getLong("dispatch_generation")));
+                null, null, null, rs.getString("lease_token"), rs.getLong("dispatch_generation"), rs.getString("model_profile")));
         for (Work work : candidates) tx.executeWithoutResult(transaction -> {
             lockBudget(work);
             var rows = jdbc.queryForList("""
