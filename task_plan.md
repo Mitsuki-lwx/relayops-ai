@@ -4,7 +4,7 @@
 完成 Outbox/RabbitMQ、Docker 存储迁移到 F 盘，并继续实现排队取消与明确重跑；以真实数据库、Broker 和浏览器验证责任与用量边界。
 
 ## Next Step
-真实链路及结果展示已验证；完成最终差异/凭据检查并提交推送。
+本批真实链路、结果展示、测试及推送已完成。后续按完整设计推进目的地与交付回调，另立任务记录。
 
 ## Current Phase
 Phase 20
@@ -101,8 +101,8 @@ Phase 20
 
 ### Phase 20: Model verification and publication
 - [x] 70项后端、11项浏览器、构建及真实成功任务两档只读核对通过。
-- [ ] 自审、凭据检查、提交推送。
-- **Status:** in_progress
+- [x] 自审、凭据检查、提交推送，远程哈希一致。
+- **Status:** complete
 
 ## Git follow-up
 2026-10-29 用户提供 relayops-ai 远程。已初始化仓库，保留远程 8923f53 初始历史，本地 main 追踪 origin/main。
