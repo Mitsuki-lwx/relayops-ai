@@ -7,3 +7,4 @@
 ops/.env
 *.log
 artifacts/
+**/__pycache__/

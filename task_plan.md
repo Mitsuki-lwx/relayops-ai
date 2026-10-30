@@ -4,10 +4,10 @@
 完成 Outbox/RabbitMQ、Docker 存储迁移到 F 盘，并继续实现排队取消与明确重跑；以真实数据库、Broker 和浏览器验证责任与用量边界。
 
 ## Next Step
-本批真实链路、结果展示、测试及推送已完成。后续按完整设计推进目的地与交付回调，另立任务记录。
+完成交付差异与凭据自审、文档归档并自动提交推送。
 
 ## Current Phase
-Phase 20
+Phase 23
 
 ## Phases
 
@@ -131,3 +131,17 @@ Phase 20
 | 残留 socket 单独查询/重命名均返回系统错误 1920 | 改为在 Desktop 停止时保留重命名整个 run 目录，并新建正常运行时目录，避免解析坏的 socket 节点。 |
 | WslDataFolder 在 4.82 被记录为 unknown，实际仍挂载 C 盘 | 清理前的文件占用校验拦截；读取 Desktop 设置 API 确认正确键为 customWslDistroDir，并改用其原生更新接口。 |
 | 独占打开 F 盘 VHD 不报错，尽管原生迁移后数据和对象清单均已转移 | 文件共享锁不是可靠挂载信号；使用 DiskImage 状态和原生配置/原文件迁移/对象清单综合验证。 |
+
+### Phase 21: Controlled delivery design
+- [x] 核对原设计，限定本机受控目录、签名、稳定字节与自动重试，更新三份文档和ADR。
+- **Status:** complete
+
+### Phase 22: Delivery implementation
+- [x] V5、目录授权、任务目标冻结、原子成功结算、独立Outbox/MQ及投递执行/恢复。
+- [x] 独立SQLite演示接收端、页面配置与时间线。
+- **Status:** complete
+
+### Phase 23: Delivery verification and publication
+- [x] 专用MySQL/Broker/接收端验证、迁移、故障恢复、权限、签名与浏览器。
+- [ ] 自审、凭据核查、提交推送。
+- **Status:** in_progress

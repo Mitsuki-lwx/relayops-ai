@@ -63,6 +63,8 @@ async function fixture(page: Page, body = result, errorCode?: string) {
         ],
       };
     else if (path === "/api/v1/organizations") value = [];
+    else if (path.endsWith("/destinations") || path.endsWith("/deliveries"))
+      value = [];
     else if (path.endsWith("/applications"))
       value = [{ id: "app", name: "文档提取" }];
     else if (path.endsWith("/model-profile"))

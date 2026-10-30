@@ -3,6 +3,7 @@ package dev.relayops.job;
 import dev.relayops.common.PayloadCipher;
 import dev.relayops.messaging.OutboxStore;
 import dev.relayops.messaging.ReadyMessage;
+import dev.relayops.delivery.DeliveryStore;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -26,11 +27,13 @@ public class JobWorker {
     private final LeaseHeartbeat heartbeat;
     private final boolean recoveryEnabled;
     private final OutboxStore outbox;
+    private final DeliveryStore deliveries;
 
     public JobWorker(JdbcTemplate jdbc, TransactionTemplate tx, PayloadCipher cipher, JsonMapper json,
-                     ModelGateway model, LeaseHeartbeat heartbeat, OutboxStore outbox, @Value("${relayops.recovery-enabled}") boolean recoveryEnabled) {
+                     ModelGateway model, LeaseHeartbeat heartbeat, OutboxStore outbox, DeliveryStore deliveries, @Value("${relayops.recovery-enabled}") boolean recoveryEnabled) {
         this.jdbc = jdbc; this.tx = tx; this.cipher = cipher; this.json = json; this.model = model; this.outbox = outbox; this.recoveryEnabled = recoveryEnabled;
         this.heartbeat = heartbeat;
+        this.deliveries = deliveries;
     }
 
     record Work(String id, String workspaceId, LocalDate date, String title, byte[] input, String language, String token, long generation, String modelProfile) {}
@@ -148,6 +151,7 @@ public class JobWorker {
             if (response != null) {
                 jdbc.update("INSERT INTO ai_result(job_id, workspace_id, result_cipher) VALUES (?, ?, ?)", work.id(), work.workspaceId(),
                         cipher.encrypt(response, work.workspaceId() + ":" + work.id() + ":result"));
+                deliveries.createForResult(work.workspaceId(),work.id(),response);
             }
             String state = response != null ? "SUCCEEDED" : "FAILED";
             jdbc.update("UPDATE ai_attempt SET status = ?, completed_at = CURRENT_TIMESTAMP(3) WHERE job_id = ? AND lease_token = ? AND status = ?",

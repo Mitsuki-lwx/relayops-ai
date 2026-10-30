@@ -42,7 +42,7 @@ spring:
           enabled: false
 server:
   address: 127.0.0.1
-  port: ${PORT:8080}
+  port: ${PORT:18080}
   servlet:
     session:
       timeout: 30m

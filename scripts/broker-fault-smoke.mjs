@@ -12,7 +12,7 @@ async function request(path, init = {}, expected = 200) {
   const headers = new Headers(init.headers)
   headers.set('Cookie', [...cookies].map(([k, v]) => `${k}=${v}`).join('; '))
   if (init.method && csrf) headers.set(csrf.headerName, csrf.token)
-  const response = await fetch('http://127.0.0.1:8080' + path, { ...init, headers, signal: AbortSignal.timeout(10000) })
+  const response = await fetch('http://127.0.0.1:18080' + path, { ...init, headers, signal: AbortSignal.timeout(10000) })
   for (const cookie of response.headers.getSetCookie()) {
     const pair = cookie.split(';')[0], at = pair.indexOf('=')
     cookies.set(pair.slice(0, at), pair.slice(at + 1))

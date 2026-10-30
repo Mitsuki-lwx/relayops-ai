@@ -1,5 +1,20 @@
 # 验证记录
 
+## 第八阶段受控本机回调
+
+2026-10-30，Sol Advisor solo实现与自审。当前API默认18080，前端5173同源代理，已核对CSRF两端200；RelayOps未监听8080。主服务保留用户compatible配置，本批没有真实供应商请求。浏览器写入使用单独18081 Fake、relayops_test及relayops-test vhost，验收后停止临时API/前端/接收端。
+
+- **83项后端全部通过，0失败/错误/跳过**：`./scripts/test-backend.ps1`。新增13项交付集成覆盖目标权限/密钥审计/幂等意图、错误受理回滚、结果和Delivery/Run/Outbox同事务、真实Broker路由、500/500/200、408/429/Retry-After、重定向与永久4xx、网络未知、总请求超时、六次上限、TTL/目录变化/停用、过期租约恢复及旧执行器迟到200不得回写。共享消息关联和AI回归保持通过。V4→V5真实升级并二次执行保留旧任务密文/额度/Outbox，六表无追补回调；V1–V4无改动。
+- **独立接收端2项通过**：`python scripts/test-demo-receiver.py`。实际HTTP验证错误HMAC/过期时间戳拒绝、同ID同hash重复2xx只一行、同ID换hash409；SQLite提交后丢弃响应，重试仍一行。最初临时目录受本机沙箱权限限制，权限允许环境复跑通过，未据首次失败判定产品故障。
+- **13项浏览器通过**：8项本地结果API夹具、3项真实元数据只读布局，加2项独立Fake交付链路。1440px经历500/500/200；390px首次接收并提交后丢弃响应，平台先记UNKNOWN再成功。每个任务modelCalls=1、接收端SQLite=1，密钥未进入localStorage/sessionStorage；列表不含明文密钥，导出DOM排除密钥节点。新用例首次有标签/箭头按钮的精确匹配错误，修正定位后最终通过。
+- 浏览器交付两次成功执行合计4个独立Fake任务、4次模型执行、10次HTTP尝试：4条500失败、2条网络UNKNOWN、4条200成功。每个任务分别为3或2次交付尝试，AI状态和额度未被交付重试改变。后续后端测试会重置专用测试库，历史对账文件保留在忽略目录。
+- Vue类型检查和生产构建通过。目的地及交付快照1440/768/390共六档无横向溢出，字体实际加载、无密钥节点，截图均已目视审阅。taste lint为0FAIL/3条原有ID等宽字体WARN。**本轮原生taste inspect未完成**：默认及显式Edge、不同临时目录均浏览器早退code0；替代Playwright测量和截图不能冒充原生规则检查通过。
+- 演示库只读对账：预算分录差异0、成功缺结果0、重复SENT0；空间A当日dailyLimit=20/reserved=0/spent=20/uncertain=0，交付0。没有增加额度、重置演示任务或给旧任务追补外发。
+
+最终证据均为本机忽略产物：`artifacts/stage8-tests-final.log`、`stage8-receiver-tests-final.log`、`stage8-delivery-browser-pass.log`、`stage8-readonly-browser-final.log`、`stage8-build-final.log`、`stage8-layout-check.log`、`stage8-reconciliation.log`、`stage8-demo-reconciliation.log`及六张`stage8-layout-*.png`。浏览器新用例使用本机专用配置`artifacts/stage8-playwright.config.mjs`连接5174，常规前端配置仍连接主服务18080。
+
+范围限制：只支持固定127.0.0.1演示目录；未验证生产HTTPS目录、真实外部业务副作用、密钥轮换、人工补投、物理TTL清理、完整网络/磁盘故障或恢复SLO。签名与接收端去重不等于两个系统间的恰好一次事务。
+
 ## 第七阶段真实模型验收与结果展示
 
 实现提交a86bcfe已推送origin/main，远程完整哈希一致；以下为实际执行记录。

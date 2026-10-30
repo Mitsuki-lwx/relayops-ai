@@ -5,7 +5,9 @@ export async function snapshot(page: Page, name: string) {
   // Local DOM capture for the taste inspector; no session cookies or password values are exported.
   const body = await page.evaluate(() => {
     const clone = document.body.cloneNode(true) as HTMLElement;
-    clone.querySelectorAll("script").forEach((node) => node.remove());
+    clone
+      .querySelectorAll("script, [data-secret]")
+      .forEach((node) => node.remove());
     clone
       .querySelectorAll<HTMLInputElement>('input[type="password"]')
       .forEach((node) => {

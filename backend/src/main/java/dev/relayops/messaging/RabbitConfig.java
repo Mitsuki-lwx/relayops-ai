@@ -12,6 +12,8 @@ public class RabbitConfig {
     public static final String READY_EXCHANGE = "relay.ready.v1";
     public static final String AI_QUEUE = "relay.ai.ready.v1";
     public static final String AI_KEY = "ai.execute.v1";
+    public static final String DELIVERY_QUEUE = "relay.delivery.ready.v1";
+    public static final String DELIVERY_KEY = "delivery.send.v1";
     public static final String QUARANTINE_EXCHANGE = "relay.quarantine.v1";
     public static final String QUARANTINE_QUEUE = "relay.quarantine.v1";
 
@@ -23,7 +25,10 @@ public class RabbitConfig {
                 .maxLength(10000).overflow(QueueBuilder.Overflow.rejectPublish).build();
         var invalid = QueueBuilder.durable(QUARANTINE_QUEUE).withArgument("x-queue-type", "classic")
                 .maxLength(1000).overflow(QueueBuilder.Overflow.rejectPublish).build();
-        return new Declarables(ready, quarantine, ai, invalid,
+        var delivery = QueueBuilder.durable(DELIVERY_QUEUE).withArgument("x-queue-type", "classic")
+                .maxLength(10000).overflow(QueueBuilder.Overflow.rejectPublish).build();
+        return new Declarables(ready, quarantine, ai, delivery, invalid,
+                BindingBuilder.bind(delivery).to(ready).with(DELIVERY_KEY),
                 BindingBuilder.bind(ai).to(ready).with(AI_KEY), BindingBuilder.bind(invalid).to(quarantine).with("invalid.v1"));
     }
 

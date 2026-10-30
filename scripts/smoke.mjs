@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { setTimeout } from 'node:timers/promises'
 
 const config = Object.fromEntries(readFileSync(new URL('../ops/.env', import.meta.url), 'utf8').split(/\r?\n/).filter(l => l && !l.startsWith('#')).map(l => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)]))
-const base = process.env.RELAYOPS_BASE_URL ?? 'http://127.0.0.1:8080'
+const base = process.env.RELAYOPS_BASE_URL ?? 'http://127.0.0.1:18080'
 const password = process.env.RELAYOPS_DEMO_PASSWORD ?? config.RELAYOPS_DEMO_PASSWORD
 function client() {
   const cookies = new Map()

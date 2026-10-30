@@ -60,6 +60,13 @@ class V2UpgradeTest {
         assertArrayEquals(new byte[]{1,2,3},jdbc.queryForObject("SELECT input_cipher FROM ai_job WHERE id=?",byte[].class,job));
         assertEquals(1,jdbc.queryForObject("SELECT reserved FROM budget_account WHERE workspace_id=?",Integer.class,space));
         assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM outbox_event WHERE aggregate_id=?",Integer.class,job));
+        var v5=Flyway.configure().dataSource(source).locations("classpath:db/migration").target("5").load();
+        v5.migrate(); v5.migrate();
+        assertEquals("QUEUED",jdbc.queryForObject("SELECT status FROM ai_job WHERE id=?",String.class,job));
+        assertArrayEquals(new byte[]{1,2,3},jdbc.queryForObject("SELECT input_cipher FROM ai_job WHERE id=?",byte[].class,job));
+        assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM outbox_event WHERE aggregate_id=?",Integer.class,job));
+        for(var table:java.util.List.of("destination","job_destination","delivery","delivery_run","delivery_attempt","delivery_outbox"))
+            assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM "+table,Integer.class));
         // The same current schema must also support a new installation's local seed, without duplicates.
         var seed=new dev.relayops.identity.LocalSeed(jdbc,new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder(4),"local-fixture-password-only");
         seed.run(null); seed.run(null);

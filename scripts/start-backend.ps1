@@ -1,5 +1,7 @@
-param([switch]$FakeModel)
+param([switch]$FakeModel, [ValidateRange(1024,65535)][int]$Port = 18080)
 $ErrorActionPreference = 'Stop'
+if ($Port -eq 8080) { throw 'Port 8080 is reserved; use 18080 or another port.' }
+$env:PORT = $Port.ToString()
 $taskRoot = Split-Path -Parent $PSScriptRoot
 $envFile = Join-Path $taskRoot 'ops/.env'
 if (-not (Test-Path -LiteralPath $envFile)) { throw 'Run scripts/init-local.ps1 first.' }

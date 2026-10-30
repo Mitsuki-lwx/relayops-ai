@@ -4,6 +4,7 @@ import dev.relayops.common.ApiException;
 import dev.relayops.common.PayloadCipher;
 import dev.relayops.identity.Access;
 import dev.relayops.messaging.OutboxStore;
+import dev.relayops.delivery.DestinationService;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
@@ -27,10 +28,12 @@ public class JobService {
     private final JsonMapper json;
     private final OutboxStore outbox;
     private final ModelGateway models;
+    private final DestinationService destinations;
 
-    public JobService(JdbcTemplate jdbc, Access access, PayloadCipher cipher, JsonMapper json, OutboxStore outbox, ModelGateway models) {
+    public JobService(JdbcTemplate jdbc, Access access, PayloadCipher cipher, JsonMapper json, OutboxStore outbox, ModelGateway models, DestinationService destinations) {
         this.jdbc = jdbc; this.access = access; this.cipher = cipher; this.json = json; this.outbox = outbox;
         this.models = models;
+        this.destinations = destinations;
     }
 
     public record CreateJob(String applicationId, String title, String inputText, List<String> destinationIds, String outputLanguage,
@@ -82,12 +85,14 @@ public class JobService {
     private CreateJob normalize(CreateJob request) {
         if (request == null || request.applicationId() == null || request.title() == null
                 || request.title().isBlank() || request.title().length() > 100) throw DocumentInput.invalid("请选择应用，标题为 1 至 100 字符");
-        if (request.destinationIds() != null && !request.destinationIds().isEmpty()) throw DocumentInput.invalid("本阶段仅支持在工作台查看结果，不能指定回调目标");
+        var targets = request.destinationIds() == null ? List.<String>of() : request.destinationIds();
+        if (targets.size()>3 || targets.stream().anyMatch(id->!dev.relayops.messaging.ReadyMessage.uuid(id)) || targets.stream().distinct().count()!=targets.size())
+            throw DocumentInput.invalid("最多选择三个不同的有效目的地");
         String language = request.outputLanguage() == null ? "zh-CN" : request.outputLanguage();
         if (!List.of("zh-CN", "en-US").contains(language)) throw DocumentInput.invalid("语言只支持 zh-CN 或 en-US");
         String input = DocumentInput.normalize(request.inputText());
         DocumentInput.paragraphs(input);
-        return new CreateJob(request.applicationId(), request.title().strip(), input, List.of(), language,
+        return new CreateJob(request.applicationId(), request.title().strip(), input, targets.stream().sorted().toList(), language,
                 Boolean.TRUE.equals(request.acknowledgeExternalProcessing()) ? true : null);
     }
 
@@ -130,6 +135,7 @@ public class JobService {
                 cipher.encrypt(request.inputText(), workspaceId + ":" + id + ":input"), DocumentInput.hash(request.inputText()), date,
                 request.outputLanguage(), parentJobId, profile.profileId(), profile.promptVersion(), profile.schemaVersion());
         jdbc.update("INSERT INTO budget_entry(job_id, workspace_id, accepted_date, state) VALUES (?, ?, ?, 'RESERVED')", id, workspaceId, date);
+        destinations.freeze(workspaceId,id,request.destinationIds());
         outbox.enqueue(workspaceId, id, 1);
         audit(workspaceId, member.userId(), id, "JOB_ACCEPTED");
         return accepted(workspaceId, id);
@@ -220,7 +226,8 @@ public class JobService {
         compareVersion(current, expected);
         if (!List.of("FAILED", "UNKNOWN").contains(current.status())) throw new ApiException(409, "STATE_CONFLICT", "只有失败或结果未知的任务可以明确重跑");
         String input = cipher.decrypt(current.input(), workspaceId + ":" + jobId + ":input");
-        CreateJob normalized = normalize(new CreateJob(current.applicationId(), current.title(), input, List.of(), current.language()));
+        var targetIds=jdbc.queryForList("SELECT destination_id FROM job_destination WHERE workspace_id=? AND job_id=? ORDER BY destination_id",String.class,workspaceId,jobId);
+        CreateJob normalized = normalize(new CreateJob(current.applicationId(), current.title(), input, targetIds, current.language()));
         Accepted response = admit(member, workspaceId, date, normalized, jobId);
         jdbc.update("INSERT INTO audit_event(workspace_id, actor_id, resource_id, operation, detail_json) VALUES (?, ?, ?, 'JOB_RERUN_REQUESTED', ?)",
                 workspaceId, member.userId(), jobId, json.writeValueAsString(Map.of("reason", reason, "newJobId", response.jobId(),

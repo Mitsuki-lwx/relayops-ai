@@ -49,7 +49,7 @@ public class OutboxRelay {
                 properties.setContentType(MessageProperties.CONTENT_TYPE_JSON);
                 properties.setDeliveryMode(MessageDeliveryMode.PERSISTENT);
                 properties.setMessageId(event.envelope().messageId());
-                rabbit.send(RabbitConfig.READY_EXCHANGE, RabbitConfig.AI_KEY,
+                rabbit.send(RabbitConfig.READY_EXCHANGE, event.envelope().kind().equals("AI_EXECUTE") ? RabbitConfig.AI_KEY : RabbitConfig.DELIVERY_KEY,
                         new Message(json.writeValueAsBytes(event.envelope()), properties), correlation);
                 pending.add(new Pending(event, correlation));
             } catch (Exception ex) {

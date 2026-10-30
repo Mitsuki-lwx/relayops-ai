@@ -4,6 +4,8 @@ import { api, ApiError, refreshCsrf } from "./api";
 import OrganizationPanel from "./OrganizationPanel.vue";
 import AppIcon from "./AppIcon.vue";
 import ResultView from "./ResultView.vue";
+import DestinationPanel, { type Destination } from "./DestinationPanel.vue";
+import DeliveryPanel from "./DeliveryPanel.vue";
 import { jobError } from "./jobErrors";
 import type { ResultBody } from "./resultTypes";
 
@@ -80,7 +82,16 @@ const pending = ref<Draft | null>(null),
 const commandPending = ref<Command | null>(null);
 const profile = ref<Profile | null>(null);
 const externalAcknowledged = ref(false);
-type View = "tasks" | "new" | "organization";
+const destinations = ref<Destination[]>([]),
+  selectedDestinations = ref<string[]>([]);
+async function refreshDestinations() {
+  const id = workspaceId.value;
+  const items = await api<Destination[]>(
+    `/api/v1/workspaces/${id}/destinations`,
+  );
+  if (id === workspaceId.value) destinations.value = items;
+}
+type View = "tasks" | "new" | "organization" | "destinations";
 const activeView = ref<View>("tasks"),
   menuOpen = ref(false),
   hasOrganization = ref(false);
@@ -129,7 +140,7 @@ function navigate(view: View) {
 }
 function syncView() {
   const view = window.location.hash.slice(1);
-  activeView.value = ["new", "organization"].includes(view)
+  activeView.value = ["new", "organization", "destinations"].includes(view)
     ? (view as View)
     : "tasks";
   menuOpen.value = false;
@@ -276,6 +287,8 @@ async function switchWorkspace() {
   result.value = null;
   jobs.value = [];
   profile.value = null;
+  destinations.value = [];
+  selectedDestinations.value = [];
   externalAcknowledged.value = false;
   error.value = "";
   traceId.value = "";
@@ -290,6 +303,7 @@ async function switchWorkspace() {
     profile.value = currentProfile;
     applicationId.value = apps[0]?.id ?? "";
     await refreshList();
+    await refreshDestinations();
   } catch (ex) {
     showError(ex);
   }
@@ -344,6 +358,10 @@ async function restoreIntents() {
   ) {
     await select(await api<Job>(path(`/jobs/${commandPending.value.jobId}`)));
   }
+  selectedDestinations.value =
+    pending.value?.workspaceId === workspaceId.value
+      ? [...(pending.value.body.destinationIds ?? [])]
+      : [];
 }
 async function login() {
   busy.value = true;
@@ -410,7 +428,7 @@ async function submit() {
           applicationId: applicationId.value,
           title: title.value,
           inputText: input.value,
-          destinationIds: [],
+          destinationIds: [...selectedDestinations.value],
           outputLanguage: "zh-CN",
           acknowledgeExternalProcessing: externalAcknowledged.value,
         },
@@ -635,6 +653,13 @@ onUnmounted(() => {
             <AppIcon name="team" />组织管理
           </button></template
         >
+        <button
+          :aria-current="activeView === 'destinations' ? 'page' : undefined"
+          :disabled="busy || !!pending || !!commandPending"
+          @click="navigate('destinations')"
+        >
+          <AppIcon name="arrow" />回调目的地
+        </button>
       </nav>
       <div class="sidebar-bottom">
         <span class="avatar">{{ me.username.slice(0, 1).toUpperCase() }}</span>
@@ -675,11 +700,13 @@ onUnmounted(() => {
             <span>{{ workspace?.tenantName ?? "RelayOps" }}</span
             ><span aria-hidden="true">/</span
             ><strong>{{
-              activeView === "organization"
-                ? "组织管理"
-                : activeView === "new"
-                  ? "新建文档"
-                  : "任务队列"
+              activeView === "destinations"
+                ? "回调目的地"
+                : activeView === "organization"
+                  ? "组织管理"
+                  : activeView === "new"
+                    ? "新建文档"
+                    : "任务队列"
             }}</strong>
           </div>
           <div class="scope-control">
@@ -766,20 +793,24 @@ onUnmounted(() => {
             <div>
               <h1>
                 {{
-                  activeView === "organization"
-                    ? "公司与组织管理"
-                    : activeView === "new"
-                      ? "新建文档任务"
-                      : "AI 任务工作台"
+                  activeView === "destinations"
+                    ? "回调目的地"
+                    : activeView === "organization"
+                      ? "公司与组织管理"
+                      : activeView === "new"
+                        ? "新建文档任务"
+                        : "AI 任务工作台"
                 }}
               </h1>
               <p class="muted">
                 {{
-                  activeView === "organization"
-                    ? "管理部门、小组和空间访问权限。"
-                    : activeView === "new"
-                      ? "提交文档，获得可追溯原文的结构化结果。"
-                      : `已载入任务中：${activeJobs} 个处理中，${attentionJobs} 个需关注。`
+                  activeView === "destinations"
+                    ? "配置受控接收端，交付结果并跟踪每次尝试。"
+                    : activeView === "organization"
+                      ? "管理部门、小组和空间访问权限。"
+                      : activeView === "new"
+                        ? "提交文档，获得可追溯原文的结构化结果。"
+                        : `已载入任务中：${activeJobs} 个处理中，${attentionJobs} 个需关注。`
                 }}
               </p>
             </div>
@@ -805,7 +836,18 @@ onUnmounted(() => {
             @available="hasOrganization = $event"
             @changed="refreshAccess"
           />
-          <template v-if="activeView !== 'organization'">
+          <DestinationPanel
+            v-if="activeView === 'destinations'"
+            :workspace-id="workspaceId"
+            :owner="workspace?.role === 'OWNER'"
+            :disabled="busy || !!pending || !!commandPending"
+            @changed="refreshDestinations"
+          />
+          <template
+            v-if="
+              activeView !== 'organization' && activeView !== 'destinations'
+            "
+          >
             <div class="metrics">
               <div class="usage-metric">
                 <span>当日可用额度</span
@@ -882,6 +924,39 @@ onUnmounted(() => {
                     >
                       {{ characters }} / 6000 字符 · {{ bytes }} / 24576 字节
                     </div>
+                  </fieldset>
+                  <fieldset
+                    class="destination-choice"
+                    :disabled="busy || !!pending || !!commandPending"
+                  >
+                    <legend>
+                      结果回调 <span class="muted">可选，最多3个</span>
+                    </legend>
+                    <p class="muted">
+                      选中的目的地会接收结构化结果，不包含输入全文；不选则仅在工作台查看。
+                    </p>
+                    <label
+                      v-for="destination in destinations.filter(
+                        (d) => d.enabled,
+                      )"
+                      :key="destination.id"
+                      class="risk-check"
+                      ><input
+                        v-model="selectedDestinations"
+                        type="checkbox"
+                        :value="destination.id"
+                        :disabled="
+                          selectedDestinations.length >= 3 &&
+                          !selectedDestinations.includes(destination.id)
+                        "
+                      />{{ destination.name }}</label
+                    >
+                    <p
+                      v-if="!destinations.some((d) => d.enabled)"
+                      class="muted"
+                    >
+                      暂无启用的回调目的地，可在侧栏配置。
+                    </p>
                   </fieldset>
                   <p class="muted">
                     每个任务预留 1 次额度。{{
@@ -1130,7 +1205,9 @@ onUnmounted(() => {
                   @submit.prevent="startCommand('retry')"
                 >
                   <h3>明确重跑</h3>
-                  <p>创建新的关联任务，保留原任务和原用量记录。</p>
+                  <p>
+                    创建新的关联任务，保留原任务和原用量记录。沿用来源回调目的地并重新校验启用状态。
+                  </p>
                   <dl class="profile-comparison">
                     <div>
                       <dt>原模型配置</dt>
@@ -1204,6 +1281,11 @@ onUnmounted(() => {
                   </button>
                   <p class="muted">读取正文会留下审计记录。</p></template
                 >
+                <DeliveryPanel
+                  :workspace-id="workspaceId"
+                  :job-id="selected.jobId"
+                  :job-status="selected.status"
+                />
                 <ResultView v-if="result" :result="result" />
               </section>
               <section v-if="!selected" class="selection-hint">

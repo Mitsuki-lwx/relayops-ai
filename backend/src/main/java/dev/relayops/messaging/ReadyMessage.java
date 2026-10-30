@@ -32,7 +32,7 @@ public record ReadyMessage(int schemaVersion, String messageId, String kind, Str
             var envelope = json.readValue(bytes, ReadyMessage.class);
             if (!uuid(envelope.messageId()) || !uuid(envelope.workspaceId()) || !uuid(envelope.aggregateId())
                     || !uuid(envelope.traceId()) || envelope.dispatchGeneration() < 1 || envelope.createdAt() == null
-                    || !"AI_EXECUTE".equals(envelope.kind())) throw new Invalid("MALFORMED_ENVELOPE");
+                    || !List.of("AI_EXECUTE","DELIVERY_SEND").contains(envelope.kind())) throw new Invalid("MALFORMED_ENVELOPE");
             return envelope;
         } catch (Invalid ex) { throw ex; }
         catch (Exception ex) { throw new Invalid("MALFORMED_ENVELOPE"); }

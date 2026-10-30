@@ -31,6 +31,7 @@ public class AiConsumer {
         try {
             try {
                 ReadyMessage envelope = ReadyMessage.decode(message.getBody(), json);
+                if (!"AI_EXECUTE".equals(envelope.kind())) throw new ReadyMessage.Invalid("WRONG_ROUTE_KIND");
                 outbox.verify(envelope);
                 if (!worker.execute(envelope)) { channel.abort(); return; }
             } catch (ReadyMessage.Invalid ex) {
