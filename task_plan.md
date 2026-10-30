@@ -4,7 +4,7 @@
 完成 Outbox/RabbitMQ、Docker 存储迁移到 F 盘，并继续实现排队取消与明确重跑；以真实数据库、Broker 和浏览器验证责任与用量边界。
 
 ## Next Step
-完成补投页面三档布局、账目核对与差异自审，再提交推送。
+单条补投已完成验证与推送；后续按需求推进受控外网目录或保留期清理。
 
 ## Current Phase
 Phase 26
@@ -155,6 +155,6 @@ Phase 26
 - **Status:** complete
 
 ### Phase 26: Replay verification and publication
-- [ ] 隔离数据库/Broker并发、撤权、过期/停用、响应丢失、浏览器与构建。
-- [ ] 自审、凭据检查、自动提交推送。
-- **Status:** in_progress
+- [x] 隔离数据库/Broker并发、撤权、过期/停用、响应丢失、浏览器与构建。
+- [x] 自审、凭据检查、自动提交推送。
+- **Status:** complete
