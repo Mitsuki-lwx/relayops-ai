@@ -4,10 +4,10 @@
 完成 Outbox/RabbitMQ、Docker 存储迁移到 F 盘，并继续实现排队取消与明确重跑；以真实数据库、Broker 和浏览器验证责任与用量边界。
 
 ## Next Step
-本批公司、部门/小组与显式空间授权链路已实现、验证并推送。公司注册/邀请、公司配置与预算、回调/补投留给后续批次。
+按本机taste skill的app-screen流程重构登录、任务/结果和组织管理前端；验证真实交互、三档布局及taste检查后自动提交推送。
 
 ## Current Phase
-Phase 14 complete
+Phase 17
 
 ## Phases
 
@@ -77,6 +77,19 @@ Phase 14 complete
 - [x] MySQL升级、跨公司/跨组/撤权、幂等重放和浏览器验证。
 - [x] 自审、凭据检查、提交推送并核对远程。
 - **Status:** complete
+
+### Phase 15: Taste app design
+- [x] 数据/主任务盘点、抽取风格与产品特征，更新三份文档和设计说明。
+- **Status:** complete
+
+### Phase 16: Frontend reconstruction
+- [x] 重构应用外壳、任务列表/详情、编辑区、登录和独立组织视图。
+- **Status:** complete
+
+### Phase 17: Taste verification and publication
+- [x] 构建、真实浏览器回归、1440/768/390截图及taste lint/inspect与视觉自审。
+- [ ] 核对差异与凭据、自动提交推送。
+- **Status:** in_progress
 
 ## Git follow-up
 2026-10-29 用户提供 relayops-ai 远程。已初始化仓库，保留远程 8923f53 初始历史，本地 main 追踪 origin/main。

@@ -9,7 +9,8 @@ AI 技术文档任务与结果交付平台。当前链路：登录 → 公司与
 - [LLM 与组织隔离扩展建议](docs/product-directions.md)：已实现边界与后续扩展。
 
 - [需求范围](docs/spec.md)：当前做什么，以及完成条件。
-- [实施任务](docs/tasks.md)：第五阶段的 8 项任务及依赖。
+- [实施任务](docs/tasks.md)：第六阶段的 8 项任务及依赖。
+- [前端设计](docs/frontend-design.md)：taste app风格、信息层级和验证方式。
 - [验收清单](docs/checklist.md)：只勾选已有证据的项。
 - [首阶段决策](docs/adr/0001-first-slice.md)：先打通纵向链路的取舍。
 - [消息分发决策](docs/adr/0002-outbox-rabbitmq.md)：确认、重发、代次和隔离边界。
@@ -20,6 +21,8 @@ AI 技术文档任务与结果交付平台。当前链路：登录 → 公司与
 - [验证记录](docs/verification.md)：实际命令、结果及限制。
 
 ## 本地运行
+
+前端采用taste的framed-sheet工作台布局：任务队列、文档新建、组织管理各有独立视图；任务可按已载入范围搜索或筛选，手机在列表与详情间返回。字体本地托管，包含OFL许可证。业务API、权限和调用责任边界保持原有契约。
 
 需要 JDK 21、Maven 3.9+、Node 22.12+、Docker Desktop（Linux 容器引擎）。后端使用 Spring Boot 4.1.2；前端使用 Vue 3 和 Vite 7，精确版本见 package.json / package-lock.json。
 
@@ -128,7 +131,7 @@ FAILED/UNKNOWN 详情提供明确重跑：填写原因并确认新调用风险�
 
 ## 公司、部门与小组
 
-登录后，管理员可展开“公司与组织管理”：创建部门或小组（可选择父部门）、将已有公司成员加入组织、创建同公司的新空间，再显式授予组织 OPERATOR 或 VIEWER。新空间的创建者成为 OWNER；其他公司成员不会自动获得新空间权限。默认演示账号 owner.a / owner.b 分属两家公司并各自具有 ADMIN，operator/viewer 没有组织管理权限。
+登录后，管理员从侧栏或手机菜单进入“组织管理”：创建部门或小组（可选择父部门）、将已有公司成员加入组织、创建同公司的新空间，再显式授予组织 OPERATOR 或 VIEWER。新空间的创建者成为 OWNER；其他公司成员不会自动获得新空间权限。默认演示账号 owner.a / owner.b 分属两家公司并各自具有 ADMIN，operator/viewer 没有组织管理权限。
 
 已有数据库升级到 V4 时，每个旧空间归入独立公司，保留原空间/成员/任务ID、角色、额度、密文及消息；原有效 OWNER 成为对应公司 ADMIN。新安装同样预置两个隔离公司。空间选择器显示公司及空间名称。
 

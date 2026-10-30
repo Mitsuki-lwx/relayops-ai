@@ -1,5 +1,19 @@
 # 验证记录
 
+## 第六阶段taste前端重构
+
+2026-10-30，使用本机taste skill的app-screens流程，抽出framed-sheet（seed1361095215），无重抽。实际设计记录见frontend-design.md。
+
+- 重构登录、浅色应用外壳、任务列表/详情、新建文档及独立组织管理视图；增加已载入任务的本地标题/ID搜索和状态筛选，数据均来自既有API。手机可折叠导航、从详情返回；组织现有授权在桌面右侧、窄屏前置。
+- 浏览器共 **10项覆盖通过**：原7项加1440/768/390三项布局/筛选/导航验证。全量首轮8项成功，2项依据阅读用例因宽泛summary定位命中隐藏的组织视图而失败；限定.result后两项单独复验通过。最后仅组织布局调整后，针对组织真实流程及三档布局的4项再次通过。取消、明确重跑、原键响应恢复、外发确认及撤权仍通过实际后端/MySQL/Broker验证。
+- 三档测试实际验证字体加载、无页面横向溢出、搜索空结果、状态选中、手机列表/详情返回、组织导航、键盘可见焦点和减少动态偏好。构建包含vue-tsc和Vite生产构建，通过。前端源码经格式化与实际diff自审，后端/迁移/运行配置未修改，原66项后端记录继续适用，未重复运行。
+- taste原生lint **0 FAIL、3 WARN**。三条mono警告分别是字体定义、Job ID和Profile ID；app-screens明确允许ID/Key使用等宽字体，按该规则保留。原生inspect对任务、编辑、组织各在1440/768/390测量，最终三份报告均 **0 FAIL、0 WARN**。
+- 原生inspect使用已登录真实页面导出的本地DOM快照，不导出会话cookie或密码，字体内嵌为同一静态字体。初轮整屏误用data-ui、辅助字偏小和快照字体路径问题均修正。动态交互由上述真实浏览器覆盖；静态测量不作为API验证。所有视图与三档截图已目视检查，并按截图调整组织权限的位置。
+- IBM Plex Sans/Mono本地托管并带OFL许可证，没有运行时外部字体请求。没有虚构趋势、占位人物或假数据；截图包含本机验收账号与测试任务。验收后端仍显式Fake，没有付费模型调用。
+- 凭据候选扫描无真实本地凭据命中；ops/.env、artifacts及DOM快照保持忽略，构建/依赖输出不提交。
+
+证据：`artifacts/stage6-build.log`、`stage6-browser.log`（首轮8通过、2定位失败）、`stage6-evidence-final.log`（2项复验）、`stage6-layout-final.log`（最后局部4项）、`artifacts/taste/lint.log`、`task-inspection/report.json`、`editor-inspection/report.json`、`organization-inspection/report.json`；三档登录/队列/编辑/组织截图及原生检查图均在artifacts/taste内。
+
 ## 第五阶段公司与组织隔离
 
 2026-10-30，按用户确认“按空间共享，小组需显式授权”，继续Sol Advisor solo实现、自审，无辅助agent。

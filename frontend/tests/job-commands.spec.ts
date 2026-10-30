@@ -20,6 +20,7 @@ async function login(page: Page) {
   await page.getByLabel("密码", { exact: true }).fill(password);
   await page.getByRole("button", { name: "登录工作台" }).click();
   await expect(page.getByRole("heading", { name: "AI 任务工作台" })).toBeVisible();
+  await page.getByRole("button", { name: "新建文档", exact: true }).click();
 }
 async function queued(page: Page, title: string) {
   await page.getByLabel("任务标题").fill(title);

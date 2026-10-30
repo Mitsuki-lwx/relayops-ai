@@ -26,7 +26,7 @@ test("organization grant admits a teammate and revocation blocks the next body r
   test.setTimeout(100000);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await login(page, "owner.a");
-  await page.locator(".organization > summary").click();
+  await page.getByRole("button", { name: "组织管理", exact: true }).click();
   const tenant = await page.getByLabel("管理公司", { exact: true }).inputValue();
   const tag = Date.now();
   const departmentName = `研发部门 ${tag}`, teamName = `后端小组 ${tag}`, spaceName = `组织协作 ${tag}`;
@@ -66,6 +66,7 @@ test("organization grant admits a teammate and revocation blocks the next body r
 
     await member.reload();
     await member.getByLabel("当前空间", { exact: true }).selectOption(space);
+    await member.getByRole("button", { name: "新建文档", exact: true }).click();
     await member.getByLabel("任务标题").fill(`小组任务 ${tag}`);
     await member.getByLabel("技术文档").fill("小组成员获得空间授权后可创建任务，撤销后后续正文读取必须拒绝。");
     const accepted = member.waitForResponse(r => r.request().method() === "POST" && r.url().endsWith(`/workspaces/${space}/jobs`));

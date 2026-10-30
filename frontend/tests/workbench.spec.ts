@@ -21,6 +21,7 @@ async function login(page: Page) {
   await expect(
     page.getByRole("heading", { name: "AI 任务工作台" }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "新建文档", exact: true }).click();
 }
 
 for (const width of [1440, 390]) {
@@ -46,7 +47,7 @@ for (const width of [1440, 390]) {
     await expect(
       page.getByRole("heading", { name: "摘要", exact: true }),
     ).toBeVisible();
-    await page.locator("summary").first().click();
+    await page.locator(".result summary").first().click();
     await expect(page.locator("blockquote").first()).toContainText(
       "数据库事务提交",
     );
@@ -140,6 +141,7 @@ test("external consent is explicit and retained only with the pending intent", a
   expect(requests).toHaveLength(2);
   expect(requests[1]).toEqual(requests[0]);
   expect(JSON.parse(requests[0].body!).acknowledgeExternalProcessing).toBe(true);
+  await page.getByRole("button", { name: "新建文档", exact: true }).click();
   await expect(consent).not.toBeChecked();
   await expect(submit).toBeDisabled();
 });
