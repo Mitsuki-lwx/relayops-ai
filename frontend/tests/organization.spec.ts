@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { test, expect, type Page } from "@playwright/test";
+import { requireFakeModel } from "./require-fake";
 
 const password = readFileSync(new URL("../../ops/.env", import.meta.url), "utf8")
   .split(/\r?\n/).find(line => line.startsWith("RELAYOPS_DEMO_PASSWORD="))!.split("=").slice(1).join("=");
@@ -9,6 +10,7 @@ async function login(page: Page, username: string) {
   await page.getByLabel("密码", { exact: true }).fill(password);
   await page.getByRole("button", { name: "登录工作台" }).click();
   await expect(page.getByRole("heading", { name: "AI 任务工作台" })).toBeVisible();
+  await requireFakeModel(page);
 }
 async function create(page: Page, suffix: string, button: string) {
   const accepted = page.waitForResponse(r => r.request().method() === "POST" && r.url().endsWith(suffix));

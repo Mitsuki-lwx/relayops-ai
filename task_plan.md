@@ -4,10 +4,10 @@
 完成 Outbox/RabbitMQ、Docker 存储迁移到 F 盘，并继续实现排队取消与明确重跑；以真实数据库、Broker 和浏览器验证责任与用量边界。
 
 ## Next Step
-按本机taste skill的app-screen流程重构登录、任务/结果和组织管理前端；验证真实交互、三档布局及taste检查后自动提交推送。
+真实链路及结果展示已验证；完成最终差异/凭据检查并提交推送。
 
 ## Current Phase
-Phase 17
+Phase 20
 
 ## Phases
 
@@ -88,7 +88,20 @@ Phase 17
 
 ### Phase 17: Taste verification and publication
 - [x] 构建、真实浏览器回归、1440/768/390截图及taste lint/inspect与视觉自审。
-- [ ] 核对差异与凭据、自动提交推送。
+- [x] 核对差异与凭据、自动提交推送。
+- **Status:** complete
+
+### Phase 18: Activate configured model
+- [x] 安全启用真实配置，定位成功信封包装并修复；第四个关联任务成功，原三次失败及用量保留。
+- **Status:** complete
+
+### Phase 19: Complete result presentation
+- [x] 展示摘要依据、约束、关键要点和未知项，解释安全错误码，不改变调用边界。
+- **Status:** complete
+
+### Phase 20: Model verification and publication
+- [x] 70项后端、11项浏览器、构建及真实成功任务两档只读核对通过。
+- [ ] 自审、凭据检查、提交推送。
 - **Status:** in_progress
 
 ## Git follow-up

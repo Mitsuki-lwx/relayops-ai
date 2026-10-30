@@ -9,6 +9,51 @@ class ModelGatewayTest {
     static final List<DocumentInput.Paragraph> PARAGRAPHS = DocumentInput.paragraphs("必须持久化任务，再返回受理。");
     ModelGateway.Prepared prepare(ModelGateway gateway) { return gateway.prepare(gateway.currentProfile().profileId(), "协议验证", PARAGRAPHS, "zh-CN"); }
 
+    @Test void supportsExplicitSuccessfulDataEnvelopeWithoutRelaxingInnerValidation() throws Exception {
+        try (var stub = new StubProvider(); var gateway = stub.gateway(3)) {
+            var completion = java.util.Map.of("choices", List.of(java.util.Map.of("finish_reason", "stop", "message",
+                    java.util.Map.of("role", "assistant", "content", stub.validAnalysis()))));
+            stub.raw = stub.json.writeValueAsString(java.util.Map.of("success", true, "data", completion));
+            DocumentResult.validate(prepare(gateway).invoke(), PARAGRAPHS);
+            for (var envelope : List.of(java.util.Map.of("success", false, "data", completion),
+                    java.util.Map.of("success", "true", "data", completion), java.util.Map.of("data", completion),
+                    java.util.Map.of("success", true, "error", "private-provider-body", "data", completion),
+                    java.util.Map.of("success", true, "data", java.util.Map.of("error", "private-provider-body")))) {
+                stub.raw = stub.json.writeValueAsString(envelope);
+                assertEquals("OUTPUT_INVALID", assertThrows(ModelGateway.Failure.class, () -> prepare(gateway).invoke()).code);
+            }
+            stub.raw = stub.json.writeValueAsString(java.util.Map.of("success", true, "data", java.util.Map.of("choices",
+                    List.of(java.util.Map.of("finish_reason", "length", "message", java.util.Map.of("content", stub.validAnalysis()))))));
+            assertEquals("OUTPUT_TRUNCATED", assertThrows(ModelGateway.Failure.class, () -> prepare(gateway).invoke()).code);
+            assertEquals(7, stub.calls.get());
+        }
+    }
+
+    @Test void acceptsNullAndEmptyToolMetadataWithoutTreatingItAsAToolRequest() throws Exception {
+        try (var stub = new StubProvider(); var gateway = stub.gateway(3)) {
+            for (Object tools : new Object[]{null, List.of()}) {
+                var message = new java.util.LinkedHashMap<String,Object>();
+                message.put("role", "assistant"); message.put("content", stub.validAnalysis());
+                message.put("tool_calls", tools); message.put("function_call", null);
+                stub.raw = stub.json.writeValueAsString(java.util.Map.of("choices", List.of(java.util.Map.of("finish_reason", "stop", "message", message))));
+                DocumentResult.validate(prepare(gateway).invoke(), PARAGRAPHS);
+            }
+            assertEquals(2, stub.calls.get());
+        }
+    }
+    @Test void rejectsActualMalformedOrLegacyToolRequestsEvenWithValidText() throws Exception {
+        try (var stub = new StubProvider(); var gateway = stub.gateway(3)) {
+            for (var request : List.of(java.util.Map.of("tool_calls", List.of(java.util.Map.of("id", "call-1"))),
+                    java.util.Map.of("tool_calls", java.util.Map.of("name", "unsafe")), java.util.Map.of("function_call", java.util.Map.of("name", "unsafe")))) {
+                var message = new java.util.LinkedHashMap<String,Object>();
+                message.put("role", "assistant"); message.put("content", stub.validAnalysis()); message.putAll(request);
+                stub.raw = stub.json.writeValueAsString(java.util.Map.of("choices", List.of(java.util.Map.of("finish_reason", "stop", "message", message))));
+                assertEquals("OUTPUT_INVALID", assertThrows(ModelGateway.Failure.class, () -> prepare(gateway).invoke()).code);
+            }
+            assertEquals(3, stub.calls.get());
+        }
+    }
+
     @Test void validatesEndpointAndSecretsWithoutPrintingThem() throws Exception {
         try (var stub = new StubProvider()) {
             for (String endpoint : List.of("http://example.com/chat/completions", "https://secret:password@example.com/chat/completions", "https://example.com/chat/completions?token=secret", "https://example.com/other")) {
@@ -41,11 +86,20 @@ class ModelGatewayTest {
     }
     @Test void knownRejectionsHaveSafeCodesAndNoApplicationRetries() throws Exception {
         try (var stub = new StubProvider(); var gateway = stub.gateway(3)) {
-            for (int status : List.of(400, 401, 429)) {
+            for (int status : List.of(400, 401, 402, 429)) {
                 stub.status = status; stub.raw = "provider-secret-error";
                 assertEquals("MODEL_REJECTED", assertThrows(ModelGateway.Failure.class, () -> prepare(gateway).invoke()).code);
             }
-            assertEquals(3, stub.calls.get());
+            assertEquals(4, stub.calls.get());
+        }
+    }
+    @Test void errorEnvelopesNeverBecomeSuccessfulResultsOrExposeProviderText() throws Exception {
+        try (var stub = new StubProvider(); var gateway = stub.gateway(3)) {
+            stub.raw = "{\"error\":{\"message\":\"private-provider-body\"}}";
+            var failure = assertThrows(ModelGateway.Failure.class, () -> prepare(gateway).invoke());
+            assertEquals("OUTPUT_INVALID", failure.code);
+            assertEquals("OUTPUT_INVALID", failure.getMessage());
+            assertEquals(1, stub.calls.get());
         }
     }
     @Test void rejectsTruncationRefusalAndMalformedOutput() throws Exception {

@@ -760,9 +760,52 @@ fieldset {
 summary {
   cursor: pointer;
 }
-.claim details {
+.evidence-list {
   font-size: 13px;
   color: var(--muted);
+}
+.evidence-list details {
+  margin-top: 8px;
+}
+.evidence-list summary {
+  padding: 8px 0;
+  color: var(--accent);
+}
+.result-section + .result-section {
+  margin-top: 24px;
+}
+.result .source-paragraph {
+  color: var(--text);
+  margin: 6px 0 16px;
+}
+.source-paragraph mark {
+  background: #fff0ba;
+  color: inherit;
+  box-decoration-break: clone;
+}
+.result-section ul {
+  padding-left: 20px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.job-problem {
+  margin: 16px 0;
+  padding: 16px;
+  border: 1px solid #edcdd0;
+  border-radius: 6px;
+  background: #fff7f7;
+}
+.job-problem h3 {
+  color: var(--negative);
+}
+.job-problem p {
+  margin: 8px 0;
+  line-height: 1.8;
+}
+.job-problem code {
+  font: inherit;
+  color: var(--muted);
+  overflow-wrap: anywhere;
 }
 blockquote {
   margin: 12px 0;

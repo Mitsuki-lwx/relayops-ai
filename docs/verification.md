@@ -1,6 +1,27 @@
 # 验证记录
 
+## 第七阶段真实模型验收与结果展示
+
+2026-10-30，用户确认原ClinePass完整型号，沿用Sol Advisor solo，自审完成。没有更换型号或改为按量付费路由。
+
+- 默认启动已读取本地compatible配置，去除原验收用Fake命令行覆盖。真实密钥仅留在本地环境，不进入浏览器、日志或提交。
+- 自拟短文经真实受理、Outbox、RabbitMQ、一次SENT、模型、引用验证和加密保存后完成。排错包含3个FAILED/OUTPUT_INVALID和1个SUCCEEDED，共4次独立明确调用，每个任务仅1次SENT。原任务不复活、不退款、不自动重新调用；每次复验有原因、确认和固定幂等键。
+- 第三个任务2005c009的固定布尔诊断实际证明：顶层choices缺失，success为布尔true，data.choices为数组。修复为兼容明确成功的包装信封；不是依据通用/models缺失修改订阅型号。原两次失败未保存供应商正文，不把空工具元数据判定为已证实根因。
+- 修复后任务3614e95d成功：摘要86字符，3条关键结论、3条约束、5项未知信息，所有引用精确匹配原文。数据库确认其结果密文2201字节；三个失败来源各保留SPENT，无结果行。全库预算分录差异、成功缺结果、重复SENT均0。
+- **70项后端测试通过，0失败、0跳过**。含标准/明确成功包装信封、布尔false/字符串true/缺成功标识/错误包装拒绝、包装内截断拒绝、空/null工具元数据允许、实际/非法/旧工具请求拒绝和HTTP402明确拒绝。供应商故障回归使用本机HTTP夹具，数据库/消息测试使用专用测试库和vhost，不访问真实供应商。
+- **11项浏览器测试通过**：8项全API本地夹具（完整结果三档、空集合、撤权后清除、3类失败与重跑确认），3项真实工作台元数据只读布局。真实成功结果另在1440/390两档读取、核对3/3/5及摘要原文高亮，业务API写入0，没有新增模型请求。
+- Vue类型检查与生产构建通过。结果按纯文本显示，含script字样的引用不会执行；结果的摘要依据、关键结论、约束和未知项完整呈现。新增安全错误说明。旧写入浏览器套件新增Fake模式检查，本轮未在真实模式重跑其业务写入流程。
+- taste结果视图inspect三档**0FAIL/0WARN**，lint仍0FAIL/3条允许的ID字体WARN；三档原生检查图及真实成功截图已目视检查。静态快照含本地夹具；真实任务截图来自实际API，均留在忽略目录。
+
+平台演示空间A当日额度已使用20/20，其中本轮真实排错/验收4次；没有调高额度或清理历史。供应商实际费用/订阅扣量未核对。一篇短文只证明当前配置联通及该样本符合结构/引用规则，不能代表通用质量、所有供应商兼容或完整设计已完成。
+
+证据均为本地忽略文件：artifacts/stage7-real-smoke.log、stage7-real-rerun.log、stage7-real-diagnostic.log、stage7-real-wrapper.log、stage7-backend-diagnostic-proof.log、stage7-tests-wrapper.log、stage7-build.log、stage7-browser-final.log、stage7-readonly-browser.log、stage7-reconciliation.log、stage7-taste-lint.log及taste/result-inspection/report.json。成功截图stage7-real-result-1440.png、stage7-real-result-390.png。
+
+协议核对：[Cline Chat Completions](https://github.com/cline/cline/blob/main/docs/api/chat-completions.mdx)、[ClinePass完整订阅slug](https://github.com/cline/cline/blob/main/docs/getting-started/clinepass.mdx)、[Cline HTTP错误](https://github.com/cline/cline/blob/main/docs/api/errors.mdx)、[OpenAI可选工具元数据类型](https://github.com/openai/openai-python/blob/main/src/openai/types/chat/chat_completion_message.py)。success/data包装以实际固定结构诊断为依据，公开示例仍是标准未包装信封。
+
 ## 第六阶段taste前端重构
+
+实现提交bd106b8已推送origin/main并核对远程一致；完成状态随下一批文档归档。
 
 2026-10-30，使用本机taste skill的app-screens流程，抽出framed-sheet（seed1361095215），无重抽。实际设计记录见frontend-design.md。
 

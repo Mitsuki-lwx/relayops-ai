@@ -3,6 +3,9 @@ import { computed, onMounted, onUnmounted, ref } from "vue";
 import { api, ApiError, refreshCsrf } from "./api";
 import OrganizationPanel from "./OrganizationPanel.vue";
 import AppIcon from "./AppIcon.vue";
+import ResultView from "./ResultView.vue";
+import { jobError } from "./jobErrors";
+import type { ResultBody } from "./resultTypes";
 
 type Workspace = {
   id: string;
@@ -43,20 +46,6 @@ type Command = {
     reason?: string;
     acknowledgeDuplicateCost?: boolean;
   };
-};
-type Claim = {
-  text: string;
-  evidence: { paragraphId: string; quote: string }[];
-};
-type ResultBody = {
-  data: {
-    title: string;
-    summary: Claim;
-    keyPoints: Claim[];
-    constraints: Claim[];
-    unknowns: string[];
-  };
-  paragraphs: { paragraphId: string; text: string }[];
 };
 type Draft = {
   workspaceId: string;
@@ -1104,9 +1093,15 @@ onUnmounted(() => {
                 <div v-if="selected.status === 'UNKNOWN'" class="notice">
                   请求可能已在供应商执行，本平台未取得可验证结果；再次执行可能产生额外费用。当前版本不提供自动重跑。
                 </div>
-                <p v-if="selected.errorCode" class="error-text">
-                  {{ selected.errorCode }}
-                </p>
+                <section
+                  v-if="selected.errorCode"
+                  class="job-problem"
+                  aria-label="任务错误说明"
+                >
+                  <h3>{{ jobError(selected.errorCode).title }}</h3>
+                  <p>{{ jobError(selected.errorCode).message }}</p>
+                  <code>{{ selected.errorCode }}</code>
+                </section>
                 <p
                   v-if="!terminal(selected.status)"
                   class="muted"
@@ -1209,40 +1204,7 @@ onUnmounted(() => {
                   </button>
                   <p class="muted">读取正文会留下审计记录。</p></template
                 >
-                <div v-if="result" class="result">
-                  <h3>摘要</h3>
-                  <p>{{ result.data.summary.text }}</p>
-                  <h3>关键结论</h3>
-                  <div
-                    v-for="(point, index) in result.data.keyPoints"
-                    :key="index"
-                    class="claim"
-                  >
-                    <p>{{ point.text }}</p>
-                    <details v-for="(evidence, n) in point.evidence" :key="n">
-                      <summary>原文依据 · {{ evidence.paragraphId }}</summary>
-                      <blockquote>{{ evidence.quote }}</blockquote>
-                      <p class="muted">
-                        {{
-                          result.paragraphs.find(
-                            (p) => p.paragraphId === evidence.paragraphId,
-                          )?.text
-                        }}
-                      </p>
-                    </details>
-                  </div>
-                  <h3>未确定信息</h3>
-                  <p
-                    v-for="unknown in result.data.unknowns"
-                    :key="unknown"
-                    class="muted"
-                  >
-                    {{ unknown }}
-                  </p>
-                  <p class="disclaimer">
-                    引用匹配仅说明原文可定位，不代表事实判断完全正确。
-                  </p>
-                </div>
+                <ResultView v-if="result" :result="result" />
               </section>
               <section v-if="!selected" class="selection-hint">
                 <div class="selection-symbol"><AppIcon name="tasks" /></div>

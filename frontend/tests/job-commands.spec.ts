@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { test, expect, type Page } from "@playwright/test";
+import { requireFakeModel } from "./require-fake";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const password = readFileSync(new URL("../../ops/.env", import.meta.url), "utf8")
@@ -20,6 +21,7 @@ async function login(page: Page) {
   await page.getByLabel("密码", { exact: true }).fill(password);
   await page.getByRole("button", { name: "登录工作台" }).click();
   await expect(page.getByRole("heading", { name: "AI 任务工作台" })).toBeVisible();
+  await requireFakeModel(page);
   await page.getByRole("button", { name: "新建文档", exact: true }).click();
 }
 async function queued(page: Page, title: string) {

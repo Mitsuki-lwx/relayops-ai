@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { test, expect, type Page } from "@playwright/test";
+import { requireFakeModel } from "./require-fake";
 
 const config = Object.fromEntries(
   readFileSync(new URL("../../ops/.env", import.meta.url), "utf8")
@@ -21,6 +22,7 @@ async function login(page: Page) {
   await expect(
     page.getByRole("heading", { name: "AI 任务工作台" }),
   ).toBeVisible();
+  await requireFakeModel(page);
   await page.getByRole("button", { name: "新建文档", exact: true }).click();
 }
 

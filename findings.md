@@ -1,6 +1,7 @@
 # Findings & Decisions
 
 ## Requirements
+- 2026-10-30 用户确认真实LLM已配置并要求继续，授权启用配置及一次自拟文档真实链路验收。后续自动回归仍用Fake/本机响应夹具，避免把回归批量流量送入真实供应商。
 - 2026-10-30 用户指定taste skill重构前端。本机技能在F:/CodexData/.tmp/marketplaces/taste-skill/skills/taste-skill，已读取SKILL及app-screens规则，使用app流程而非营销页流程；不引入业务新能力或假数据。
 - 2026-10-30 用户要求说明本地URL/Key位置后继续开发，继续Sol Advisor；确认“按空间共享，小组需显式授权”。本批做公司边界、部门/小组、组织成员到空间的授权，不做仅本人任务可见范围。
 - 迁移时每个旧空间对应独立公司，保留原用户/空间/任务ID、直接成员与预算；新建空间可归入同公司。部门树仅组织展示，不隐式继承正文权限。额度仍按空间，不引入公司额度。
@@ -53,3 +54,9 @@
 - https://www.rabbitmq.com/docs/confirms
 - https://www.rabbitmq.com/release-information
 - 本地基线 docs/spec.md、tasks.md、checklist.md 与现有 Java 源码。
+
+- 第七阶段：两次真实任务各一次SENT，结果均OUTPUT_INVALID。明确复验的诊断为INVALID_CHOICES；不声称空工具修复已解决供应商问题。官方ClinePass支持同API的完整订阅slug，不能依据通用/models缺失就改为按量型号。
+
+- 实际诊断任务2005c009证明Cline成功结果是success=true/data.choices包裹。仅兼容显式布尔成功，保持内部所有输出/引用/截断校验。
+
+- 最终成功任务3614e95d已通过真实MQ/模型/引用/加密链路，3要点/3约束/5未知；共4次真实SENT（3失败+1成功），空间A今日20/20不调额。70后端、11浏览器及两档真实结果只读通过。

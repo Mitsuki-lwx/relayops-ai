@@ -15,10 +15,13 @@ import java.util.concurrent.Flow;
 import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import tools.jackson.databind.json.JsonMapper;
 
 @Component
 public class ModelGateway implements AutoCloseable {
+    private static final Logger LOG = LoggerFactory.getLogger(ModelGateway.class);
     public record Profile(String profileId, String provider, String modelName, String promptVersion,
                           String schemaVersion, boolean billable, int creditsPerJob) {}
     public record Prepared(Profile profile, int timeoutSeconds, Callable<DocumentResult> action) {
@@ -102,28 +105,56 @@ public class ModelGateway implements AutoCloseable {
         try {
             var response = future.get(timeoutSeconds, TimeUnit.SECONDS);
             int status = response.statusCode();
-            if (List.of(400, 401, 403, 404, 405, 413, 415, 422, 429).contains(status)) throw new Failure("MODEL_REJECTED");
+            if (List.of(400, 401, 402, 403, 404, 405, 413, 415, 422, 429).contains(status)) throw new Failure("MODEL_REJECTED");
             if (status != 200) throw new IllegalStateException("MODEL_RESULT_UNKNOWN");
             try {
                 var envelope = json.readTree(response.body());
+                if (envelope.has("success")) {
+                    if (!envelope.path("success").isBoolean() || !envelope.path("success").asBoolean()
+                            || (!envelope.path("error").isMissingNode() && !envelope.path("error").isNull())) throw invalid("ERROR_ENVELOPE");
+                    // Some compatible gateways wrap their successful Chat Completions object in data.
+                    if (envelope.path("choices").isMissingNode() && envelope.path("data").isObject()) envelope = envelope.path("data");
+                }
+                if (!envelope.path("error").isMissingNode() && !envelope.path("error").isNull()) throw invalid("ERROR_ENVELOPE");
                 var choices = envelope.path("choices");
-                if (!choices.isArray() || choices.size() != 1) throw new Failure("OUTPUT_INVALID");
+                if (!choices.isArray() || choices.size() != 1) {
+                    LOG.warn("operation=model_envelope_shape rootObject={} choicesArray={} choiceCount={} nestedChoicesArray={} successTrue={}",
+                            envelope.isObject(), choices.isArray(), choices.isArray() ? choices.size() : 0,
+                            envelope.path("data").path("choices").isArray(), envelope.path("success").asBoolean(false));
+                    throw invalid("INVALID_CHOICES");
+                }
                 var choice = choices.get(0);
                 if (!choice.path("message").path("refusal").isMissingNode() && !choice.path("message").path("refusal").isNull()) throw new Failure("MODEL_REFUSED");
                 String finish = choice.path("finish_reason").asText();
                 if (finish.equals("length")) throw new Failure("OUTPUT_TRUNCATED");
                 if (finish.equals("content_filter")) throw new Failure("MODEL_REFUSED");
-                if (!finish.equals("stop") || !choice.path("message").path("content").isString()
-                        || choice.path("message").has("tool_calls")) throw new Failure("OUTPUT_INVALID");
-                Analysis analysis = json.readValue(choice.path("message").path("content").asText(), Analysis.class);
+                if (!finish.equals("stop")) throw invalid("UNEXPECTED_FINISH");
+                var message = choice.path("message");
+                if (!message.path("content").isString()) throw invalid("MISSING_TEXT");
+                var tools = message.path("tool_calls");
+                var legacyTool = message.path("function_call");
+                if ((!tools.isMissingNode() && !tools.isNull() && (!tools.isArray() || tools.size() != 0))
+                        || (!legacyTool.isMissingNode() && !legacyTool.isNull())) throw invalid("UNSUPPORTED_TOOLS");
+                Analysis analysis;
+                try { analysis = json.readValue(message.path("content").asText(), Analysis.class); }
+                catch (Exception ex) {
+                    LOG.warn("operation=model_analysis_unreadable exceptionType={}", ex.getClass().getSimpleName());
+                    throw invalid("INVALID_ANALYSIS_JSON");
+                }
                 return new DocumentResult(current.schemaVersion(), title, analysis.summary(), analysis.keyPoints(), analysis.constraints(), analysis.unknowns(), current.profileId());
             } catch (Failure ex) { throw ex; }
-            catch (Exception ex) { throw new Failure("OUTPUT_INVALID"); }
+            catch (Exception ex) { throw invalid("INVALID_ENVELOPE_JSON"); }
         } catch (java.util.concurrent.ExecutionException ex) {
             if (ex.getCause() instanceof Failure failure) throw failure;
             throw new IllegalStateException("MODEL_RESULT_UNKNOWN");
         } catch (InterruptedException ex) { Thread.currentThread().interrupt(); throw ex; }
         finally { if (!future.isDone()) future.cancel(true); }
+    }
+
+    private Failure invalid(String reason) {
+        // Fixed local reason only: provider bodies and exception messages can contain sensitive text.
+        LOG.warn("operation=model_output_rejected reason={}", reason);
+        return new Failure("OUTPUT_INVALID");
     }
 
     private record Analysis(DocumentResult.Claim summary, List<DocumentResult.Claim> keyPoints,
