@@ -124,7 +124,8 @@ class DatabaseTest {
     void competingNewIntentsCannotExceedDailyLimit() throws Exception {
         String testWorkspace = UUID.randomUUID().toString(), testApp = UUID.randomUUID().toString();
         String actor = jdbc.queryForObject("SELECT id FROM user_account WHERE username = 'owner.a'", String.class);
-        jdbc.update("INSERT INTO workspace(id,code,name) VALUES (?,?,?)", testWorkspace, "test-" + UUID.randomUUID().toString().substring(0, 8), "隔离额度测试");
+        String tenantId=jdbc.queryForObject("SELECT tenant_id FROM workspace WHERE id=?",String.class,workspaceId);
+        jdbc.update("INSERT INTO workspace(id,code,name,tenant_id) VALUES (?,?,?,?)", testWorkspace, "test-" + UUID.randomUUID().toString().substring(0, 8), "隔离额度测试",tenantId);
         jdbc.update("INSERT INTO workspace_member(workspace_id,user_id,role) VALUES (?,?,'OWNER')", testWorkspace, actor);
         jdbc.update("INSERT INTO application(id,workspace_id,name) VALUES (?,?,'额度验证')", testApp, testWorkspace);
         var date = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Shanghai"));

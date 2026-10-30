@@ -235,6 +235,16 @@ p {
   border-radius: 10px;
   margin-bottom: 28px;
 }
+.organization { margin-bottom: 24px; }
+.organization > summary { cursor: pointer; font-size: 16px; font-weight: 600; }
+.organization-forms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin: 20px 0; }
+.organization-forms form { min-width: 0; }
+.organization-forms input, .organization-forms select { margin-bottom: 14px; }
+.organization-forms button { margin: 8px 8px 0 0; }
+.organization-list { padding-left: 18px; overflow-wrap: anywhere; }
+.organization-list li { margin-bottom: 16px; }
+.organization-list p { margin: 6px 0; }
+@media (max-width: 600px) { .organization-forms { grid-template-columns: 1fr; } }
 .metrics > div {
   padding: 18px 25px;
 }

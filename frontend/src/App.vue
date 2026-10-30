@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { api, ApiError, refreshCsrf } from "./api";
+import OrganizationPanel from "./OrganizationPanel.vue";
 
-type Workspace = { id: string; name: string; role: string };
+type Workspace = { id: string; name: string; role: string; tenantId: string; tenantName: string };
 type Job = {
   jobId: string;
   title: string;
@@ -240,6 +241,15 @@ async function loadMe() {
   me.value = await api("/api/v1/me");
   workspaceId.value = me.value!.workspaces[0]?.id ?? "";
   if (workspaceId.value) await switchWorkspace();
+}
+async function refreshAccess() {
+  busy.value = true;
+  try {
+    me.value = await api("/api/v1/me");
+    if (!me.value!.workspaces.some(w => w.id === workspaceId.value)) workspaceId.value = me.value!.workspaces[0]?.id ?? "";
+    await switchWorkspace();
+  } catch (ex) { showError(ex); }
+  finally { busy.value = false; }
 }
 async function restoreIntents() {
   const actor = me.value!.username;
@@ -575,11 +585,12 @@ onUnmounted(() => {
               @change="switchWorkspace"
             >
               <option v-for="w in me.workspaces" :key="w.id" :value="w.id">
-                {{ w.name }} · {{ w.role }}
+                {{ w.tenantName }} / {{ w.name }} · {{ w.role }}
               </option>
             </select>
           </div>
         </div>
+        <OrganizationPanel :disabled="busy || !!pending || !!commandPending" :tenant-id="workspace?.tenantId" @changed="refreshAccess" />
         <div class="metrics">
           <div>
             <span>当日可用额度</span

@@ -29,6 +29,7 @@ class V2UpgradeTest {
         var date = LocalDate.now(ZoneId.of("Asia/Shanghai"));
         jdbc.update("INSERT INTO user_account(id,username,password_hash) VALUES (?,'migration.owner','unused-fixture-hash')", user);
         jdbc.update("INSERT INTO workspace(id,code,name) VALUES (?,'migration','迁移验证')", space);
+        jdbc.update("INSERT INTO workspace_member(workspace_id,user_id,role) VALUES (?,?,'OWNER')",space,user);
         jdbc.update("INSERT INTO application(id,workspace_id,name) VALUES (?,?,'迁移应用')", app, space);
         jdbc.update("INSERT INTO budget_account(workspace_id,accepted_date,reserved) VALUES (?,?,1)", space, date);
         // Opaque fixture bytes are never executed or presented as a real extraction result.
@@ -50,5 +51,20 @@ class V2UpgradeTest {
         assertEquals(job, jdbc.queryForObject("SELECT JSON_UNQUOTE(JSON_EXTRACT(response_json, '$.jobId')) FROM idempotency_record WHERE job_id = ?", String.class, job));
         assertEquals("QUEUED", jdbc.queryForObject("SELECT JSON_UNQUOTE(JSON_EXTRACT(response_json, '$.status')) FROM idempotency_record WHERE job_id = ?", String.class, job));
         assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM idempotency_record WHERE response_json IS NULL", Integer.class));
+        var v4=Flyway.configure().dataSource(source).locations("classpath:db/migration").target("4").load();
+        v4.migrate(); v4.migrate();
+        assertEquals(space,jdbc.queryForObject("SELECT tenant_id FROM workspace WHERE id=?",String.class,space));
+        assertEquals("ADMIN",jdbc.queryForObject("SELECT role FROM tenant_member WHERE tenant_id=? AND user_id=?",String.class,space,user));
+        assertEquals("OWNER",jdbc.queryForObject("SELECT role FROM workspace_member WHERE workspace_id=? AND user_id=?",String.class,space,user));
+        assertEquals("QUEUED",jdbc.queryForObject("SELECT status FROM ai_job WHERE id=?",String.class,job));
+        assertArrayEquals(new byte[]{1,2,3},jdbc.queryForObject("SELECT input_cipher FROM ai_job WHERE id=?",byte[].class,job));
+        assertEquals(1,jdbc.queryForObject("SELECT reserved FROM budget_account WHERE workspace_id=?",Integer.class,space));
+        assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM outbox_event WHERE aggregate_id=?",Integer.class,job));
+        // The same current schema must also support a new installation's local seed, without duplicates.
+        var seed=new dev.relayops.identity.LocalSeed(jdbc,new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder(4),"local-fixture-password-only");
+        seed.run(null); seed.run(null);
+        assertEquals(2,jdbc.queryForObject("SELECT COUNT(*) FROM workspace w JOIN tenant_member m ON m.tenant_id=w.tenant_id WHERE w.code IN ('a','b') AND m.role='ADMIN'",Integer.class));
+        assertEquals(6,jdbc.queryForObject("SELECT COUNT(*) FROM user_account WHERE username IN ('owner.a','operator.a','viewer.a','owner.b','operator.b','viewer.b')",Integer.class));
+        assertEquals(1,((java.util.List<?>)new dev.relayops.identity.Access(jdbc).me("owner.a").get("workspaces")).size());
     }
 }

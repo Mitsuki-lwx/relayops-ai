@@ -1,3 +1,4 @@
+param([switch]$FakeModel)
 $ErrorActionPreference = 'Stop'
 $taskRoot = Split-Path -Parent $PSScriptRoot
 $envFile = Join-Path $taskRoot 'ops/.env'
@@ -9,6 +10,8 @@ foreach ($line in [IO.File]::ReadAllLines($envFile)) {
 }
 Push-Location (Join-Path $taskRoot 'backend')
 try {
-    & mvn.cmd -s ../ops/maven-settings.xml -gs ../ops/maven-settings.xml -B -ntp spring-boot:run
+    $mavenArguments = @('-s','../ops/maven-settings.xml','-gs','../ops/maven-settings.xml','-B','-ntp','spring-boot:run')
+    if ($FakeModel) { $mavenArguments += '-Dspring-boot.run.arguments=--relayops.model.mode=fake' }
+    & mvn.cmd @mavenArguments
     if ($LASTEXITCODE -ne 0) { throw 'Backend exited unsuccessfully.' }
 } finally { Pop-Location }

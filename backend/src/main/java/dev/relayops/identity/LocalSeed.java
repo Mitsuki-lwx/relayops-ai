@@ -33,11 +33,14 @@ public class LocalSeed implements ApplicationRunner {
             var existing = jdbc.queryForList("SELECT id FROM workspace WHERE code = ?", String.class, code);
             if (!existing.isEmpty()) continue;
             String workspaceId = UUID.randomUUID().toString();
-            jdbc.update("INSERT INTO workspace(id, code, name) VALUES (?, ?, ?)", workspaceId, code, "演示空间 " + code.toUpperCase());
+            String tenantId = UUID.randomUUID().toString();
+            jdbc.update("INSERT INTO tenant(id, name) VALUES (?, ?)", tenantId, "演示公司 " + code.toUpperCase());
+            jdbc.update("INSERT INTO workspace(id, code, name, tenant_id) VALUES (?, ?, ?, ?)", workspaceId, code, "演示空间 " + code.toUpperCase(), tenantId);
             jdbc.update("INSERT INTO application(id, workspace_id, name) VALUES (?, ?, ?)", UUID.randomUUID().toString(), workspaceId, "技术文档提取");
             for (String role : List.of("OWNER", "OPERATOR", "VIEWER")) {
                 String id = UUID.randomUUID().toString();
                 jdbc.update("INSERT INTO user_account(id, username, password_hash) VALUES (?, ?, ?)", id, role.toLowerCase() + "." + code, encoder.encode(password));
+                jdbc.update("INSERT INTO tenant_member(tenant_id, user_id, role) VALUES (?, ?, ?)", tenantId, id, role.equals("OWNER") ? "ADMIN" : "MEMBER");
                 jdbc.update("INSERT INTO workspace_member(workspace_id, user_id, role) VALUES (?, ?, ?)", workspaceId, id, role);
             }
         }
