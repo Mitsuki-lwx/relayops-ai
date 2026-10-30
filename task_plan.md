@@ -4,10 +4,10 @@
 完成 Outbox/RabbitMQ、Docker 存储迁移到 F 盘，并继续实现排队取消与明确重跑；以真实数据库、Broker 和浏览器验证责任与用量边界。
 
 ## Next Step
-实现 OpenAI 兼容 Chat Completions、配置冻结和有界心跳，接入工作台并验证后提交推送。
+本批兼容接口、配置绑定、心跳与工作台验证已完成并推送；后续按新一批需求推进供应商效果评估和组织隔离。
 
 ## Current Phase
-Phase 11
+Phase 11 complete
 
 ## Phases
 
@@ -62,8 +62,8 @@ Phase 11
 
 ### Phase 11: Compatible model verification and publication
 - [x] 本机 HTTP 故障、真实数据库/消息和浏览器验证，自审与文档。
-- [ ] 自动提交推送并核对远程。
-- **Status:** in_progress
+- [x] 自动提交推送并核对远程。
+- **Status:** complete
 
 ## Git follow-up
 2026-10-29 用户提供 relayops-ai 远程。已初始化仓库，保留远程 8923f53 初始历史，本地 main 追踪 origin/main。
