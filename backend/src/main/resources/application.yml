@@ -1,0 +1,59 @@
+spring:
+  application:
+    name: relayops
+  profiles:
+    default: local
+  datasource:
+    url: ${DB_URL:jdbc:mysql://127.0.0.1:3307/relayops?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true}
+    username: ${DB_USERNAME:relayops}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 6
+      connection-init-sql: SET time_zone = '+00:00'
+  flyway:
+    enabled: true
+  task:
+    scheduling:
+      pool:
+        size: 2
+  rabbitmq:
+    host: ${RABBITMQ_HOST:127.0.0.1}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:relayops}
+    password: ${RABBITMQ_PASSWORD:}
+    virtual-host: ${RABBITMQ_VHOST:relayops}
+    connection-timeout: 2s
+    channel-rpc-timeout: 2s
+    requested-heartbeat: 15s
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
+      retry:
+        enabled: false
+    listener:
+      simple:
+        acknowledge-mode: manual
+        concurrency: 1
+        max-concurrency: 1
+        prefetch: 1
+        default-requeue-rejected: false
+        retry:
+          enabled: false
+server:
+  address: 127.0.0.1
+  port: ${PORT:8080}
+  servlet:
+    session:
+      timeout: 30m
+      cookie:
+        http-only: true
+        same-site: lax
+relayops:
+  master-key: ${RELAYOPS_MASTER_KEY}
+  demo-password: ${RELAYOPS_DEMO_PASSWORD}
+  worker-enabled: ${RELAYOPS_WORKER_ENABLED:true}
+  relay-enabled: ${RELAYOPS_RELAY_ENABLED:true}
+  recovery-enabled: ${RELAYOPS_RECOVERY_ENABLED:true}
+  consumer-enabled: ${RELAYOPS_CONSUMER_ENABLED:${RELAYOPS_WORKER_ENABLED:true}}
+  pending-limit: ${RELAYOPS_PENDING_LIMIT:1000}

@@ -1,0 +1,104 @@
+# 验证记录
+
+## 第三阶段取消与明确重跑
+
+2026-10-29，继续 Sol Advisor solo 路由，无辅助 agent。Docker 原生迁移完成，数据盘为 `F:/DockerData/disk/docker_data.vhdx`，C 盘旧数据盘不存在；对象清单和旧结果读取验证见 docker-storage.md。
+
+- 后端 **39 项通过，0 失败、0 跳过**：8 项规则、7 项原数据库、9 项生命周期、14 项真实 Broker 消息测试、1 项逐级升级测试。命令和竞争测试使用真实 MySQL 8.4，消息测试使用真实 RabbitMQ，测试库/vhost 与演示环境隔离。
+- V1→V2→V3 实际升级保留旧 Job、预算和 Outbox，旧 CREATE_JOB 补齐成功响应；V1/V2 与阶段前快照 SHA-256 一致。演示库也已成功迁移到 V3。
+- QUEUED 取消和原受理日额度释放只发生一次；RUNNING/终态返回 409；与领取竞争只允许取消成功且零 SENT，或取消冲突且一次 SENT；取消后旧信封不创建 Attempt。
+- FAILED/UNKNOWN 明确重跑创建新 ID、来源关联、当前配置、独立密文和 Outbox，来源状态与旧用量不变。8 次并发同键只产生一个子任务和一份额度。预算 429、积压 503、权限 403/404、缺确认或原因 422、版本冲突 409、TTL 410 均无孤立业务记录。
+- 浏览器 **5 项全部通过**：原有桌面/手机提交与原文依据、创建响应丢失；新增手机取消和明确重跑，命令成功响应丢失后刷新沿用原键和请求，新任务 ID 不变；来源跳转及真实 409/410 提示通过。命令以键盘 Enter 提交，390px 无页面横向溢出。首次加载等待 CSRF 初始化完成后才能登录，修复初轮暴露的初始化竞争。
+- 浏览器 UNKNOWN 来源由测试对自己新建的指定 UUID 注入 UNKNOWN/UNCERTAIN，不是实际供应商超时。子任务经过真实 AMQP 消费和 FakeModel 产生结果。故障测试短暂停止后自动恢复本项目 Broker。
+- 初轮测试遗漏 Compose 项目名，在 Broker 仍运行时注入过一条分录。最终对账发现，已按该指定测试任务的实际 SUCCEEDED/SENT 修复为 SPENT，并记录 TEST_FIXTURE_REPAIRED 审计；账户原计数未修改。夹具增加非 QUEUED 必须使事务失败的保护，并复验命令用例。
+- V3 启动后的原 HTTP 冒烟通过（CSRF、会话、202、幂等、权限、持久化结果和单 SENT）；Vue 类型检查与生产构建通过。
+
+证据：`artifacts/stage3-tests.log`、`artifacts/stage3-backend.log`、`artifacts/stage3-browser-final.log`、`artifacts/stage3-command-final.log`（强化夹具后重跑通过）、`artifacts/stage3-cancel-final.log`（修正空输入时截图等待条件后取消单项通过）、`artifacts/stage3-frontend-build.log`、`artifacts/stage3-http-smoke.log`、`artifacts/stage3-fixture-repair.log`。截图为 `cancel-mobile.png`、`rerun-desktop.png`、`rerun-mobile.png` 和原工作台截图，均在 artifacts 内。自审比较 `artifacts/stage3-before` 基线与当前 Java/Vue/迁移/测试源码；当前没有 Git 元数据，未创建提交或 PR。
+
+最终只读对账 `artifacts/stage3-reconciliation.log`：预算账户与分录差异 0、成功却缺结果 0、重复 SENT 0、缺幂等响应快照 0；两个依赖 healthy。工作台、CSRF 和管理界面均 HTTP 200，记录于 `artifacts/stage3-services.json`。
+
+当前仍为免费确定性假模型；真实供应商超时、长请求心跳、付费风险、回调与补投尚未实现。本阶段不代表完整 P0 或生产发布验收。
+
+事务与锁依据：[MySQL locking reads](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking-reads.html)、[Spring 声明式事务与代理边界](https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative/annotations.html)。
+
+## 第二阶段 Outbox 与 RabbitMQ
+
+2026-10-29，按用户确认的 Sol / High 和 Sol Advisor solo 路由实现、自审与验证，无辅助 agent。官方 Spring AMQP API 核对后接入，仍使用确定性假模型。
+
+- RabbitMQ 4.3.6-management 已由 Compose 下载启动，健康检查通过；AMQP/管理端口仅绑定 127.0.0.1。镜像锁定 `rabbitmq@sha256:54cb013d76cd1fd6c0a0708f34062ad61c452bb6f016b434c6c33f1a765d2b58`。
+- 最终后端 **27 项通过，0 失败、0 跳过**：8 项规则、7 项数据库、11 项真实 Broker 消息故障测试、1 项 V1→V2 升级测试。
+- 升级用例在专用库先迁移 V1 并写入一条旧排队任务，再迁移 V2，确认任务和预留额度保留、首代 Outbox 自动生成；重复迁移无重复事件。V1 文件与改动前 SHA-256 一致。
+- 事务回滚没有 Job/额度分录/Outbox 残留；同键并发仅创建一条首代 Outbox。积压容量测试使用上限 2，第三个新意图返回 503，旧意图仍可重放。
+- 实际 Broker 验证 mandatory return 后不标 SENT；确认已到达但刻意省略数据库回写时，发布租约恢复后重发同 messageId；过期发布者不能覆盖新 claim。
+- 同信封发送十次只调用一次 Fake 模型；消费结果提交后关闭真实 AMQP channel、不发 ACK，重投不会再次调用。
+- PREPARED 失效生成新代次，旧消息不执行，迟到 token 不覆盖结果；SENT 失效进入 UNKNOWN/UNCERTAIN，旧消息重投不调用。已发布超时未领取的任务重建一条新代次 Outbox。
+- 非法 JSON、未知版本、错空间和不存在关联进入 DB 安全诊断，隔离队列仅收到 hash/错误码；不保留原始不可信字节。
+- 数据库异常用一次 spy 注入模拟；实际 Broker 上未确认消息随 channel 关闭重新入队，之后恢复处理成功。该项不是停掉 MySQL 的演练。消费容器配置五秒恢复间隔，Broker 停止期间日志显示间隔恢复，没有无延迟 requeue。
+- 新版 HTTP 冒烟通过，真实 Spring RabbitListener 消费并保存结果；已有权限、CSRF 和幂等行为保留。
+- **实际停止并恢复 RabbitMQ 容器的演练通过**：停止时 202、QUEUED、零次 SENT，原键重放不变；恢复后 SUCCEEDED，只有一次 SENT。
+- **3 项浏览器回归全部通过**：1440px、390px 的登录、键盘提交及依据阅读；已受理响应被丢弃后，重载页面沿用原幂等键恢复。此次使用 owner.b 避免耗尽空间 A 的演示额度。页面代码未改，第一阶段前端构建结果仍适用。
+
+原始证据：`artifacts/stage2-tests.log`、`backend/target/surefire-reports/`、`artifacts/stage2-http-smoke.log`、`artifacts/stage2-broker-fault.log`、`artifacts/stage2-backend-run.log`、`artifacts/playwright-results.json`。Broker 暂停、不可路由和数据库异常用例会产生预期的告警日志，不能据此误判测试失败。
+
+最终只读核对演示库：预算账户与分录不一致为 0、SUCCEEDED 却缺少结果为 0、同 Job 多条 SENT 为 0，记录于 `artifacts/stage2-reconciliation.log`。前端、CSRF 端点和 RabbitMQ 管理界面均返回 HTTP 200；MySQL/Broker 健康。
+
+自审使用 `artifacts/stage2-before` 与当前源码的 no-index diff，当前目录仍无 Git 仓库元数据；未创建提交或 PR。消息实现改动范围为 Java、V2、应用配置、Compose、脚本、测试和文档；前端只增加测试账号的环境变量选择。当前依旧不支持真实模型、长请求心跳、取消/明确重跑、回调与补投，不代表完整 P0 完成。
+
+消息发布整批等待确认预算五秒、发布租约三十秒、连接和 channel RPC 配置两秒。尚未进行所有网络黑洞、磁盘满和长连接极端故障的时限测试，不把本次功能用例推导为完整恢复 SLO。
+
+API 与协议依据：[Spring AMQP 发布确认与 returns](https://docs.spring.io/spring-amqp/reference/4.0/amqp/template.html)、[RabbitMQ confirms](https://www.rabbitmq.com/docs/confirms)、[Spring Boot AMQP](https://docs.spring.io/spring-boot/reference/messaging/amqp.html)、[配置项](https://docs.spring.io/spring-boot/appendix/application-properties/index.html)、[RabbitMQ 发布表](https://www.rabbitmq.com/release-information)。
+
+## 第一阶段历史记录
+
+日期：2026-10-29，时间使用 Asia/Shanghai。验证对象为本仓库首阶段代码。无真实模型、回调、RabbitMQ 或生产性能验证。
+
+## 实际环境
+
+| 工具 | 实际使用 |
+| --- | --- |
+| JDK | 21.0.7，D:/jdk |
+| Maven | 3.9.11，项目设置使用官方 HTTPS 仓库 |
+| Spring Boot | 4.1.2 |
+| MySQL | 8.4.7，Docker 容器 relayops-mysql-1，健康检查通过 |
+| MySQL 镜像 | mysql@sha256:0426ec38c7a10aa45ba383887df7878f74ee70e2fd589c7b69207f3577901903 |
+| Node / npm | 24.12.0 / 11.6.2 |
+| Vue / Vite | 3.5.44 / 7.3.7 |
+| Playwright | 1.64.1，使用已安装的无头 Microsoft Edge |
+
+## 已执行结果
+
+- 后端编译成功，首个 Flyway 迁移在空 MySQL 8.4 数据库实际执行成功。
+- 再次启动验证迁移校验通过，无重复迁移或演示账号初始化。
+- 后端规则测试验证 Unicode/NFC、输入边界、精确引用及 AES-GCM 上下文和防篡改。
+- 后端最终共 15 项测试通过、0 跳过：8 项规则测试、7 项真实数据库集成测试。后者覆盖同键并发受理、意图冲突、跨空间、VIEWER、TTL、SENT 后 UNKNOWN、排队到期释放、成员撤权和并发额度上限。
+- HTTP 冒烟通过：匿名 401、缺 CSRF 的登录 403、登录后提交 202、受理响应重放一致、意图冲突 409、持久化结果及一次 SENT、VIEWER 403、跨空间 404、退出旧会话失效。
+- 浏览器 3 项全部通过：1440px 和 390px 下真实登录、键盘提交、读取结果与展开原文；第三项拦截一次已受理的响应并断开，刷新页面后沿用同一幂等键重试成功。
+- 两张实际截图已目视检查；390px 无横向页面溢出。
+- 按 lockfile 执行 npm ci，npm 审计为 0 项漏洞；前端类型检查及生产构建成功。
+
+原始证据在本机忽略目录：`artifacts/backend-tests.log`、`backend/target/surefire-reports/`、`artifacts/http-smoke.log`、`artifacts/playwright-results.json`、`artifacts/workbench-1440.png` 和 `artifacts/workbench-390.png`。这些是实际执行记录，不是设计目标；重新运行测试会更新记录。
+
+## 当前阶段的限制
+
+- 数据库扫描承担首阶段任务分发；尚未实现 Outbox、RabbitMQ 与代次协议。
+- 假模型执行很短；正式模型的网络超时、心跳、供应商错误分类及故障闩锁尚未实现。当前恢复覆盖数据库租约失效，不代表已完成真实供应商故障测试。
+- UNKNOWN 不自动调用；取消和明确重跑端点尚未实现。
+- 每日额度与幂等已实现；独立 API 服务凭据、目的地、交付、补投与审计管理页面尚未实现。
+- 正文读取执行七天 TTL，已返回结果也设置浏览器到期清除；后台物理清理、三十天元数据清理、备份和恢复尚未实现。
+- 本地单主密钥配置，密文中存储 nonce；尚未实现 keyRef 轮换。不能丢失 ops/.env 中的密钥，否则现有密文无法解密。
+- 仅供本地开发；完整生产账号治理、登录限频、性能、监控与安全发布验收未完成。
+- 未提供完整设计所引用的独立工程包；当前 11 张业务表和测试为本次实现，不冒充原始 23 表、80 用例和 30 评测样本。
+
+## API 资料核对
+
+当前会话没有 Context7 MCP，按 CLAUDE.md 的“等文档工具”要求，使用官方资料核对 API：
+
+- [Spring Boot 系统要求](https://docs.spring.io/spring-boot/system-requirements.html)
+- [Spring Boot SQL 与 JDBC 支持](https://docs.spring.io/spring-boot/reference/data/sql.html)
+- [Spring Security CSRF 与显式令牌端点](https://docs.spring.io/spring-security/reference/servlet/exploits/csrf.html)
+- [Vue 快速开始](https://vuejs.org/guide/quick-start.html)
+- [Vite 快速开始及 Node 要求](https://vite.dev/guide/)
+- [Playwright 配置](https://playwright.dev/docs/test-configuration)
+- [Playwright 浏览器 channel](https://playwright.dev/docs/api/class-testoptions#test-options-channel)
+
+版本以实际构建和锁文件为准。安装时发现旧 Vue/Vite 补丁的已知漏洞，升级为 npm 官方审计给出的修复版本；升级后审计返回 0。
