@@ -4,10 +4,10 @@
 完成 Outbox/RabbitMQ、Docker 存储迁移到 F 盘，并继续实现排队取消与明确重跑；以真实数据库、Broker 和浏览器验证责任与用量边界。
 
 ## Next Step
-实现公司、部门/小组与显式空间授权的纵向链路；保留旧数据和直接成员权限，验证撤权与跨公司访问，再自动提交推送。
+本批公司、部门/小组与显式空间授权链路已实现、验证并推送。公司注册/邀请、公司配置与预算、回调/补投留给后续批次。
 
 ## Current Phase
-Phase 14
+Phase 14 complete
 
 ## Phases
 
@@ -75,8 +75,8 @@ Phase 14
 
 ### Phase 14: Organization isolation verification and publication
 - [x] MySQL升级、跨公司/跨组/撤权、幂等重放和浏览器验证。
-- [ ] 自审、凭据检查、提交推送并核对远程。
-- **Status:** in_progress
+- [x] 自审、凭据检查、提交推送并核对远程。
+- **Status:** complete
 
 ## Git follow-up
 2026-10-29 用户提供 relayops-ai 远程。已初始化仓库，保留远程 8923f53 初始历史，本地 main 追踪 origin/main。
