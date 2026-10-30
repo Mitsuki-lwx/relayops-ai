@@ -4,7 +4,7 @@
 完成 Outbox/RabbitMQ、Docker 存储迁移到 F 盘，并继续实现排队取消与明确重跑；以真实数据库、Broker 和浏览器验证责任与用量边界。
 
 ## Next Step
-完成交付差异与凭据自审、文档归档并自动提交推送。
+本批交付完成；下一批按需求推进外网目录或人工补投，先更新范围与验收。
 
 ## Current Phase
 Phase 23
@@ -143,5 +143,5 @@ Phase 23
 
 ### Phase 23: Delivery verification and publication
 - [x] 专用MySQL/Broker/接收端验证、迁移、故障恢复、权限、签名与浏览器。
-- [ ] 自审、凭据核查、提交推送。
-- **Status:** in_progress
+- [x] 自审、凭据核查、提交推送。
+- **Status:** complete
