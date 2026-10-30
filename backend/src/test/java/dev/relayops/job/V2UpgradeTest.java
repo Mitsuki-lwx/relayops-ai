@@ -67,6 +67,19 @@ class V2UpgradeTest {
         assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM outbox_event WHERE aggregate_id=?",Integer.class,job));
         for(var table:java.util.List.of("destination","job_destination","delivery","delivery_run","delivery_attempt","delivery_outbox"))
             assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM "+table,Integer.class));
+        String destination=UUID.randomUUID().toString(),delivery=UUID.randomUUID().toString(),run=UUID.randomUUID().toString(),attempt=UUID.randomUUID().toString();
+        jdbc.update("INSERT INTO destination(id,workspace_id,name,catalog_id,endpoint,secret_cipher) VALUES (?,?,'迁移目标','demo-local-v1','http://127.0.0.1:8091/relayops/events',?)",destination,space,new byte[]{4});
+        jdbc.update("INSERT INTO delivery(id,workspace_id,job_id,destination_id,catalog_id,endpoint,destination_name,payload_cipher,payload_hash,payload_expires_at) VALUES (?,?,?,?,'demo-local-v1','http://127.0.0.1:8091/relayops/events','迁移目标',?, ?,DATE_ADD(CURRENT_TIMESTAMP(3),INTERVAL 7 DAY))",delivery,space,job,destination,new byte[]{5,6},"1".repeat(64));
+        jdbc.update("INSERT INTO delivery_run(id,workspace_id,delivery_id,status,attempt_count) VALUES (?,?,?,'DEAD',1)",run,space,delivery);
+        jdbc.update("INSERT INTO delivery_attempt(id,workspace_id,run_id,attempt_no,key_id,status,http_status) VALUES (?,?,?,1,?,'FAILED',400)",attempt,space,run,destination);
+        var checksums=jdbc.queryForList("SELECT version,checksum FROM flyway_schema_history WHERE success=TRUE");
+        var v6=Flyway.configure().dataSource(source).locations("classpath:db/migration").target("6").load();v6.migrate();v6.migrate();
+        assertEquals(checksums,jdbc.queryForList("SELECT version,checksum FROM flyway_schema_history WHERE success=TRUE AND version<>'6'"));
+        assertArrayEquals(new byte[]{5,6},jdbc.queryForObject("SELECT payload_cipher FROM delivery WHERE id=?",byte[].class,delivery));
+        assertEquals("DEAD",jdbc.queryForObject("SELECT status FROM delivery_run WHERE id=?",String.class,run));
+        assertEquals(400,jdbc.queryForObject("SELECT http_status FROM delivery_attempt WHERE id=?",Integer.class,attempt));
+        assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM replay_plan",Integer.class));
+        assertNull(jdbc.queryForObject("SELECT replay_plan_id FROM delivery_run WHERE id=?",String.class,run));
         // The same current schema must also support a new installation's local seed, without duplicates.
         var seed=new dev.relayops.identity.LocalSeed(jdbc,new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder(4),"local-fixture-password-only");
         seed.run(null); seed.run(null);

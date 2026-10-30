@@ -16,8 +16,8 @@ const password = readFileSync(
   .split("=")
   .slice(1)
   .join("=");
-for (const width of [1440, 390]) {
-  test(`controlled callback and independent receiver at ${width}px`, async ({
+for (const {width, mode} of [{width:1440,mode:"retry"},{width:390,mode:"lost"},{width:390,mode:"replay"}]) {
+  test(`controlled callback ${mode} and independent receiver at ${width}px`, async ({
     page,
   }) => {
     test.setTimeout(90000);
@@ -86,7 +86,7 @@ for (const width of [1440, 390]) {
         fileURLToPath(file),
         "--db",
         inbox,
-        ...(width === 1440 ? ["--fail-first", "2"] : ["--drop-first-response"]),
+        ...(mode === "retry" ? ["--fail-first", "2"] : mode === "replay" ? ["--reject-first", "1"] : ["--drop-first-response"]),
       ],
       { cwd: root, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] },
     );
@@ -127,13 +127,44 @@ for (const width of [1440, 390]) {
       await page.getByRole("button", { name: /^提交任务/ }).click();
       const job = await (await created).json();
       const panel = page.getByRole("region", { name: "结果交付", exact: true });
+      if (mode === "replay") {
+        await expect(panel.getByText("已停止", {exact:true})).toBeVisible({timeout:30000});
+        await panel.getByLabel("补投原因", {exact:true}).fill("接收端故障已修复，核对后补投");
+        await panel.getByRole("button", {name:"预览补投",exact:true}).click();
+        const confirmButton=panel.getByRole("button", {name:"确认补投",exact:true});
+        await expect(confirmButton).toBeDisabled();
+        await panel.getByRole("checkbox", {name:/我确认接收端可能已处理/}).check();
+        await snapshot(page,"replay-preview");
+        await page.screenshot({path:"../artifacts/stage9-replay-preview-390.png",fullPage:true});
+        let acceptedKey="";
+        await page.route("**/replay-plans/*/confirm",async route=>{
+          acceptedKey=route.request().headers()["idempotency-key"];
+          const response=await route.fetch();expect(response.status()).toBe(202);
+          await route.abort("connectionreset");
+        },{times:1});
+        await confirmButton.click();
+        await expect(panel.getByRole("button", {name:"沿用原确认重试",exact:true})).toBeVisible();
+        await page.reload();
+        await expect(page.getByRole("heading",{name:"AI 任务工作台",exact:true})).toBeVisible();
+        await page.getByRole("button",{name:new RegExp(name)}).click();
+        const restored=page.waitForResponse(r=>r.request().method()==="POST"&&r.url().endsWith("/confirm"));
+        await panel.getByRole("button",{name:"沿用原确认重试",exact:true}).click();
+        const recovered=await restored;expect(recovered.status()).toBe(202);expect(recovered.request().headers()["idempotency-key"]).toBe(acceptedKey);
+      }
       await expect(panel.getByText("已确认接收", { exact: true })).toBeVisible({
         timeout: 45000,
       });
       await expect(panel.locator(".attempt-list li")).toHaveCount(
         width === 1440 ? 3 : 2,
       );
-      if (width === 390) await expect(panel).toContainText("结果未知");
+      if (mode === "lost") await expect(panel).toContainText("结果未知");
+      if (mode === "replay") {
+        await expect(panel).toContainText("第 1 轮 · 已停止");
+        await expect(panel).toContainText("第 2 轮 · 已确认接收");
+        await expect(panel.getByRole("button",{name:"沿用原确认重试",exact:true})).toHaveCount(0);
+        await snapshot(page,"replay");
+        await page.screenshot({path:"../artifacts/stage9-replay-390.png",fullPage:true});
+      }
       const current = await (
         await page.request.get(
           `/api/v1/workspaces/${workspace}/jobs/${job.jobId}`,

@@ -68,6 +68,7 @@ class DeliveryIntegrationTest {
     @Autowired JobWorker ai;
     @Autowired DeliveryWorker worker;
     @Autowired DeliveryStore store;
+    @Autowired ReplayService replays;
     @Autowired DestinationService destinations;
     @Autowired PayloadCipher cipher;
     @Autowired OutboxStore outbox;
@@ -82,7 +83,7 @@ class DeliveryIntegrationTest {
         try(var c=jdbc.getDataSource().getConnection()){assertEquals("relayops_test",c.getCatalog());}
         assertEquals("relayops-test",rabbit.getConnectionFactory().getVirtualHost());
         jdbc.update("UPDATE ai_job SET parent_job_id=NULL");
-        for(var table:List.of("delivery_outbox","delivery_attempt","delivery_run","delivery","job_destination","destination","quarantine_message","outbox_event","audit_event","idempotency_record","ai_result","budget_entry","ai_attempt","ai_job","budget_account"))jdbc.update("DELETE FROM "+table);
+        for(var table:List.of("delivery_outbox","delivery_attempt","delivery_run","replay_plan","delivery","job_destination","destination","quarantine_message","outbox_event","audit_event","idempotency_record","ai_result","budget_entry","ai_attempt","ai_job","budget_account"))jdbc.update("DELETE FROM "+table);
         admin.purgeQueue(RabbitConfig.AI_QUEUE,false);admin.purgeQueue(RabbitConfig.DELIVERY_QUEUE,false);
         calls.set(0);bodies.clear();headers.clear();response=200;failFirst=0;retryAfter=null;disconnect=false;delayMillis=0;requestArrived=null;responseRelease=null;
         workspace=jdbc.queryForObject("SELECT id FROM workspace WHERE code='a'",String.class);app=jdbc.queryForObject("SELECT id FROM application WHERE workspace_id=? LIMIT 1",String.class,workspace);
@@ -198,5 +199,89 @@ class DeliveryIntegrationTest {
         destinations.enable("owner.a",workspace,destination,new DestinationService.Enable(false,0L));assertThrows(ApiException.class,()->jobs.retry("owner.a",workspace,job,id(),new JobService.RetryJob(0L,"复验",true)));
         assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM ai_job",Integer.class));destinations.enable("owner.a",workspace,destination,new DestinationService.Enable(true,1L));
         var child=jobs.retry("owner.a",workspace,job,id(),new JobService.RetryJob(0L,"复验",true));assertEquals(destination,jdbc.queryForObject("SELECT destination_id FROM job_destination WHERE job_id=?",String.class,child.jobId()));
+    }
+    String stoppedDelivery() {
+        create();response=400;assertTrue(worker.execute(ready()));response=200;
+        return jdbc.queryForObject("SELECT id FROM delivery LIMIT 1",String.class);
+    }
+    ReplayService.Plan preview(String delivery) {
+        long version=jdbc.queryForObject("SELECT version FROM delivery WHERE id=?",Long.class,delivery);
+        return replays.preview("owner.a",workspace,delivery,new ReplayService.Preview(version,"接收端已修复"));
+    }
+    ReplayService.Accepted confirm(ReplayService.Plan plan,String key) {
+        return replays.confirm("owner.a",workspace,plan.planId(),key,new ReplayService.Confirm(true));
+    }
+    @Test void replayPreviewIsScopedBoundedAndHasNoSendOrRunSideEffects() {
+        String delivery=stoppedDelivery();int sent=calls.get();var plan=preview(delivery);
+        assertEquals(2,plan.nextRunNo());assertEquals(delivery,plan.deliveryId());
+        assertTrue(plan.expiresAt().isAfter(Instant.now().plusSeconds(110)));
+        assertTrue(plan.expiresAt().isBefore(Instant.now().plusSeconds(125)));
+        assertEquals(sent,calls.get());assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM delivery_run",Integer.class));
+        assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM delivery_outbox",Integer.class));
+        assertEquals(403,assertThrows(ApiException.class,()->replays.preview("viewer.a",workspace,delivery,new ReplayService.Preview(plan.deliveryVersion(),"no"))).status);
+        assertEquals(404,assertThrows(ApiException.class,()->replays.preview("owner.b",workspace,delivery,new ReplayService.Preview(plan.deliveryVersion(),"no"))).status);
+        assertThrows(ApiException.class,()->replays.preview("owner.a",workspace,delivery,new ReplayService.Preview(plan.deliveryVersion()," ")));
+        assertEquals(409,assertThrows(ApiException.class,()->replays.preview("owner.a",workspace,delivery,new ReplayService.Preview(999L,"修复"))).status);
+        jdbc.update("UPDATE delivery_run SET status='SUCCEEDED'");assertEquals(409,assertThrows(ApiException.class,()->preview(delivery)).status);
+    }
+    @Test void replayConfirmationPreservesBytesHistoryBudgetAndOriginalSuccessSnapshot() {
+        String delivery=stoppedDelivery();var plan=preview(delivery);var other=preview(delivery);String key=id();
+        long modelCalls=fake.callCount();var budgets=jdbc.queryForList("SELECT * FROM budget_account");byte[] body=bodies.getFirst();
+        var accepted=confirm(plan,key);assertEquals(accepted,confirm(plan,key));assertEquals(2,accepted.runNo());
+        assertEquals(409,assertThrows(ApiException.class,()->confirm(plan,id())).status);
+        assertEquals(409,assertThrows(ApiException.class,()->confirm(other,key)).status);
+        assertEquals(404,assertThrows(ApiException.class,()->replays.confirm("operator.a",workspace,plan.planId(),id(),new ReplayService.Confirm(true))).status);
+        assertEquals("CONFIRMED",jdbc.queryForObject("SELECT status FROM replay_plan WHERE id=?",String.class,plan.planId()));
+        assertEquals(accepted.runId(),jdbc.queryForObject("SELECT confirmed_run_id FROM replay_plan WHERE id=?",String.class,plan.planId()));
+        assertEquals(plan.planId(),jdbc.queryForObject("SELECT replay_plan_id FROM delivery_run WHERE id=?",String.class,accepted.runId()));
+        assertTrue(worker.execute(envelope("delivery_outbox",accepted.runId(),"DELIVERY_SEND")));
+        assertArrayEquals(body,bodies.getLast());assertEquals(headers.getFirst().get("Delivery-Id"),headers.getLast().get("Delivery-Id"));
+        assertNotEquals(headers.getFirst().get("Run-Id"),headers.getLast().get("Run-Id"));
+        assertEquals(modelCalls,fake.callCount());assertEquals(budgets,jdbc.queryForList("SELECT * FROM budget_account"));
+        assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM ai_job",Integer.class));
+        var view=store.list("viewer.a",workspace,jdbc.queryForObject("SELECT job_id FROM delivery",String.class)).getFirst();
+        assertEquals(2,view.runNo());assertEquals(2,view.runs().size());assertEquals("DEAD",view.runs().get(1).status());assertEquals(1,view.runs().get(1).attempts().size());
+        assertEquals(accepted,confirm(plan,key)); // Acceptance remains PENDING even after the new run succeeds.
+        assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM audit_event WHERE operation='DELIVERY_REPLAY_CONFIRMED'",Integer.class));
+    }
+    @Test void replayExpiredChangedOrDisabledPlansCannotCreateAnotherRun() {
+        String delivery=stoppedDelivery();var expired=preview(delivery);
+        jdbc.update("UPDATE replay_plan SET expires_at=DATE_SUB(CURRENT_TIMESTAMP(3),INTERVAL 1 SECOND) WHERE id=?",expired.planId());
+        assertEquals(410,assertThrows(ApiException.class,()->confirm(expired,id())).status);
+        var changed=preview(delivery);destinations.enable("owner.a",workspace,destination,new DestinationService.Enable(false,0L));
+        assertEquals(422,assertThrows(ApiException.class,()->confirm(changed,id())).status);
+        destinations.enable("owner.a",workspace,destination,new DestinationService.Enable(true,1L));
+        assertEquals(409,assertThrows(ApiException.class,()->confirm(changed,id())).status);
+        var hash=preview(delivery);jdbc.update("UPDATE delivery SET payload_hash=?","f".repeat(64));
+        assertEquals(409,assertThrows(ApiException.class,()->confirm(hash,id())).status);
+        var ttl=preview(delivery);jdbc.update("UPDATE delivery SET payload_expires_at=DATE_SUB(CURRENT_TIMESTAMP(3),INTERVAL 1 SECOND)");
+        assertEquals(410,assertThrows(ApiException.class,()->confirm(ttl,id())).status);
+        assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM delivery_run",Integer.class));
+        assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM delivery_outbox",Integer.class));
+    }
+    @Test void replayAuthorizationAndTtlAreRecheckedEvenForOriginalKey() {
+        String delivery=stoppedDelivery();var plan=preview(delivery);String key=id();var accepted=confirm(plan,key);
+        jdbc.update("UPDATE workspace_member m JOIN user_account u ON u.id=m.user_id SET m.active=FALSE WHERE u.username='owner.a' AND m.workspace_id=?",workspace);
+        try {assertEquals(404,assertThrows(ApiException.class,()->confirm(plan,key)).status);}
+        finally {jdbc.update("UPDATE workspace_member m JOIN user_account u ON u.id=m.user_id SET m.active=TRUE WHERE u.username='owner.a' AND m.workspace_id=?",workspace);}
+        assertEquals(accepted,confirm(plan,key));jdbc.update("UPDATE delivery SET payload_expires_at=DATE_SUB(CURRENT_TIMESTAMP(3),INTERVAL 1 SECOND)");
+        assertEquals(410,assertThrows(ApiException.class,()->confirm(plan,key)).status);
+    }
+    @Test void concurrentPlansConfirmAtMostOneNewRun() throws Exception {
+        String delivery=stoppedDelivery();var first=preview(delivery);var second=preview(delivery);
+        var gate=new java.util.concurrent.CountDownLatch(1);
+        java.util.function.Function<ReplayService.Plan,Integer> invoke=p->{try{gate.await();confirm(p,id());return 202;}catch(ApiException ex){return ex.status;}catch(InterruptedException ex){throw new RuntimeException(ex);}};
+        var one=java.util.concurrent.CompletableFuture.supplyAsync(()->invoke.apply(first));var two=java.util.concurrent.CompletableFuture.supplyAsync(()->invoke.apply(second));gate.countDown();
+        var outcomes=List.of(one.get(5,java.util.concurrent.TimeUnit.SECONDS),two.get(5,java.util.concurrent.TimeUnit.SECONDS));
+        assertEquals(1,outcomes.stream().filter(s->s==202).count());assertEquals(1,outcomes.stream().filter(s->s==409).count());
+        assertEquals(2,jdbc.queryForObject("SELECT COUNT(*) FROM delivery_run",Integer.class));
+    }
+    @Test void concurrentSameKeyRecoversOneRunAndConfirmationRollbackIsAtomic() throws Exception {
+        String delivery=stoppedDelivery();var plan=preview(delivery);String key=id();
+        assertThrows(IllegalStateException.class,()->tx.executeWithoutResult(s->{confirm(plan,key);throw new IllegalStateException("injected-after-replay");}));
+        assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM delivery_run",Integer.class));assertEquals("READY",jdbc.queryForObject("SELECT status FROM replay_plan WHERE id=?",String.class,plan.planId()));
+        var one=java.util.concurrent.CompletableFuture.supplyAsync(()->confirm(plan,key));var two=java.util.concurrent.CompletableFuture.supplyAsync(()->confirm(plan,key));
+        assertEquals(one.get(5,java.util.concurrent.TimeUnit.SECONDS),two.get(5,java.util.concurrent.TimeUnit.SECONDS));
+        assertEquals(2,jdbc.queryForObject("SELECT COUNT(*) FROM delivery_run",Integer.class));
     }
 }

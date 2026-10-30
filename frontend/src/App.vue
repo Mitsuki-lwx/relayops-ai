@@ -1285,6 +1285,8 @@ onUnmounted(() => {
                   :workspace-id="workspaceId"
                   :job-id="selected.jobId"
                   :job-status="selected.status"
+                  :actor="me.username"
+                  :can-replay="!viewer"
                 />
                 <ResultView v-if="result" :result="result" />
               </section>

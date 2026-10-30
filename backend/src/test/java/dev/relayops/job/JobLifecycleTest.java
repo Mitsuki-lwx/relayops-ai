@@ -40,7 +40,7 @@ class JobLifecycleTest {
             assertTrue(connection.getMetaData().getURL().contains("/relayops_test?"), "Refuse to reset a non-test schema");
         }
         jdbc.update("UPDATE ai_job SET parent_job_id = NULL");
-        for (String table : List.of("delivery_outbox", "delivery_attempt", "delivery_run", "delivery", "job_destination", "destination", "quarantine_message", "outbox_event", "audit_event", "idempotency_record", "ai_result", "budget_entry", "ai_attempt", "ai_job", "budget_account")) jdbc.update("DELETE FROM " + table);
+        for (String table : List.of("delivery_outbox", "delivery_attempt", "delivery_run", "replay_plan", "delivery", "job_destination", "destination", "quarantine_message", "outbox_event", "audit_event", "idempotency_record", "ai_result", "budget_entry", "ai_attempt", "ai_job", "budget_account")) jdbc.update("DELETE FROM " + table);
         workspaceId = jdbc.queryForObject("SELECT id FROM workspace WHERE code = 'a'", String.class);
         applicationId = jdbc.queryForObject("SELECT id FROM application WHERE workspace_id = ? LIMIT 1", String.class, workspaceId);
     }

@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { ref, watch, onUnmounted } from "vue";
 import { api } from "./api";
+import ReplayPanel from "./ReplayPanel.vue";
 const props = defineProps<{
   workspaceId: string;
   jobId: string;
   jobStatus: string;
+  actor: string;
+  canReplay: boolean;
 }>();
 type Attempt = {
   id: string;
@@ -23,6 +26,9 @@ type Delivery = {
   errorCode: string | null;
   nextAttemptAt: string;
   attempts: Attempt[];
+  version: number;
+  runNo: number;
+  runs: { id: string; runNo: number; status: string; attemptCount: number; errorCode: string | null; nextAttemptAt: string; attempts: Attempt[] }[];
 };
 const items = ref<Delivery[]>([]),
   error = ref(""),
@@ -109,16 +115,12 @@ onUnmounted(() => {
         ><span>{{ names[item.status] ?? item.status }}</span>
       </div>
       <p class="muted">交付 ID：{{ item.id }}</p>
-      <p>
-        {{ item.attemptCount }} / 6 次尝试<span v-if="item.errorCode">
-          · {{ item.errorCode }}</span
-        >
-      </p>
-      <p v-if="item.status === 'RETRY_WAIT'" class="muted">
-        下次最早：{{ format(item.nextAttemptAt) }}
-      </p>
+      <div v-for="run in item.runs" :key="run.id" class="delivery-run">
+      <h4>第 {{ run.runNo }} 轮 · {{ names[run.status] ?? run.status }}</h4>
+      <p>{{ run.attemptCount }} / 6 次尝试<span v-if="run.errorCode"> · {{ run.errorCode }}</span></p>
+      <p v-if="run.status === 'RETRY_WAIT'" class="muted">下次最早：{{ format(run.nextAttemptAt) }}</p>
       <ol class="attempt-list">
-        <li v-for="attempt in item.attempts" :key="attempt.id">
+        <li v-for="attempt in run.attempts" :key="attempt.id">
           <span
             >第 {{ attempt.attemptNo }} 次 ·
             {{ names[attempt.status] ?? attempt.status }}</span
@@ -133,9 +135,11 @@ onUnmounted(() => {
           }}</span>
         </li>
       </ol>
+      </div>
       <p v-if="item.status === 'DEAD'" class="muted">
-        本轮已停止，不会自动继续；当前阶段尚未开放人工补投。
+        本轮已停止，不会自动继续；有权限的操作者可预览并确认补投。
       </p>
+      <ReplayPanel v-if="canReplay" :workspace-id="workspaceId" :job-id="jobId" :delivery-id="item.id" :version="item.version" :status="item.status" :actor="actor" @changed="load" />
     </article>
   </section>
 </template>

@@ -39,13 +39,20 @@ public class DeliveryStore {
         }
     }
     public record Attempt(String id,int attemptNo,String status,Integer httpStatus,String errorCode,Instant startedAt,Instant completedAt) {}
-    public record View(String id,String destinationName,String runId,String status,int attemptCount,String errorCode,Instant nextAttemptAt,Instant payloadExpiresAt,List<Attempt> attempts) {}
+    public record Run(String id,int runNo,String status,int attemptCount,String errorCode,Instant nextAttemptAt,List<Attempt> attempts) {}
+    public record View(String id,String destinationName,String runId,String status,int attemptCount,String errorCode,Instant nextAttemptAt,Instant payloadExpiresAt,List<Attempt> attempts,long version,int runNo,List<Run> runs) {}
+    private List<Attempt> attempts(String run) {
+        return jdbc.query("SELECT * FROM delivery_attempt WHERE run_id=? ORDER BY attempt_no",(a,i)->new Attempt(a.getString("id"),a.getInt("attempt_no"),a.getString("status"),a.getObject("http_status",Integer.class),a.getString("error_code"),a.getObject("started_at",LocalDateTime.class).toInstant(ZoneOffset.UTC),a.getObject("completed_at",LocalDateTime.class)==null?null:a.getObject("completed_at",LocalDateTime.class).toInstant(ZoneOffset.UTC)),run);
+    }
+    private List<Run> runs(String delivery) {
+        return jdbc.query("SELECT * FROM delivery_run WHERE delivery_id=? ORDER BY run_no DESC",(r,i)->new Run(r.getString("id"),r.getInt("run_no"),r.getString("status"),r.getInt("attempt_count"),r.getString("error_code"),r.getObject("next_attempt_at",LocalDateTime.class).toInstant(ZoneOffset.UTC),attempts(r.getString("id"))),delivery);
+    }
     public List<View> list(String username,String workspace,String job) {
         access.require(username,workspace,false,false,false);
         if(jdbc.queryForObject("SELECT COUNT(*) FROM ai_job WHERE workspace_id=? AND id=?",Integer.class,workspace,job)!=1) throw new ApiException(404,"NOT_FOUND","任务不存在或不可访问");
-        return jdbc.query("SELECT d.*,r.id AS run_id,r.status,r.attempt_count,r.error_code,r.next_attempt_at FROM delivery d JOIN delivery_run r ON r.delivery_id=d.id WHERE d.workspace_id=? AND d.job_id=? AND r.run_no=(SELECT MAX(x.run_no) FROM delivery_run x WHERE x.delivery_id=d.id) ORDER BY d.id",
+        return jdbc.query("SELECT d.*,r.id AS run_id,r.run_no,r.status,r.attempt_count,r.error_code,r.next_attempt_at FROM delivery d JOIN delivery_run r ON r.delivery_id=d.id WHERE d.workspace_id=? AND d.job_id=? AND r.run_no=(SELECT MAX(x.run_no) FROM delivery_run x WHERE x.delivery_id=d.id) ORDER BY d.id",
             (rs,n)->new View(rs.getString("id"),rs.getString("destination_name"),rs.getString("run_id"),rs.getString("status"),rs.getInt("attempt_count"),rs.getString("error_code"),
                 rs.getObject("next_attempt_at",LocalDateTime.class).toInstant(ZoneOffset.UTC),rs.getObject("payload_expires_at",LocalDateTime.class).toInstant(ZoneOffset.UTC),
-                jdbc.query("SELECT * FROM delivery_attempt WHERE run_id=? ORDER BY attempt_no",(a,i)->new Attempt(a.getString("id"),a.getInt("attempt_no"),a.getString("status"),a.getObject("http_status",Integer.class),a.getString("error_code"),a.getObject("started_at",LocalDateTime.class).toInstant(ZoneOffset.UTC),a.getObject("completed_at",LocalDateTime.class)==null?null:a.getObject("completed_at",LocalDateTime.class).toInstant(ZoneOffset.UTC)),rs.getString("run_id"))),workspace,job);
+                attempts(rs.getString("run_id")),rs.getLong("version"),rs.getInt("run_no"),runs(rs.getString("id"))),workspace,job);
     }
 }

@@ -1473,6 +1473,16 @@ footer {
 .delivery-item {
   margin-top: 20px;
 }
+.delivery-run, .replay-controls {
+  margin-top: 20px;
+}
+.replay-controls {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+.replay-controls textarea { min-height: 80px; margin-bottom: 12px; }
+.replay-controls button { margin: 4px 8px 4px 0; }
+.replay-preview { margin-top: 16px; }
 .delivery-item .section-heading {
   flex-wrap: wrap;
   gap: 8px;

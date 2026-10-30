@@ -15,7 +15,7 @@ from pathlib import Path
 from uuid import UUID
 
 
-def server(port, keys_file, database, fail_first=0, drop_first_response=False):
+def server(port, keys_file, database, fail_first=0, drop_first_response=False, reject_first=0):
     database = Path(database)
     database.parent.mkdir(parents=True, exist_ok=True)
     with closing(sqlite3.connect(database)) as connection:
@@ -73,6 +73,9 @@ def server(port, keys_file, database, fail_first=0, drop_first_response=False):
                     return
                 with gate:
                     seen += 1
+                    if seen <= reject_first:
+                        self.reply(400)
+                        return
                     if seen <= fail_first:
                         self.reply(500)
                         return
@@ -108,8 +111,9 @@ if __name__ == "__main__":
     parser.add_argument("--db", default="artifacts/receiver/inbox.sqlite")
     parser.add_argument("--fail-first", type=int, default=0)
     parser.add_argument("--drop-first-response", action="store_true")
+    parser.add_argument("--reject-first", type=int, default=0)
     options = parser.parse_args()
-    receiver = server(options.port, options.keys, options.db, options.fail_first, options.drop_first_response)
+    receiver = server(options.port, options.keys, options.db, options.fail_first, options.drop_first_response, options.reject_first)
     print(f"Local demo receiver listening on 127.0.0.1:{receiver.server_port}", flush=True)
     try:
         receiver.serve_forever()

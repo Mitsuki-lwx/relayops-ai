@@ -4,10 +4,10 @@
 完成 Outbox/RabbitMQ、Docker 存储迁移到 F 盘，并继续实现排队取消与明确重跑；以真实数据库、Broker 和浏览器验证责任与用量边界。
 
 ## Next Step
-本批交付完成；下一批按需求推进外网目录或人工补投，先更新范围与验收。
+完成补投页面三档布局、账目核对与差异自审，再提交推送。
 
 ## Current Phase
-Phase 23
+Phase 26
 
 ## Phases
 
@@ -145,3 +145,16 @@ Phase 23
 - [x] 专用MySQL/Broker/接收端验证、迁移、故障恢复、权限、签名与浏览器。
 - [x] 自审、凭据核查、提交推送。
 - **Status:** complete
+
+### Phase 24: Replay design
+- [x] 明确仅最新DEAD、两分钟预览、权限/版本/目标/hash/TTL绑定及历史保留。
+- **Status:** complete
+
+### Phase 25: Replay implementation
+- [x] V6计划表、预览/确认、幂等及审计、完整Run历史与页面恢复。
+- **Status:** complete
+
+### Phase 26: Replay verification and publication
+- [ ] 隔离数据库/Broker并发、撤权、过期/停用、响应丢失、浏览器与构建。
+- [ ] 自审、凭据检查、自动提交推送。
+- **Status:** in_progress
