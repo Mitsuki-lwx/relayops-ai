@@ -21,6 +21,14 @@ public class JobController {
     @GetMapping("/jobs")
     Object list(Principal principal, @PathVariable String workspaceId) { return jobs.list(principal.getName(), workspaceId); }
 
+    @GetMapping("/job-history")
+    Object history(Principal principal,@PathVariable String workspaceId,
+            @RequestParam(required=false) String q,@RequestParam(required=false) String status,
+            @RequestParam(required=false) String beforeCreatedAt,@RequestParam(required=false) String beforeId,
+            @RequestParam(defaultValue="25") int limit) {
+        return jobs.history(principal.getName(),workspaceId,q,status,beforeCreatedAt,beforeId,limit);
+    }
+
     @PostMapping("/jobs/{jobId}/cancel")
     Object cancel(Principal principal, @PathVariable String workspaceId, @PathVariable String jobId,
             @RequestHeader(value = "Idempotency-Key", required = false) String key, @RequestBody JobService.CancelJob request) {

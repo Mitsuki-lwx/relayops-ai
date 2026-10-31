@@ -7,6 +7,7 @@ import ResultView from "./ResultView.vue";
 import DestinationPanel, { type Destination } from "./DestinationPanel.vue";
 import DeliveryPanel from "./DeliveryPanel.vue";
 import OperationsPanel from "./OperationsPanel.vue";
+import JobHistoryPanel from "./JobHistoryPanel.vue";
 import { jobError } from "./jobErrors";
 import type { ResultBody } from "./resultTypes";
 
@@ -92,7 +93,7 @@ async function refreshDestinations() {
   );
   if (id === workspaceId.value) destinations.value = items;
 }
-type View = "tasks" | "new" | "organization" | "destinations" | "operations";
+type View = "tasks" | "new" | "organization" | "destinations" | "operations" | "history";
 const activeView = ref<View>("tasks"),
   menuOpen = ref(false),
   hasOrganization = ref(false);
@@ -141,7 +142,7 @@ function navigate(view: View) {
 }
 function syncView() {
   const view = window.location.hash.slice(1);
-  activeView.value = ["new", "organization", "destinations", "operations"].includes(view)
+  activeView.value = ["new", "organization", "destinations", "operations", "history"].includes(view)
     ? (view as View)
     : "tasks";
   menuOpen.value = false;
@@ -250,6 +251,21 @@ async function select(job: Job) {
   error.value = "";
   traceId.value = "";
   await refreshSelected();
+}
+async function openHistory(job: Job) {
+  const current = generation, space = workspaceId.value;
+  busy.value = true;
+  try {
+    const latest = await api<Job>(path(`/jobs/${job.jobId}`));
+    if (current !== generation || space !== workspaceId.value) return;
+    navigate("tasks");
+    await select(latest);
+    if (error.value) backToList();
+  } catch (ex) {
+    if (current === generation && space === workspaceId.value) {
+      navigate("tasks"); backToList(); showError(ex);
+    }
+  } finally { busy.value = false; }
 }
 async function readResult() {
   if (!selected.value) return;
@@ -702,7 +718,7 @@ onUnmounted(() => {
             <span>{{ workspace?.tenantName ?? "RelayOps" }}</span
             ><span aria-hidden="true">/</span
             ><strong>{{
-              activeView === "operations" ? "运行概览" : activeView === "destinations"
+              activeView === "history" ? "任务历史" : activeView === "operations" ? "运行概览" : activeView === "destinations"
                 ? "回调目的地"
                 : activeView === "organization"
                   ? "组织管理"
@@ -795,7 +811,7 @@ onUnmounted(() => {
             <div>
               <h1>
                 {{
-                  activeView === "operations" ? "空间运行概览" : activeView === "destinations"
+                  activeView === "history" ? "完整任务历史" : activeView === "operations" ? "空间运行概览" : activeView === "destinations"
                     ? "回调目的地"
                     : activeView === "organization"
                       ? "公司与组织管理"
@@ -806,7 +822,7 @@ onUnmounted(() => {
               </h1>
               <p class="muted">
                 {{
-                  activeView === "operations" ? "核对全部保留任务、当前交付与消息责任。" : activeView === "destinations"
+                  activeView === "history" ? "搜索当前空间的历史任务，继续查看处理与结果。" : activeView === "operations" ? "核对全部保留任务、当前交付与消息责任。" : activeView === "destinations"
                     ? "配置受控接收端，交付结果并跟踪每次尝试。"
                     : activeView === "organization"
                       ? "管理部门、小组和空间访问权限。"
@@ -824,7 +840,7 @@ onUnmounted(() => {
             >
               <AppIcon name="plus" />新建文档</button
             ><button
-              v-else-if="activeView === 'new'"
+              v-else-if="activeView === 'new' || activeView === 'history'"
               class="quiet"
               @click="navigate('tasks')"
             >
@@ -839,6 +855,7 @@ onUnmounted(() => {
             @changed="refreshAccess"
           />
           <OperationsPanel v-if="activeView === 'operations'" :workspace-id="workspaceId" :owner="workspace?.role === 'OWNER'" :disabled="busy || !!pending || !!commandPending" />
+          <JobHistoryPanel v-if="activeView === 'history'" :workspace-id="workspaceId" :disabled="busy || !!pending || !!commandPending" @open="openHistory" />
           <DestinationPanel
             v-if="activeView === 'destinations'"
             :workspace-id="workspaceId"
@@ -848,7 +865,7 @@ onUnmounted(() => {
           />
           <template
             v-if="
-              activeView !== 'organization' && activeView !== 'destinations' && activeView !== 'operations'
+              activeView !== 'organization' && activeView !== 'destinations' && activeView !== 'operations' && activeView !== 'history'
             "
           >
             <div class="metrics">
@@ -1128,6 +1145,7 @@ onUnmounted(() => {
                 <p class="list-footnote">
                   显示 {{ visibleJobs.length }} / {{ jobs.length }} 条已载入任务
                   · 最多载入最近 50 条
+                  <button class="quiet" :disabled="busy || !!pending || !!commandPending" @click="navigate('history')">查询完整任务历史</button>
                 </p>
               </section>
               <section v-if="selected" class="panel detail">

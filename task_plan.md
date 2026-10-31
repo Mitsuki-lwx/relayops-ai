@@ -4,10 +4,10 @@
 完成 Outbox/RabbitMQ、Docker 存储迁移到 F 盘，并继续实现排队取消与明确重跑；以真实数据库、Broker 和浏览器验证责任与用量边界。
 
 ## Next Step
-本批空间运行概览/OWNER安全审计已完成并推送，等待下一批功能需求。
+实现并验证完整任务历史、空间服务端筛选与稳定分页，接入已有任务详情。
 
 ## Current Phase
-Phase 33
+Phase 36
 
 ## Phases
 
@@ -188,3 +188,17 @@ Phase 33
 - [x] 真实库权限/隔离/统计/分页负例、浏览器三档与切空间/撤权清除，构建及自审。
 - [x] 凭据检查、自动提交推送并核对远程。
 - **Status:** complete
+
+
+### Phase 34: Job history design
+- [x] 定义安全字段、字面搜索、状态筛选、时间/ID游标和上下文清理，更新三份文档。
+- **Status:** complete
+
+### Phase 35: Job history implementation
+- [x] 只读历史端点、真实库负例、筛选分页页面和详情入口。
+- **Status:** complete
+
+### Phase 36: Job history verification and publication
+- [x] 适用后端/浏览器三档、构建、只读对账及自审。
+- [ ] 凭据检查、提交推送并核对远程。
+- **Status:** in_progress

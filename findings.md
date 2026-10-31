@@ -78,3 +78,9 @@
 - 第十一阶段选择只读运行概览与OWNER审计，原设计含概览/审计及15秒刷新。全局quarantine_message无workspace_id，明确不纳入空间概览；审计detail_json可能含原因/正文片段，仅读白名单列。历史交付DEAD与最新成功必须分开，概览只数最新Run。
 
 - 第十一阶段自审：两端点所有查询限定workspace，审计先按当前有效OWNER授权再校验筛选，白名单不读取detail_json；只读RR中无业务写入或外发，SENT/UNKNOWN路径和V1-V7均未修改。前端epoch/序列/AbortController阻止旧上下文回填，单15秒定时器在隐藏/卸载停止；最终23浏览器及103后端验证通过。
+
+- 第十二阶段选择完整任务历史，原设计要求created_at DESC/id DESC且不是消费游标。保留现有队列50条契约，新增独立只读历史端点和页面；LOCATE字面子串不解释LIKE通配符，同时间用ID次序，不读取密文，不改变SENT/UNKNOWN或模型调用。
+
+- MySQL8.4真实测试验证LOCATE的参数字符集会受ASCII id列影响；搜索时显式CONVERT(j.id USING utf8mb4)，排序仍按原ascii_bin主键。官方转换函数资料：https://dev.mysql.com/doc/refman/8.4/en/cast-functions.html 。
+
+- 第十二阶段自审：history先鉴权后参数校验，所有状态/关键词/时间/ID均绑定，唯一动态SQL为固定占位符个数。显式元数据列也用于原list/get回归；排序不读取游标任务，空间边界不由客户端游标决定。前端在load开始清空旧页，序号和AbortController丢弃旧上下文，详情先重新授权，拒绝后回队列清除旧信息。

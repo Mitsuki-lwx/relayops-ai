@@ -1,5 +1,20 @@
 # 验证记录
 
+## 第十二阶段完整任务历史
+
+2026-10-31，Sol Advisor solo实现、自审。新增只读历史接口和队列内入口，已有元数据SELECT改为显式安全列；没有迁移，V1–V7不变。
+
+- **109后端测试全部通过，0失败/错误/跳过**：`scripts/test-backend.ps1`使用三个隔离测试schema和relayops-test vhost、Fake模型。新增6项真实MySQL测试验证60条相同时间的历史跨三页无重复、插入较新任务不推挤下一页、原最近列表仍50条、字面%/_/反斜线、中文/NFC/emoji、ID子串、状态组、limit/完整游标/时间精度/年份负例、三角色/跨空间/公司撤权、锚点删除和TTL后的元数据保留、查询无审计/模型/额度写入。
+- 首轮109中106通过，3项搜索用例暴露ASCII UUID列让Unicode参数转换失败；搜索时显式`CONVERT(j.id USING utf8mb4)`后109全过，排序仍用原ASCII主键。转换语法核对[MySQL8.4官方文档](https://dev.mysql.com/doc/refman/8.4/en/cast-functions.html)。首次从项目根调用Maven相对仓库目录落到工作区外而失败，后续使用既有脚本在backend执行，未改全局Maven设置。
+- **32浏览器测试全部通过**：`npx playwright test job-history.spec.ts operations.spec.ts llm-results.spec.ts visual.spec.ts`，新增9项历史：三档搜索/翻页/草稿保持/原详情、状态过滤/空态/重置、延迟响应切空间、拒绝清除/详情拒绝、VIEWER无正文入口、卸载丢弃响应及主库只读历史对账。其余23项为运行概览、结果夹具和元数据布局回归。历史夹具含62条，最早5条在最近50条范围外；全部API本地拦截并拒绝写入。初次夹具3/8通过，补齐交付GET拦截和select角色定位后复验通过；无真实供应商请求。
+- 主库历史按每页7条遍历，与空间概览任务总数一致且无重复；HTTP非法状态/limit/不完整游标均422。用最早记录完整ID搜索返回1条，业务API均为GET。主服务18080已加载接口，本地已授权清理开关和模型配置保留。
+- **类型检查/构建及taste通过**：`npm run build`；lint0FAIL/3条既有真实ID等宽警告；原生inspect最终历史快照1440/768/390为0FAIL/0WARN。目视检查后压缩表单标签留白、手机查询/清空并排，受影响三档用例单独复验通过，复用其余29项记录；快照为5条早期任务夹具，不冒充真实主库数据。
+- **主库12类事实哈希核对不变**：重启前基线到浏览器验收后，Job/Result元数据与密文hash、预算账户/分录、AI尝试、目的地密钥hash、交付/轮次/尝试、审计和两种Outbox一致。仅只读查询，不增加付费调用或业务写入。
+
+证据位于本机忽略目录：`artifacts/stage12-tests.log`、`stage12-browser.log`、`stage12-layout-final.log`、`stage12-build.log`、`stage12-taste-lint.log`、`stage12-inspect/`、三档`stage12-history-fixture-*.png`及`stage12-history-main-readonly.png`。对账脚本与本批基线分别为`stage12-readonly-check.mjs`/`stage12-readonly-before.json`。
+
+限制：搜索遵循现有MySQL排序规则；子串搜索没有全文索引或性能SLO。分页不冻结跨请求状态，不保证晚提交记录完全不漏，不是消费游标。正文TTL/授权、公司边界和SENT/UNKNOWN执行路径保持原契约。
+
 ## 第十一阶段空间运行概览与安全审计
 
 功能提交b5bbac4486da4c3fb6da66168d67c98ead59d4fe已推送origin/main并核对远程完整哈希一致。20个暂存文件核对19个本地凭据/回调密钥值无命中；ops/.env、核对产物、数据库和依赖/构建输出未提交。

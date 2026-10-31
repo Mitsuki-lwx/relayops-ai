@@ -4,20 +4,24 @@ import dev.relayops.common.ApiException;
 import dev.relayops.common.PayloadCipher;
 import dev.relayops.identity.Access;
 import dev.relayops.messaging.OutboxStore;
+import dev.relayops.messaging.ReadyMessage;
 import dev.relayops.delivery.DestinationService;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.Normalizer;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 import tools.jackson.databind.json.JsonMapper;
 
 @Service
@@ -58,7 +62,8 @@ public class JobService {
     }
 
     private static final String SELECT = """
-            SELECT j.*, (SELECT COUNT(*) FROM ai_attempt a WHERE a.job_id = j.id AND a.sent_at IS NOT NULL) AS model_calls
+            SELECT j.id,j.application_id,j.title,j.status,j.model_profile,j.error_code,j.version,j.created_at,j.payload_expires_at,j.parent_job_id,
+              (SELECT COUNT(*) FROM ai_attempt a WHERE a.workspace_id=j.workspace_id AND a.job_id=j.id AND a.sent_at IS NOT NULL) AS model_calls
             FROM ai_job j
             """;
 
@@ -244,6 +249,42 @@ public class JobService {
     public List<Job> list(String username, String workspaceId) {
         access.require(username, workspaceId, false, false, false);
         return jdbc.query(SELECT + " WHERE j.workspace_id = ? ORDER BY j.created_at DESC, j.id DESC LIMIT 50", this::map, workspaceId);
+    }
+
+    public record HistoryCursor(Instant createdAt, String id) {}
+    public record HistoryPage(List<Job> items, HistoryCursor nextCursor) {}
+
+    @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
+    public HistoryPage history(String username,String workspace,String q,String status,String beforeCreatedAt,String beforeId,int limit) {
+        access.require(username,workspace,false,false,false);
+        if(limit<1 || limit>100)throw DocumentInput.invalid("每页数量需为1至100");
+        String term=Normalizer.normalize(q==null?"":q.strip(),Normalizer.Form.NFC);
+        if(term.codePointCount(0,term.length())>100)throw DocumentInput.invalid("搜索词最多100字符");
+        List<String> states=status==null?List.of():switch(status) {
+            case "ACTIVE" -> List.of("QUEUED","RUNNING");
+            case "ATTENTION" -> List.of("FAILED","UNKNOWN");
+            case "QUEUED","RUNNING","SUCCEEDED","FAILED","UNKNOWN","CANCELLED" -> List.of(status);
+            default -> throw DocumentInput.invalid("任务状态筛选无效");
+        };
+        LocalDateTime before=null;
+        if(beforeCreatedAt!=null || beforeId!=null) {
+            if(beforeCreatedAt==null || beforeId==null || !ReadyMessage.uuid(beforeId))throw DocumentInput.invalid("需要完整的有效分页游标");
+            try {
+                Instant instant=Instant.parse(beforeCreatedAt);
+                before=LocalDateTime.ofInstant(instant,ZoneOffset.UTC);
+                if(instant.getNano()%1000000!=0 || before.getYear()<1000 || before.getYear()>9999)throw new IllegalArgumentException();
+            } catch(Exception ex) {throw DocumentInput.invalid("游标时间需为有效的毫秒精度时间");}
+        }
+        var sql=new StringBuilder(SELECT+" WHERE j.workspace_id=?");
+        var args=new ArrayList<Object>();args.add(workspace);
+        if(!term.isEmpty()) {sql.append(" AND (LOCATE(?,j.title)>0 OR LOCATE(?,CONVERT(j.id USING utf8mb4))>0)");args.add(term);args.add(term);}
+        if(!states.isEmpty()) {sql.append(" AND j.status IN (").append(String.join(",",java.util.Collections.nCopies(states.size(),"?"))).append(")");args.addAll(states);}
+        if(before!=null) {sql.append(" AND (j.created_at<? OR (j.created_at=? AND j.id<?))");args.add(before);args.add(before);args.add(beforeId);}
+        sql.append(" ORDER BY j.created_at DESC,j.id DESC LIMIT ?");args.add(limit+1);
+        var rows=jdbc.query(sql.toString(),this::map,args.toArray());
+        var items=List.copyOf(rows.subList(0,Math.min(limit,rows.size())));
+        var cursor=rows.size()>limit?new HistoryCursor(items.getLast().createdAt(),items.getLast().jobId()):null;
+        return new HistoryPage(items,cursor);
     }
 
     public Job get(String username, String workspaceId, String id) {
