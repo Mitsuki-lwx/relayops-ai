@@ -4,7 +4,7 @@
 完成 Outbox/RabbitMQ、Docker 存储迁移到 F 盘，并继续实现排队取消与明确重跑；以真实数据库、Broker 和浏览器验证责任与用量边界。
 
 ## Next Step
-实现并验证完整任务历史、空间服务端筛选与稳定分页，接入已有任务详情。
+本批完整任务历史已完成并推送，等待下一批功能需求。
 
 ## Current Phase
 Phase 36
@@ -200,5 +200,5 @@ Phase 36
 
 ### Phase 36: Job history verification and publication
 - [x] 适用后端/浏览器三档、构建、只读对账及自审。
-- [ ] 凭据检查、提交推送并核对远程。
-- **Status:** in_progress
+- [x] 凭据检查、提交推送并核对远程。
+- **Status:** complete
