@@ -2,6 +2,8 @@
 
 ## 第十三阶段分析报告Markdown导出
 
+功能提交cfebec51c16dec906f2319ad5a5e54f97a9ef615已推送origin/main，远程完整哈希一致。16个暂存文件核对19个真实本地凭据/回调密钥值无命中；下载文件、正文、配置、数据库及构建/依赖输出未提交。
+
 2026-10-31，Sol Advisor solo实现、自审。仅前端及文档变化，无后端、迁移或依赖变化；**复用第十二阶段109后端全通过记录，本批未重跑后端测试**。服务端GET result仍执行当前成员/角色/TTL和RESULT_READ审计，导出不是额外模型任务。
 
 - **实际执行56项Playwright检查全部通过**：`npx playwright test report-export.spec.ts job-history.spec.ts operations.spec.ts llm-results.spec.ts visual.spec.ts`。55项浏览器+1项纯格式化；新增24项导出/格式负例，既有32项覆盖历史、概览、结果与元数据布局。首轮23导出/格式+9结果共32项通过，随后补上旧任务迟到拒绝不得清除新正文及明确等待退出完成，再执行最终56项。

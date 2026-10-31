@@ -4,7 +4,7 @@
 完成 Outbox/RabbitMQ、Docker 存储迁移到 F 盘，并继续实现排队取消与明确重跑；以真实数据库、Broker 和浏览器验证责任与用量边界。
 
 ## Next Step
-实现重新授权读取的分析报告Markdown导出，验证下载/权限/TTL和上下文竞争。
+本批分析报告Markdown导出已完成并推送，等待下一批功能需求。
 
 ## Current Phase
 Phase 39
@@ -214,5 +214,5 @@ Phase 39
 
 ### Phase 39: Analysis report export verification and publication
 - [x] 下载/格式/拒绝/竞争与三档浏览器、构建/只读对账及自审。
-- [ ] 暂存凭据检查、自动提交推送并核对远程。
-- **Status:** in_progress
+- [x] 暂存凭据检查、自动提交推送并核对远程。
+- **Status:** complete
