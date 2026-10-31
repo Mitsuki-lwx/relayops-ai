@@ -4,10 +4,10 @@
 完成 Outbox/RabbitMQ、Docker 存储迁移到 F 盘，并继续实现排队取消与明确重跑；以真实数据库、Broker 和浏览器验证责任与用量边界。
 
 ## Next Step
-完成禁用主库清理条件下的自审与发布；不可逆主库清理待用户明确批准。
+代码与验证已推送；等待用户明确批准启用主库自动清理，随后核对7条过期Fake正文及业务事实。
 
 ## Current Phase
-Phase 29
+Phase 30
 
 ## Phases
 
@@ -169,8 +169,8 @@ Phase 29
 
 ### Phase 29: Payload retention verification and publication
 - [x] 隔离库验证到期/未到期、跨空间、SENT边界、并发/回滚/重复清理与迁移。
-- [ ] 适用构建/浏览器、只读对账、自审与凭据检查，自动提交推送。
-- **Status:** in_progress
+- [x] 适用构建/浏览器、只读对账、自审与凭据检查，自动提交推送。
+- **Status:** complete
 
 ### Phase 30: Main-database cleanup activation
 - [ ] 自动审批拒绝删除主库7条过期Fake正文；代码与隔离验证完成后，等待用户明确批准再启用。
