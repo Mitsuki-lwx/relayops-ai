@@ -2,6 +2,8 @@
 
 ## 第十一阶段空间运行概览与安全审计
 
+功能提交b5bbac4486da4c3fb6da66168d67c98ead59d4fe已推送origin/main并核对远程完整哈希一致。20个暂存文件核对19个本地凭据/回调密钥值无命中；ops/.env、核对产物、数据库和依赖/构建输出未提交。
+
 2026-10-31，Sol Advisor solo实现、自审与验证。新增两个只读接口和独立运行概览页面，无迁移，V1–V7未改。
 
 - **103项后端测试全部通过**：`scripts/test-backend.ps1`使用独立relayops_test/relayops_messaging_test/relayops_upgrade_test和relayops-test vhost、Fake模型。新增6项真实MySQL用例覆盖当前角色/公司撤权、空间隔离、全量Job、最新Delivery Run、Outbox SENT排除/零值/最早时间、恢复与清理、安全列、边界过滤、超2^53字符串游标及分页期间新增事件。查询不增加审计、预算分录或模型调用。首轮新增测试的var复合声明编译错误已修正后重跑。
