@@ -4,7 +4,7 @@
 完成 Outbox/RabbitMQ、Docker 存储迁移到 F 盘，并继续实现排队取消与明确重跑；以真实数据库、Broker 和浏览器验证责任与用量边界。
 
 ## Next Step
-代码与验证已推送；等待用户明确批准启用主库自动清理，随后核对7条过期Fake正文及业务事实。
+主库自动清理已按授权启用并完成对账；后续按需求继续开发。
 
 ## Current Phase
 Phase 30
@@ -173,5 +173,5 @@ Phase 30
 - **Status:** complete
 
 ### Phase 30: Main-database cleanup activation
-- [ ] 自动审批拒绝删除主库7条过期Fake正文；代码与隔离验证完成后，等待用户明确批准再启用。
-- **Status:** pending
+- [x] 用户于2026-10-31明确批准启用主库自动清理；完成清理与前后对账。
+- **Status:** complete
