@@ -1,5 +1,9 @@
 type Explanation = { title: string; message: string };
 const explanations: Record<string, Explanation> = {
+  PAYLOAD_EXPIRED: {
+    title: "正文保留期已到",
+    message: "正文已过期，不能读取、重跑或补投。任务、调用记录和原用量保留；已发送的模型请求不会自动重发。",
+  },
   MODEL_CONFIG_CHANGED: {
     title: "模型配置已变更",
     message:

@@ -155,13 +155,13 @@ public class JobService {
     }
 
     private record Source(String id, String applicationId, String title, String status, String modelProfile,
-                          String language, LocalDate acceptedDate, long version, Instant expiresAt, byte[] input) {}
+                          String language, LocalDate acceptedDate, long version, Instant expiresAt, byte[] input, boolean deleted) {}
 
     private Source source(String workspaceId, String id, boolean lock) {
         return jdbc.query("SELECT * FROM ai_job WHERE workspace_id = ? AND id = ?" + (lock ? " FOR UPDATE" : ""),
                 (rs, row) -> new Source(rs.getString("id"), rs.getString("application_id"), rs.getString("title"), rs.getString("status"),
                         rs.getString("model_profile"), rs.getString("output_language"), rs.getDate("accepted_date").toLocalDate(),
-                        rs.getLong("version"), rs.getObject("payload_expires_at", LocalDateTime.class).toInstant(ZoneOffset.UTC), rs.getBytes("input_cipher")),
+                        rs.getLong("version"), rs.getObject("payload_expires_at", LocalDateTime.class).toInstant(ZoneOffset.UTC), rs.getBytes("input_cipher"),rs.getObject("payload_deleted_at")!=null),
                 workspaceId, id).stream().findFirst().orElseThrow(() -> new ApiException(404, "NOT_FOUND", "任务不存在或不可访问"));
     }
 
@@ -176,7 +176,7 @@ public class JobService {
 
     private void requireLiveInput(Source source) {
         Instant now = jdbc.queryForObject("SELECT CURRENT_TIMESTAMP(3)", (rs, row) -> rs.getObject(1, LocalDateTime.class).toInstant(ZoneOffset.UTC));
-        if (!source.expiresAt().isAfter(now) || source.input() == null || source.input().length == 0)
+        if (!source.expiresAt().isAfter(now) || source.deleted() || source.input() == null || source.input().length == 0)
             throw new ApiException(410, "PAYLOAD_EXPIRED", "来源正文已过期或不可用，不能重跑");
     }
 
@@ -256,7 +256,9 @@ public class JobService {
     public Object result(String username, String workspaceId, String id) {
         Access.Member member = access.require(username, workspaceId, false, true, true);
         var rows = jdbc.queryForList("""
-                SELECT j.status, j.input_cipher, (j.payload_expires_at <= CURRENT_TIMESTAMP(3)) AS expired, r.result_cipher
+                SELECT j.status, j.input_cipher, (j.payload_expires_at <= CURRENT_TIMESTAMP(3)
+                  OR j.payload_deleted_at IS NOT NULL OR j.input_cipher IS NULL
+                  OR r.payload_deleted_at IS NOT NULL) AS expired, r.result_cipher
                 FROM ai_job j LEFT JOIN ai_result r ON r.job_id = j.id AND r.workspace_id = j.workspace_id
                 WHERE j.workspace_id = ? AND j.id = ?
                 """, workspaceId, id);
@@ -264,6 +266,7 @@ public class JobService {
         var row = rows.getFirst();
         if (((Number) row.get("expired")).intValue() != 0) throw new ApiException(410, "PAYLOAD_EXPIRED", "正文已过期");
         if (!row.get("status").equals("SUCCEEDED")) throw new ApiException(409, "RESULT_NOT_READY", "结果尚未就绪");
+        if (row.get("result_cipher") == null) throw new ApiException(410, "PAYLOAD_EXPIRED", "结果正文已清除或不可用");
         String context = workspaceId + ":" + id;
         Object result = json.readTree(cipher.decrypt((byte[]) row.get("result_cipher"), context + ":result"));
         var paragraphs = DocumentInput.paragraphs(cipher.decrypt((byte[]) row.get("input_cipher"), context + ":input"));

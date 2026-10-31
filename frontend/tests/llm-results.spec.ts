@@ -171,6 +171,14 @@ test("denied re-read clears every previous result and source", async ({
   expect(state.mutations).toBe(0);
 });
 
+test("expired payload explains retention and offers no impossible rerun", async ({ page }) => {
+  const state = await fixture(page, result, "PAYLOAD_EXPIRED");
+  await expect(page.getByRole("region", { name: "任务错误说明" })).toContainText("正文保留期已到");
+  await expect(page.getByRole("button", { name: "确认创建新任务", exact: true })).toHaveCount(0);
+  await expect(page.locator(".result")).toHaveCount(0);
+  expect(state.mutations).toBe(0);
+});
+
 for (const code of [
   "OUTPUT_INVALID",
   "MODEL_RESULT_UNKNOWN",

@@ -4,10 +4,10 @@
 完成 Outbox/RabbitMQ、Docker 存储迁移到 F 盘，并继续实现排队取消与明确重跑；以真实数据库、Broker 和浏览器验证责任与用量边界。
 
 ## Next Step
-单条补投已完成验证与推送；后续按需求推进受控外网目录或保留期清理。
+完成禁用主库清理条件下的自审与发布；不可逆主库清理待用户明确批准。
 
 ## Current Phase
-Phase 26
+Phase 29
 
 ## Phases
 
@@ -158,3 +158,20 @@ Phase 26
 - [x] 隔离数据库/Broker并发、撤权、过期/停用、响应丢失、浏览器与构建。
 - [x] 自审、凭据检查、自动提交推送。
 - **Status:** complete
+
+### Phase 27: Payload retention design
+- [x] 明确七天TTL、终态清理、活跃责任结算、在线/备份边界，更新三份文档和ADR。
+- **Status:** complete
+
+### Phase 28: Payload retention implementation
+- [x] V7、分批清理与标记、执行前TTL校验及恢复、正文读取拒绝和安全错误说明。
+- **Status:** complete
+
+### Phase 29: Payload retention verification and publication
+- [x] 隔离库验证到期/未到期、跨空间、SENT边界、并发/回滚/重复清理与迁移。
+- [ ] 适用构建/浏览器、只读对账、自审与凭据检查，自动提交推送。
+- **Status:** in_progress
+
+### Phase 30: Main-database cleanup activation
+- [ ] 自动审批拒绝删除主库7条过期Fake正文；代码与隔离验证完成后，等待用户明确批准再启用。
+- **Status:** pending

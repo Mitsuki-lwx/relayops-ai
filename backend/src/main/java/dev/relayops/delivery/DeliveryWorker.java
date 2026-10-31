@@ -81,10 +81,14 @@ public class DeliveryWorker {
         return new Work(e.workspaceId(),(String)d.get("id"),e.aggregateId(),attempt,token,(String)d.get("endpoint"),(String)d.get("destination_id"),(byte[])targets.getFirst().get("secret_cipher"),(byte[])d.get("payload_cipher"),(String)d.get("payload_hash"));
     }
     private String invalid(java.util.Map<String,Object> d,java.util.Map<String,Object> r,Instant time) {
-        if(!((LocalDateTime)d.get("payload_expires_at")).toInstant(ZoneOffset.UTC).isAfter(time)) return "PAYLOAD_EXPIRED";
+        if(payloadExpired(d,time)) return "PAYLOAD_EXPIRED";
         if(!catalog.current((String)d.get("catalog_id"),(String)d.get("endpoint"))) return "CATALOG_CHANGED";
         if(((Number)r.get("attempt_count")).intValue()>=6 || !((LocalDateTime)r.get("deadline_at")).toInstant(ZoneOffset.UTC).isAfter(time)) return "DELIVERY_BUDGET_EXHAUSTED";
         return null;
+    }
+    private boolean payloadExpired(java.util.Map<String,Object> d,Instant time) {
+        return !((LocalDateTime)d.get("payload_expires_at")).toInstant(ZoneOffset.UTC).isAfter(time)
+                || d.get("payload_deleted_at")!=null || d.get("payload_cipher")==null;
     }
     private void dead(String run,String delivery,String error) {
         jdbc.update("UPDATE delivery_run SET status='DEAD',error_code=?,lease_token=NULL,lease_until=NULL WHERE id=?",error,run);
@@ -120,7 +124,10 @@ public class DeliveryWorker {
         var candidates=jdbc.queryForList("""
                 SELECT id,workspace_id FROM delivery_run WHERE (status='IN_FLIGHT' AND lease_until<=CURRENT_TIMESTAMP(3))
                   OR (status='RETRY_WAIT' AND next_attempt_at<=CURRENT_TIMESTAMP(3))
-                  OR (status='PENDING' AND dispatched_at<=DATE_SUB(CURRENT_TIMESTAMP(3),INTERVAL 120 SECOND)) LIMIT 25
+                  OR (status='PENDING' AND dispatched_at<=DATE_SUB(CURRENT_TIMESTAMP(3),INTERVAL 120 SECOND))
+                  OR (status IN ('PENDING','RETRY_WAIT','IN_FLIGHT') AND EXISTS (SELECT 1 FROM delivery d
+                    WHERE d.id=delivery_run.delivery_id AND (d.payload_expires_at<=CURRENT_TIMESTAMP(3)
+                      OR d.payload_deleted_at IS NOT NULL OR d.payload_cipher IS NULL))) LIMIT 25
                 """);
         for(var candidate:candidates) tx.executeWithoutResult(s->{
             String id=(String)candidate.get("id"),workspace=(String)candidate.get("workspace_id");
@@ -130,6 +137,9 @@ public class DeliveryWorker {
                 if(((LocalDateTime)r.get("lease_until")).toInstant(ZoneOffset.UTC).isAfter(time))return;
                 var attempts=jdbc.queryForList("SELECT id FROM delivery_attempt WHERE run_id=? AND status='STARTED' ORDER BY attempt_no DESC LIMIT 1",String.class,id);
                 if(!attempts.isEmpty())finish(id,attempts.getFirst(),new WebhookTransport.Outcome(null,"LEASE_EXPIRED",true,0));
+            } else if((r.get("status").equals("PENDING") || r.get("status").equals("RETRY_WAIT"))
+                    && payloadExpired(jdbc.queryForMap("SELECT * FROM delivery WHERE id=? FOR UPDATE",r.get("delivery_id")),time)) {
+                dead(id,(String)r.get("delivery_id"),"PAYLOAD_EXPIRED");
             } else if((r.get("status").equals("RETRY_WAIT") && !((LocalDateTime)r.get("next_attempt_at")).toInstant(ZoneOffset.UTC).isAfter(time))
                     || (r.get("status").equals("PENDING") && !((LocalDateTime)r.get("dispatched_at")).toInstant(ZoneOffset.UTC).plusSeconds(120).isAfter(time))) {
                 long generation=((Number)r.get("dispatch_generation")).longValue()+1;

@@ -64,5 +64,6 @@ relayops:
   worker-enabled: ${RELAYOPS_WORKER_ENABLED:true}
   relay-enabled: ${RELAYOPS_RELAY_ENABLED:true}
   recovery-enabled: ${RELAYOPS_RECOVERY_ENABLED:true}
+  retention-enabled: ${RELAYOPS_RETENTION_ENABLED:false}
   consumer-enabled: ${RELAYOPS_CONSUMER_ENABLED:${RELAYOPS_WORKER_ENABLED:true}}
   pending-limit: ${RELAYOPS_PENDING_LIMIT:1000}

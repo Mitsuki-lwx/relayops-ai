@@ -9,7 +9,7 @@ AI 技术文档任务与结果交付平台。当前链路：登录 → 公司与
 - [LLM 与组织隔离扩展建议](docs/product-directions.md)：已实现边界与后续扩展。
 
 - [需求范围](docs/spec.md)：当前做什么，以及完成条件。
-- [实施任务](docs/tasks.md)：第九阶段的 8 项任务及依赖。
+- [实施任务](docs/tasks.md)：第十阶段的 8 项任务及依赖。
 - [前端设计](docs/frontend-design.md)：taste app风格、信息层级和验证方式。
 - [验收清单](docs/checklist.md)：只勾选已有证据的项。
 - [首阶段决策](docs/adr/0001-first-slice.md)：先打通纵向链路的取舍。
@@ -19,6 +19,7 @@ AI 技术文档任务与结果交付平台。当前链路：登录 → 公司与
 - [组织隔离决策](docs/adr/0005-organization-isolation.md)：公司边界、显式授权、迁移与撤权锁序。
 - [受控回调决策](docs/adr/0006-controlled-delivery.md)：冻结目标、签名、独立重试与接收端去重。
 - [单条补投决策](docs/adr/0007-delivery-replay.md)：两分钟预览、当前权限与版本绑定、原确认键恢复。
+- [在线载荷清理决策](docs/adr/0008-online-payload-retention.md)：到期结算、终态清理、分批审计及备份边界。
 - [原理与代码导读](docs/walkthrough.md)：202、事务和 SENT 边界。
 - [验证记录](docs/verification.md)：实际命令、结果及限制。
 
@@ -148,7 +149,7 @@ python scripts/demo-receiver.py
 
 验签与去重测试：`python scripts/test-demo-receiver.py`。`delivery.spec.ts` 为独立接收端浏览器用例，需 Fake 后端和未占用的8091；默认浏览器命令还包含其他会写任务的用例，不应在真实模型模式运行。本批验收使用隔离测试数据库及专用 vhost，未动演示空间额度。
 
-当前不包含外网 HTTPS 目录、密钥轮换、批量补投、接收端外部业务动作或物理 TTL 清理；两个系统无共享事务，不承诺端到端恰好一次。
+当前不包含外网 HTTPS 目录、密钥轮换、批量补投、接收端外部业务动作或底层存储安全擦除；两个系统无共享事务，不承诺端到端恰好一次。
 
 ## 单条交付补投
 
@@ -159,6 +160,16 @@ python scripts/demo-receiver.py
 确认响应丢失时，浏览器按账号/空间/任务/交付保存原计划与确认键。刷新后重新选择任务，点击“沿用原确认重试”恢复同一接受快照；不会自动发送。放弃本地记录不撤销服务端已接受的轮次，应先刷新核对。其他账号不能消费此计划，旧确认键也不能绕过撤权或载荷过期。
 
 API以 `/api/v1/workspaces/{workspaceId}` 为前缀：POST `/deliveries/{deliveryId}/replay-plans` 携带 `{expectedVersion,reason}`；POST `/replay-plans/{planId}/confirm` 携带 `Idempotency-Key` 和 `{acknowledgeDuplicateDelivery:true}`，成功202。现有任务交付查询增加根version、最新runNo及runs历史。所有写入沿用会话与CSRF，不接受正文或地址替换。
+
+## 七天到期在线载荷清理
+
+任务仍按受理时的 `payloadExpiresAt` 执行七天保留期。到期后立即拒绝正文读取、重跑和补投；未发送的过期任务结算失败并释放预留，已SENT的未知请求保留UNKNOWN/UNCERTAIN，不重新调用模型。迟到成功结果不能重建已清正文。
+
+新增清理器默认关闭。维护者确认到期数据可删除后，在本地 `ops/.env` 设置 `RELAYOPS_RETENTION_ENABLED=true` 并重启后端。启用后默认每分钟检查，每次最多清理25个终态Job的输入/结果和25个已结束交付的载荷；活跃责任先由恢复器结算。每项清理、删除时间和安全审计同事务，重复或并发执行不重复清理。设为false并重启可停用后续清理，已清正文无法通过平台恢复。
+
+清理仅置空在线数据库的密文字段，保留ID/hash、外键、状态、模型调用、额度、全部交付轮次和业务审计。不会删除签名密钥，也不会删除本地演示接收端SQLite/密钥文件、日志或备份。SQL置空不等于数据库页/redo/binlog/备份的安全擦除或磁盘空间立即归还；三十天元数据清理和备份保留仍需后续实现。
+
+本机预检有7条已到期的旧Fake任务（含2条结果）。本轮自动审批拒绝了在主库直接启用不可逆删除，主服务仅升级V7且保留 `RELAYOPS_RETENTION_ENABLED=false`；这7条正文保持不变，等待用户明确批准后再启用。
 
 ## 取消与明确重跑
 
@@ -192,4 +203,4 @@ scripts/    初始化、启动、集成测试和 HTTP 冒烟
 docs/       需求、任务、验收、决策和验证记录
 ```
 
-当前业务结构共 26 张表：原25张表加补投计划。V1–V5保持不变，V6追加计划与轮次关联，旧交付/尝试不变；已执行的迁移不可修改。
+当前业务结构共26张表。V1–V6保持不变，V7允许输入/结果/回调密文为空并追加删除标记和索引；迁移本身不清正文，已执行的迁移不可修改。

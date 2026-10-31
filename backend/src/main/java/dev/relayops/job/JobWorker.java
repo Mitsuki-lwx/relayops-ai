@@ -101,7 +101,8 @@ public class JobWorker {
     private Work claim(ReadyMessage envelope) {
         record Candidate(Work work, String status, boolean inTime) {}
         var jobs = jdbc.query("""
-                SELECT *, (queue_expires_at > CURRENT_TIMESTAMP(3)) AS in_time
+                SELECT *, (queue_expires_at > CURRENT_TIMESTAMP(3) AND payload_expires_at > CURRENT_TIMESTAMP(3)
+                  AND payload_deleted_at IS NULL AND input_cipher IS NOT NULL) AS in_time
                 FROM ai_job WHERE id = ? AND workspace_id = ? FOR UPDATE
                 """, (rs, row) -> new Candidate(new Work(rs.getString("id"), rs.getString("workspace_id"), rs.getDate("accepted_date").toLocalDate(),
                 rs.getString("title"), rs.getBytes("input_cipher"), rs.getString("output_language"), UUID.randomUUID().toString(), rs.getLong("dispatch_generation"), rs.getString("model_profile")),
@@ -134,6 +135,7 @@ public class JobWorker {
     private boolean markSent(Work work) {
         lockBudget(work);
         if (!owns(work)) return false;
+        if (!payloadLive(work)) return false; // Recovery closes the expired, unsent responsibility without a supplier call.
         int updated = jdbc.update("""
                 UPDATE ai_attempt SET status = 'SENT', sent_at = CURRENT_TIMESTAMP(3)
                 WHERE job_id = ? AND lease_token = ? AND status = 'PREPARED' AND sent_at IS NULL
@@ -149,6 +151,7 @@ public class JobWorker {
             lockBudget(work);
             if (!owns(work)) return;
             if (response != null) {
+                if (!payloadLive(work)) return; // Never restore an expired or already removed payload.
                 jdbc.update("INSERT INTO ai_result(job_id, workspace_id, result_cipher) VALUES (?, ?, ?)", work.id(), work.workspaceId(),
                         cipher.encrypt(response, work.workspaceId() + ":" + work.id() + ":result"));
                 deliveries.createForResult(work.workspaceId(),work.id(),response);
@@ -170,28 +173,41 @@ public class JobWorker {
         jdbc.update("UPDATE budget_entry SET state = 'RELEASED' WHERE job_id = ? AND state = 'RESERVED'", work.id());
     }
 
+    private boolean payloadLive(Work work) {
+        return !jdbc.queryForList("""
+                SELECT id FROM ai_job WHERE id=? AND payload_expires_at>CURRENT_TIMESTAMP(3)
+                  AND payload_deleted_at IS NULL AND input_cipher IS NOT NULL FOR UPDATE
+                """, String.class, work.id()).isEmpty();
+    }
+
     public void recover() {
         var candidates = jdbc.query("""
                 SELECT * FROM ai_job WHERE (status = 'RUNNING' AND lease_until <= CURRENT_TIMESTAMP(3))
-                  OR (status = 'QUEUED' AND queue_expires_at <= CURRENT_TIMESTAMP(3)) LIMIT 10
+                  OR (status = 'QUEUED' AND queue_expires_at <= CURRENT_TIMESTAMP(3))
+                  OR (status IN ('QUEUED','RUNNING') AND (payload_expires_at <= CURRENT_TIMESTAMP(3)
+                    OR payload_deleted_at IS NOT NULL OR input_cipher IS NULL)) LIMIT 10
                 """, (rs, row) -> new Work(rs.getString("id"), rs.getString("workspace_id"), rs.getDate("accepted_date").toLocalDate(),
                 null, null, null, rs.getString("lease_token"), rs.getLong("dispatch_generation"), rs.getString("model_profile")));
         for (Work work : candidates) tx.executeWithoutResult(transaction -> {
             lockBudget(work);
             var rows = jdbc.queryForList("""
-                    SELECT status FROM ai_job WHERE id = ? AND ((status = 'RUNNING' AND lease_until <= CURRENT_TIMESTAMP(3))
-                      OR (status = 'QUEUED' AND queue_expires_at <= CURRENT_TIMESTAMP(3)))
+                    SELECT status, (payload_expires_at <= CURRENT_TIMESTAMP(3) OR payload_deleted_at IS NOT NULL OR input_cipher IS NULL) AS payload_expired
+                    FROM ai_job WHERE id = ? AND ((status = 'RUNNING' AND lease_until <= CURRENT_TIMESTAMP(3))
+                      OR (status = 'QUEUED' AND queue_expires_at <= CURRENT_TIMESTAMP(3))
+                      OR (status IN ('QUEUED','RUNNING') AND (payload_expires_at <= CURRENT_TIMESTAMP(3)
+                        OR payload_deleted_at IS NOT NULL OR input_cipher IS NULL)))
                       AND dispatch_generation = ? AND lease_token <=> ? FOR UPDATE
                     """, work.id(), work.generation(), work.token());
             if (rows.isEmpty()) return;
             boolean sent = jdbc.queryForObject("SELECT COUNT(*) FROM ai_attempt WHERE job_id = ? AND sent_at IS NOT NULL", Integer.class, work.id()) > 0;
             boolean queued = rows.getFirst().get("status").equals("QUEUED");
-            String next = sent ? "UNKNOWN" : queued ? "FAILED" : "QUEUED";
-            String errorCode = sent ? "MODEL_RESULT_UNKNOWN" : queued ? "QUEUE_EXPIRED" : null;
+            boolean expired = ((Number)rows.getFirst().get("payload_expired")).intValue()!=0;
+            String next = sent ? "UNKNOWN" : queued || expired ? "FAILED" : "QUEUED";
+            String errorCode = expired ? "PAYLOAD_EXPIRED" : sent ? "MODEL_RESULT_UNKNOWN" : queued ? "QUEUE_EXPIRED" : null;
             if (sent) {
                 jdbc.update("UPDATE budget_account SET spent = spent - 1, uncertain = uncertain + 1 WHERE workspace_id = ? AND accepted_date = ?", work.workspaceId(), work.date());
                 jdbc.update("UPDATE budget_entry SET state = 'UNCERTAIN' WHERE job_id = ? AND state = 'SPENT'", work.id());
-            } else if (queued) release(work);
+            } else if (queued || expired) release(work);
             jdbc.update("UPDATE ai_attempt SET status = ?, completed_at = CURRENT_TIMESTAMP(3) WHERE job_id = ? AND status IN ('SENT','PREPARED')", sent ? "UNKNOWN" : "ABORTED", work.id());
             jdbc.update("""
                     UPDATE ai_job SET status = ?, error_code = ?, lease_token = NULL, lease_until = NULL, version = version + 1,

@@ -80,6 +80,17 @@ class V2UpgradeTest {
         assertEquals(400,jdbc.queryForObject("SELECT http_status FROM delivery_attempt WHERE id=?",Integer.class,attempt));
         assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM replay_plan",Integer.class));
         assertNull(jdbc.queryForObject("SELECT replay_plan_id FROM delivery_run WHERE id=?",String.class,run));
+        jdbc.update("INSERT INTO ai_result(job_id,workspace_id,result_cipher) VALUES (?,?,?)",job,space,new byte[]{7,8});
+        jdbc.update("UPDATE ai_job SET payload_expires_at=DATE_SUB(CURRENT_TIMESTAMP(3),INTERVAL 1 SECOND) WHERE id=?",job);
+        jdbc.update("UPDATE delivery SET payload_expires_at=DATE_SUB(CURRENT_TIMESTAMP(3),INTERVAL 1 SECOND) WHERE id=?",delivery);
+        var oldChecksums=jdbc.queryForList("SELECT version,checksum FROM flyway_schema_history WHERE success=TRUE");
+        var v7=Flyway.configure().dataSource(source).locations("classpath:db/migration").target("7").load();v7.migrate();v7.migrate();
+        assertEquals(oldChecksums,jdbc.queryForList("SELECT version,checksum FROM flyway_schema_history WHERE success=TRUE AND version<>'7'"));
+        assertArrayEquals(new byte[]{1,2,3},jdbc.queryForObject("SELECT input_cipher FROM ai_job WHERE id=?",byte[].class,job));
+        assertArrayEquals(new byte[]{7,8},jdbc.queryForObject("SELECT result_cipher FROM ai_result WHERE job_id=?",byte[].class,job));
+        assertArrayEquals(new byte[]{5,6},jdbc.queryForObject("SELECT payload_cipher FROM delivery WHERE id=?",byte[].class,delivery));
+        assertNull(jdbc.queryForObject("SELECT payload_deleted_at FROM ai_job WHERE id=?",java.sql.Timestamp.class,job));
+        assertNull(jdbc.queryForObject("SELECT payload_deleted_at FROM delivery WHERE id=?",java.sql.Timestamp.class,delivery));
         // The same current schema must also support a new installation's local seed, without duplicates.
         var seed=new dev.relayops.identity.LocalSeed(jdbc,new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder(4),"local-fixture-password-only");
         seed.run(null); seed.run(null);

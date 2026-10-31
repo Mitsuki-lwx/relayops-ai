@@ -40,7 +40,7 @@ public class ReplayService {
     }
     private Instant time(Object value) { return ((LocalDateTime) value).toInstant(ZoneOffset.UTC); }
     private void requireLive(Map<String,Object> root) {
-        if (!Boolean.TRUE.equals(jdbc.queryForObject("SELECT payload_expires_at>CURRENT_TIMESTAMP(3) AND OCTET_LENGTH(payload_cipher)>0 FROM delivery WHERE id=?", Boolean.class, root.get("id"))))
+        if (!Boolean.TRUE.equals(jdbc.queryForObject("SELECT payload_expires_at>CURRENT_TIMESTAMP(3) AND payload_deleted_at IS NULL AND OCTET_LENGTH(payload_cipher)>0 FROM delivery WHERE id=?", Boolean.class, root.get("id"))))
             throw new ApiException(410, "PAYLOAD_EXPIRED", "交付载荷已过期或不可用，不能补投");
     }
     private Map<String,Object> latestDead(String id) {

@@ -1199,7 +1199,7 @@ onUnmounted(() => {
                 </div>
                 <form
                   v-if="
-                    ['FAILED', 'UNKNOWN'].includes(selected.status) && !viewer
+                    ['FAILED', 'UNKNOWN'].includes(selected.status) && !viewer && selected.errorCode !== 'PAYLOAD_EXPIRED'
                   "
                   class="rerun-form"
                   @submit.prevent="startCommand('retry')"

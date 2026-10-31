@@ -78,6 +78,8 @@ class DeliveryIntegrationTest {
     @Autowired JsonMapper json;
     @Autowired TransactionTemplate tx;
     @Autowired FakeModel fake;
+    @Autowired dev.relayops.retention.PayloadRetention retention;
+    @org.springframework.test.context.bean.override.mockito.MockitoSpyBean ModelGateway model;
     String workspace,app,destination;
     @BeforeEach void fixtures() throws Exception {
         try(var c=jdbc.getDataSource().getConnection()){assertEquals("relayops_test",c.getCatalog());}
@@ -283,5 +285,110 @@ class DeliveryIntegrationTest {
         var one=java.util.concurrent.CompletableFuture.supplyAsync(()->confirm(plan,key));var two=java.util.concurrent.CompletableFuture.supplyAsync(()->confirm(plan,key));
         assertEquals(one.get(5,java.util.concurrent.TimeUnit.SECONDS),two.get(5,java.util.concurrent.TimeUnit.SECONDS));
         assertEquals(2,jdbc.queryForObject("SELECT COUNT(*) FROM delivery_run",Integer.class));
+    }
+    void expire(String job) {
+        jdbc.update("UPDATE ai_job SET payload_expires_at=DATE_SUB(CURRENT_TIMESTAMP(3),INTERVAL 1 SECOND) WHERE id=?",job);
+        jdbc.update("UPDATE delivery SET payload_expires_at=DATE_SUB(CURRENT_TIMESTAMP(3),INTERVAL 1 SECOND) WHERE job_id=?",job);
+    }
+    @Test void expiredTerminalPayloadsAreClearedOnceWithoutChangingHistoryOrCurrentPayloads() {
+        String expired=create();assertTrue(worker.execute(ready()));
+        String live=create();String spaceB=jdbc.queryForObject("SELECT id FROM workspace WHERE code='b'",String.class);
+        String appB=jdbc.queryForObject("SELECT id FROM application WHERE workspace_id=? LIMIT 1",String.class,spaceB);
+        String other=jobs.create("owner.b",spaceB,id(),new JobService.CreateJob(appB,"保留的正文","保留期内不能清理",List.of(),"zh-CN")).jobId();
+        assertTrue(ai.execute(envelope("outbox_event",other,"AI_EXECUTE")));
+        var accounts=jdbc.queryForList("SELECT * FROM budget_account ORDER BY workspace_id,accepted_date");
+        var attempts=jdbc.queryForList("SELECT * FROM delivery_attempt ORDER BY id");
+        byte[] current=jdbc.queryForObject("SELECT input_cipher FROM ai_job WHERE id=?",byte[].class,live);
+        byte[] secret=jdbc.queryForObject("SELECT secret_cipher FROM destination WHERE id=?",byte[].class,destination);
+        String hash=jdbc.queryForObject("SELECT input_hash FROM ai_job WHERE id=?",String.class,expired);
+        expire(expired);assertEquals(new dev.relayops.retention.PayloadRetention.Batch(1,1),retention.purge());
+        assertEquals(new dev.relayops.retention.PayloadRetention.Batch(0,0),retention.purge());
+        assertNull(jdbc.queryForObject("SELECT input_cipher FROM ai_job WHERE id=?",byte[].class,expired));
+        assertNull(jdbc.queryForObject("SELECT result_cipher FROM ai_result WHERE job_id=?",byte[].class,expired));
+        assertNull(jdbc.queryForObject("SELECT payload_cipher FROM delivery WHERE job_id=?",byte[].class,expired));
+        assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM ai_job WHERE id=? AND payload_deleted_at IS NOT NULL",Integer.class,expired));
+        assertEquals(hash,jdbc.queryForObject("SELECT input_hash FROM ai_job WHERE id=?",String.class,expired));
+        assertArrayEquals(current,jdbc.queryForObject("SELECT input_cipher FROM ai_job WHERE id=?",byte[].class,live));
+        assertNotNull(jobs.result("owner.b",spaceB,other));assertArrayEquals(secret,jdbc.queryForObject("SELECT secret_cipher FROM destination WHERE id=?",byte[].class,destination));
+        assertEquals(accounts,jdbc.queryForList("SELECT * FROM budget_account ORDER BY workspace_id,accepted_date"));assertEquals(attempts,jdbc.queryForList("SELECT * FROM delivery_attempt ORDER BY id"));
+        assertEquals(410,assertThrows(ApiException.class,()->jobs.result("owner.a",workspace,expired)).status);
+        assertEquals(2,jdbc.queryForObject("SELECT COUNT(*) FROM audit_event WHERE operation IN ('JOB_PAYLOAD_CLEARED','DELIVERY_PAYLOAD_CLEARED')",Integer.class));
+    }
+    @Test void cleanupRetainsActiveResponsibilityUntilExpiredWorkHasBeenSettled() {
+        String queued=jobs.create("owner.a",workspace,id(),request(List.of())).jobId();expire(queued);
+        assertEquals(0,retention.purge().jobs());long before=fake.callCount();
+        assertTrue(ai.execute(envelope("outbox_event",queued,"AI_EXECUTE")));assertEquals(before,fake.callCount());
+        ai.recover();assertEquals("FAILED",jobs.get("owner.a",workspace,queued).status());
+        assertEquals("RELEASED",jdbc.queryForObject("SELECT state FROM budget_entry WHERE job_id=?",String.class,queued));
+        assertEquals(1,retention.purge().jobs());
+        String job=create();var ready=ready();expire(job);assertEquals(0,retention.purge().deliveries());
+        worker.recover();assertEquals("DEAD",status());assertEquals("PAYLOAD_EXPIRED",jdbc.queryForObject("SELECT error_code FROM delivery_run",String.class));
+        assertTrue(worker.execute(ready));assertEquals(0,calls.get());assertEquals(1,retention.purge().deliveries());
+    }
+    @Test void expiryBetweenPrepareAndSentPreventsTheModelCallAndReleasesReservation() {
+        String job=jobs.create("owner.a",workspace,id(),request(List.of())).jobId();long before=fake.callCount();
+        org.mockito.Mockito.doAnswer(invocation->{var prepared=invocation.callRealMethod();expire(job);return prepared;})
+                .when(model).prepare(org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyList(),org.mockito.ArgumentMatchers.anyString());
+        assertTrue(ai.execute(envelope("outbox_event",job,"AI_EXECUTE")));assertEquals(before,fake.callCount());
+        ai.recover();assertEquals("FAILED",jobs.get("owner.a",workspace,job).status());
+        assertEquals(0,jobs.get("owner.a",workspace,job).modelCalls());assertEquals("RELEASED",jdbc.queryForObject("SELECT state FROM budget_entry WHERE job_id=?",String.class,job));
+        assertEquals(1,retention.purge().jobs());
+    }
+    @Test void lateModelResultCannotRestorePayloadAfterSentExpiryRecoveryAndCleanup() {
+        String job=jobs.create("owner.a",workspace,id(),request(List.of(destination))).jobId();long before=fake.callCount();
+        org.mockito.Mockito.doAnswer(invocation->{
+            var prepared=(ModelGateway.Prepared)invocation.callRealMethod();
+            return new ModelGateway.Prepared(prepared.profile(),prepared.timeoutSeconds(),()->{
+                var result=prepared.invoke();expire(job);ai.recover();assertEquals(1,retention.purge().jobs());return result;
+            });
+        }).when(model).prepare(org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyList(),org.mockito.ArgumentMatchers.anyString());
+        var ready=envelope("outbox_event",job,"AI_EXECUTE");assertTrue(ai.execute(ready));assertEquals(before+1,fake.callCount());
+        assertEquals("UNKNOWN",jobs.get("owner.a",workspace,job).status());assertEquals(1,jobs.get("owner.a",workspace,job).modelCalls());
+        assertEquals("UNCERTAIN",jdbc.queryForObject("SELECT state FROM budget_entry WHERE job_id=?",String.class,job));
+        assertNull(jdbc.queryForObject("SELECT input_cipher FROM ai_job WHERE id=?",byte[].class,job));
+        assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM ai_result WHERE job_id=?",Integer.class,job));assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM delivery",Integer.class));
+        assertTrue(ai.execute(ready));assertEquals(before+1,fake.callCount());
+    }
+    @Test void activeDeliveryLeaseIsRespectedThenUnknownAndExpiredPayloadAreRetainedAsMetadata() {
+        String job=create();var old=ready();expire(job);
+        jdbc.update("UPDATE delivery_run SET status='IN_FLIGHT',attempt_count=1,lease_token=?,lease_until=DATE_ADD(CURRENT_TIMESTAMP(3),INTERVAL 20 SECOND)",id());
+        jdbc.update("INSERT INTO delivery_attempt(id,workspace_id,run_id,attempt_no,key_id) VALUES (?,?,?,1,?)",id(),workspace,run(),destination);
+        worker.recover();assertEquals("IN_FLIGHT",status());assertEquals(0,retention.purge().deliveries());
+        jdbc.update("UPDATE delivery_run SET lease_until=DATE_SUB(CURRENT_TIMESTAMP(3),INTERVAL 1 SECOND)");worker.recover();
+        assertEquals("DEAD",status());assertEquals("UNKNOWN",jdbc.queryForObject("SELECT status FROM delivery_attempt",String.class));
+        assertEquals(1,retention.purge().deliveries());assertTrue(worker.execute(old));assertEquals(0,calls.get());
+    }
+    @Test void clearedMarkerRemainsAuthoritativeForResultRetryAndOldReplayConfirmation() {
+        String delivery=stoppedDelivery();String job=jdbc.queryForObject("SELECT job_id FROM delivery WHERE id=?",String.class,delivery);
+        var plan=preview(delivery);String key=id();confirm(plan,key);
+        jdbc.update("UPDATE delivery SET payload_deleted_at=CURRENT_TIMESTAMP(3) WHERE id=?",delivery);
+        assertEquals(410,assertThrows(ApiException.class,()->confirm(plan,key)).status);
+        assertEquals(410,assertThrows(ApiException.class,()->preview(delivery)).status);
+        jdbc.update("UPDATE ai_job SET payload_deleted_at=CURRENT_TIMESTAMP(3) WHERE id=?",job);
+        assertEquals(410,assertThrows(ApiException.class,()->jobs.result("owner.a",workspace,job)).status);
+        jdbc.update("UPDATE ai_job SET status='FAILED' WHERE id=?",job);
+        assertEquals(410,assertThrows(ApiException.class,()->jobs.retry("owner.a",workspace,job,id(),new JobService.RetryJob(jobs.get("owner.a",workspace,job).version(),"不应重建",true))).status);
+    }
+    @Test void cleanupRollbackAndConcurrentRunsDoNotDuplicateDeletionOrAudit() throws Exception {
+        String job=create();assertTrue(worker.execute(ready()));expire(job);
+        jdbc.execute("ALTER TABLE audit_event ADD CONSTRAINT retention_audit_guard CHECK (operation NOT IN ('JOB_PAYLOAD_CLEARED','DELIVERY_PAYLOAD_CLEARED'))");
+        try {assertEquals(new dev.relayops.retention.PayloadRetention.Batch(0,0),retention.purge());}
+        finally {jdbc.execute("ALTER TABLE audit_event DROP CHECK retention_audit_guard");}
+        assertNotNull(jdbc.queryForObject("SELECT input_cipher FROM ai_job WHERE id=?",byte[].class,job));assertNotNull(jdbc.queryForObject("SELECT result_cipher FROM ai_result WHERE job_id=?",byte[].class,job));
+        assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM ai_job WHERE payload_deleted_at IS NOT NULL",Integer.class));
+        var one=java.util.concurrent.CompletableFuture.supplyAsync(retention::purge);var two=java.util.concurrent.CompletableFuture.supplyAsync(retention::purge);
+        var first=one.get(5,java.util.concurrent.TimeUnit.SECONDS);var second=two.get(5,java.util.concurrent.TimeUnit.SECONDS);
+        assertEquals(1,first.jobs()+second.jobs());assertEquals(1,first.deliveries()+second.deliveries());
+        assertEquals(2,jdbc.queryForObject("SELECT COUNT(*) FROM audit_event WHERE operation IN ('JOB_PAYLOAD_CLEARED','DELIVERY_PAYLOAD_CLEARED')",Integer.class));
+    }
+    @Test void cleanupBatchIsBoundedAndDisabledSchedulerDoesNotClearAnything() {
+        String job=create();assertTrue(worker.execute(ready()));expire(job);retention.tick();
+        assertNotNull(jdbc.queryForObject("SELECT input_cipher FROM ai_job WHERE id=?",byte[].class,job));
+        String insert="INSERT INTO ai_job(id,workspace_id,application_id,actor_id,title,status,input_cipher,input_hash,accepted_date,output_language,queue_expires_at,payload_expires_at) SELECT ?,workspace_id,application_id,actor_id,title,'FAILED',input_cipher,input_hash,accepted_date,output_language,queue_expires_at,payload_expires_at FROM ai_job WHERE id=?";
+        for(int i=0;i<26;i++)jdbc.update(insert,id(),job); // Terminal metadata fixture, no admission or model execution.
+        assertEquals(25,retention.purge().jobs());assertEquals(2,retention.purge().jobs());assertEquals(0,retention.purge().jobs());
+        String enabledJob=create();expire(enabledJob);
+        new dev.relayops.retention.PayloadRetention(jdbc,tx,true).tick();
+        assertNull(jdbc.queryForObject("SELECT input_cipher FROM ai_job WHERE id=?",byte[].class,enabledJob));
     }
 }
