@@ -1,12 +1,12 @@
-# 第十二阶段任务
+# 第十三阶段任务
 
 | 编号 | 任务 | 文件 | 依赖 | 参考 |
 | --- | --- | --- | --- | --- |
-| 01 | 范围与分页契约 | spec/checklist、ADR0010 | 无 | 原设计created_at/id倒序 |
-| 02 | 历史查询与显式安全列 | JobService | 01 | LOCATE、状态白名单、limit+1 |
-| 03 | 历史只读端点 | JobController | 02 | 当前授权及游标边界 |
-| 04 | 真实库边界验证 | JobHistoryIntegrationTest | 03 | 超50、同时间、插入、隔离/撤权 |
-| 05 | 历史筛选分页页面 | JobHistoryPanel、style | 03 | taste、已应用条件、清空/迟到保护 |
-| 06 | 点击历史任务详情 | App | 05 | 原详情与正文授权 |
-| 07 | 接入主流程 | 队列入口、README | 04/06 | 登录到历史到详情 |
-| 08 | 端到端验证与发布 | 浏览器、verification、checklist | 07 | 三档、负例、只读对账、自审推送 |
+| 01 | 导出范围及权限契约 | spec/checklist、ADR0011 | 无 | 复用GET result及RESULT_READ |
+| 02 | 安全Markdown格式化 | analysisReport | 01 | 固定章节、动态文本围栏、UTF-8 |
+| 03 | 浏览器下载生命周期 | App | 02 | 新读取、上下文/TTL、URL释放 |
+| 04 | 导出控件与说明 | App、style | 03 | 成功角色入口、本地副本边界 |
+| 05 | 格式化负例 | report-export.spec | 02 | 恶意围栏/HTML、原文摘录、空集合 |
+| 06 | 权限与竞争验证 | report-export.spec | 03/04 | 拒绝/TTL/迟到、重复点击 |
+| 07 | 接入主流程 | 任务详情、README | 05/06 | 成功任务到重新授权到下载 |
+| 08 | 端到端验证与发布 | 浏览器、verification、checklist | 07 | 真下载三档、构建/自审/推送 |

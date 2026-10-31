@@ -10,6 +10,7 @@ import OperationsPanel from "./OperationsPanel.vue";
 import JobHistoryPanel from "./JobHistoryPanel.vue";
 import { jobError } from "./jobErrors";
 import type { ResultBody } from "./resultTypes";
+import { analysisReport, reportFilename } from "./analysisReport";
 
 type Workspace = {
   id: string;
@@ -81,6 +82,7 @@ const title = ref("技术文档提取"),
   busy = ref(true);
 const pending = ref<Draft | null>(null),
   resultBusy = ref(false);
+const exporting = ref(false), reportNotice = ref("");
 const commandPending = ref<Command | null>(null);
 const profile = ref<Profile | null>(null);
 const externalAcknowledged = ref(false);
@@ -136,6 +138,7 @@ const usagePercent = computed(() =>
   ),
 );
 function navigate(view: View) {
+  if (view !== "tasks") clearResult();
   activeView.value = view;
   menuOpen.value = false;
   window.location.hash = view;
@@ -145,13 +148,14 @@ function syncView() {
   activeView.value = ["new", "organization", "destinations", "operations", "history"].includes(view)
     ? (view as View)
     : "tasks";
+  if (activeView.value !== "tasks") clearResult();
   menuOpen.value = false;
 }
 function backToList() {
   generation++;
   stopPoll();
   selected.value = null;
-  result.value = null;
+  clearResult();
 }
 const retryReason = ref(""),
   retryAcknowledged = ref(false);
@@ -177,19 +181,28 @@ const states: Record<string, string> = {
 let poll: ReturnType<typeof setTimeout> | undefined;
 let expiryTimer: ReturnType<typeof setTimeout> | undefined;
 let generation = 0;
+let resultSequence = 0, resultController: AbortController | undefined;
+
+function clearResult() {
+  resultSequence++;
+  resultController?.abort(); resultController = undefined;
+  result.value = null; resultBusy.value = false; exporting.value = false; reportNotice.value = "";
+  if (expiryTimer) clearTimeout(expiryTimer);
+  expiryTimer = undefined;
+}
 
 function showError(ex: unknown) {
   error.value = ex instanceof Error ? ex.message : "请求失败";
   traceId.value = ex instanceof ApiError ? (ex.traceId ?? "") : "";
   if (ex instanceof ApiError && [403, 404, 410].includes(ex.status))
-    result.value = null;
+    clearResult();
   if (ex instanceof ApiError && ex.status === 401) {
     menuOpen.value = false;
     generation++;
     stopPoll();
     me.value = null;
     selected.value = null;
-    result.value = null;
+    clearResult();
     jobs.value = [];
     credits.value = { dailyLimit: 20, reserved: 0, spent: 0, uncertain: 0 };
     pending.value = null;
@@ -244,7 +257,7 @@ async function refreshSelected() {
 async function select(job: Job) {
   generation++;
   stopPoll();
-  result.value = null;
+  clearResult();
   selected.value = job;
   retryReason.value = "";
   retryAcknowledged.value = false;
@@ -267,41 +280,44 @@ async function openHistory(job: Job) {
     }
   } finally { busy.value = false; }
 }
-async function readResult() {
-  if (!selected.value) return;
-  const current = generation,
-    id = selected.value.jobId;
-  resultBusy.value = true;
-  error.value = "";
-  result.value = null;
+async function readResult(download = false) {
+  if (!selected.value || resultBusy.value || viewer.value || selected.value.status !== "SUCCEEDED" || activeView.value !== "tasks") return;
+  clearResult();
+  const current = generation, sequence = resultSequence, space = workspaceId.value,
+    id = selected.value.jobId, actor = me.value?.username;
+  const isCurrent = () => current === generation && sequence === resultSequence && workspaceId.value === space && me.value?.username === actor && selected.value?.jobId === id && activeView.value === "tasks" && !document.hidden && !viewer.value;
+  resultController = new AbortController();
+  resultBusy.value = true; exporting.value = download; error.value = ""; traceId.value = "";
   try {
-    const body = await api<ResultBody>(path(`/jobs/${id}/result`));
-    if (current === generation && selected.value?.jobId === id) {
-      result.value = body;
-      if (expiryTimer) clearTimeout(expiryTimer);
-      const remaining =
-        new Date(selected.value.payloadExpiresAt).getTime() - Date.now();
-      // Browser timers have a signed 32-bit delay ceiling; payload TTL is seven days.
-      if (remaining <= 0) result.value = null;
-      else
-        expiryTimer = setTimeout(
-          () => {
-            result.value = null;
-          },
-          Math.min(remaining, 2147483647),
-        );
+    const body = await api<ResultBody>(path(`/jobs/${id}/result`), { signal: resultController.signal });
+    if (!isCurrent()) return;
+    const job = selected.value!, remaining = new Date(job.payloadExpiresAt).getTime() - Date.now();
+    if (!(remaining > 0)) throw new ApiError(410, "PAYLOAD_EXPIRED", "正文已过期，无法读取或导出");
+    result.value = body;
+    // Browser timers have a signed 32-bit delay ceiling; payload TTL is seven days.
+    expiryTimer = setTimeout(clearResult, Math.min(remaining, 2147483647));
+    if (download) {
+      const report = analysisReport(job, body, new Date());
+      if (!isCurrent()) return;
+      if (new Date(job.payloadExpiresAt).getTime() <= Date.now()) throw new ApiError(410, "PAYLOAD_EXPIRED", "正文已过期，无法导出");
+      const url = URL.createObjectURL(new Blob([report], { type: "text/markdown;charset=utf-8" }));
+      const link = document.createElement("a");
+      link.href = url; link.download = reportFilename(id); link.hidden = true;
+      document.body.appendChild(link);
+      try { link.click(); reportNotice.value = "已开始下载分析报告，请在浏览器下载记录中确认保存。"; }
+      finally { link.remove(); setTimeout(() => URL.revokeObjectURL(url), 0); }
     }
   } catch (ex) {
-    showError(ex);
+    if (isCurrent()) { clearResult(); showError(ex); }
   } finally {
-    resultBusy.value = false;
+    if (sequence === resultSequence) { resultBusy.value = false; exporting.value = false; }
   }
 }
 async function switchWorkspace() {
   generation++;
   stopPoll();
   selected.value = null;
-  result.value = null;
+  clearResult();
   jobs.value = [];
   profile.value = null;
   destinations.value = [];
@@ -415,7 +431,7 @@ async function logout() {
     stopPoll();
     me.value = null;
     selected.value = null;
-    result.value = null;
+    clearResult();
     jobs.value = [];
     pending.value = null;
     commandPending.value = null;
@@ -576,7 +592,7 @@ function clearDraft() {
 function visibility() {
   if (document.hidden) {
     stopPoll();
-    result.value = null;
+    clearResult();
   } else if (selected.value) void refreshSelected();
 }
 const formatTime = (text: string) =>
@@ -600,6 +616,7 @@ onMounted(async () => {
   }
 });
 onUnmounted(() => {
+  generation++; clearResult();
   window.removeEventListener("hashchange", syncView);
   stopPoll();
   if (expiryTimer) clearTimeout(expiryTimer);
@@ -1287,10 +1304,10 @@ onUnmounted(() => {
                   </button>
                 </form>
                 <template v-if="selected.status === 'SUCCEEDED' && !viewer"
-                  ><button
+                  ><div class="result-actions"><button
                     class="secondary"
                     :disabled="resultBusy"
-                    @click="readResult"
+                    @click="readResult()"
                   >
                     {{
                       resultBusy
@@ -1300,7 +1317,10 @@ onUnmounted(() => {
                           : "查看结果与原文依据"
                     }}
                   </button>
-                  <p class="muted">读取正文会留下审计记录。</p></template
+                  <button class="quiet" :disabled="resultBusy" @click="readResult(true)">{{ exporting ? '导出中…' : '下载分析报告' }}</button></div>
+                  <p class="muted">读取与导出均重新检查权限并留下正文读取审计。</p>
+                  <p class="muted">报告含原文摘录；下载副本不受平台后续撤权或自动清理控制。</p>
+                  <p v-if="reportNotice" role="status" class="muted">{{ reportNotice }}</p></template
                 >
                 <DeliveryPanel
                   :workspace-id="workspaceId"

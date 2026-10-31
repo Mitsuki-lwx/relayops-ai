@@ -1503,6 +1503,7 @@ footer {
 }
 
 .operations-panel > .section-heading { margin-bottom: 12px; flex-wrap: wrap; }
+.result-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .history-filters { display: grid; grid-template-columns: minmax(0, 1fr) 220px auto auto; gap: 16px; align-items: end; }
 .history-filters label { margin: 0; }
 .history-filters input, .history-filters select { margin-top: 8px; }

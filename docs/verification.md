@@ -1,5 +1,20 @@
 # 验证记录
 
+## 第十三阶段分析报告Markdown导出
+
+2026-10-31，Sol Advisor solo实现、自审。仅前端及文档变化，无后端、迁移或依赖变化；**复用第十二阶段109后端全通过记录，本批未重跑后端测试**。服务端GET result仍执行当前成员/角色/TTL和RESULT_READ审计，导出不是额外模型任务。
+
+- **实际执行56项Playwright检查全部通过**：`npx playwright test report-export.spec.ts job-history.spec.ts operations.spec.ts llm-results.spec.ts visual.spec.ts`。55项浏览器+1项纯格式化；新增24项导出/格式负例，既有32项覆盖历史、概览、结果与元数据布局。首轮23导出/格式+9结果共32项通过，随后补上旧任务迟到拒绝不得清除新正文及明确等待退出完成，再执行最终56项。
+- 三档1440/768/390真实触发下载并saveAs到本机忽略目录，核对建议文件名、UTF-8中文/emoji、任务/配置/时间、四节结构、段落ID与精确引用。先读取旧结果，再改夹具响应，导出必须产生第二次GET并包含新内容。文件无输入全文标记，下载结束没有临时a节点，对象URL已释放，浏览器存储没有正文。
+- 401/403/404/410及网络失败清除旧结果且不下载；OWNER/OPERATOR成功、VIEWER与其他五类状态无入口。延迟响应在切任务/空间/视图/隐藏/退出后不下载；旧403不清除另一任务的新授权结果。读取期间TTL到期拒绝下载，已成功下载后在线结果仍按TTL清除。重复点击只一次读取和一次URL创建/释放。
+- 格式负例覆盖中文、emoji、嵌套反引号、恶意标题/HTML/script/图片/iframe/javascript链接、空集合和不安全文件名。通过报告围栏外内容检查证明动态指令没有逃出纯文本块。内容围栏遵循[CommonMark0.31.2](https://spec.commonmark.org/0.31.2/#fenced-code-blocks)；对象URL和下载语义核对[MDN createObjectURL](https://developer.mozilla.org/en-US/docs/Web/API/URL/createObjectURL_static)、[revokeObjectURL](https://developer.mozilla.org/en-US/docs/Web/API/URL/revokeObjectURL_static)与[download属性](https://developer.mozilla.org/en-US/docs/Web/API/HTMLAnchorElement/download)。
+- **类型检查/构建通过**：`npm run build`；taste lint为0FAIL/3条既有真实ID等宽警告。原生inspect首次仅因夹具模型正文中的emoji报1FAIL；按用户文本保真允许emoji内容例外后，三档0FAIL/0WARN，其余规则无放宽。界面文案无装饰emoji，未删除/改变正文以满足检查。三档实际截图与检查图已目视复核，沿用framed-sheet/seed1361095215。
+- **主库12类事实哈希核对一致**：本批真实主库仅做元数据只读回归，没有实际读取/导出真实正文、追加读取审计或发送模型请求。三档下载及权限/故障均为完全拦截API的夹具，非GET业务请求会失败；保留本机已授权清理开关、18080端口和真实模型配置，未重启后端。
+
+证据在本机忽略目录：`artifacts/stage13-browser-final.log`、`stage13-build.log`、`stage13-taste-lint.log`、`stage13-inspect/`、`stage13-export-*.png`、`stage13-report-*.md`及`stage13-readonly-before.json`。没有提交正文或下载文件。
+
+限制：只支持单条Markdown分析报告与证据摘录；不导出输入全文，不提供PDF/Word、批量或副本撤回。自动回归证明当前Edge下载链路，不能代表所有Markdown阅读器、全部浏览器或用户最终磁盘保存；平台不把发起下载冒充已保存审计。
+
 ## 第十二阶段完整任务历史
 
 功能提交f9259d20a9e2394415aa730fefc32b9dc5adb56d已推送origin/main并核对远程完整哈希一致。19个暂存文件核对19个本地凭据/回调密钥值无命中；配置、数据库、测试对账及构建/依赖输出未提交。

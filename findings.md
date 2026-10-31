@@ -84,3 +84,9 @@
 - MySQL8.4真实测试验证LOCATE的参数字符集会受ASCII id列影响；搜索时显式CONVERT(j.id USING utf8mb4)，排序仍按原ascii_bin主键。官方转换函数资料：https://dev.mysql.com/doc/refman/8.4/en/cast-functions.html 。
 
 - 第十二阶段自审：history先鉴权后参数校验，所有状态/关键词/时间/ID均绑定，唯一动态SQL为固定占位符个数。显式元数据列也用于原list/get回归；排序不读取游标任务，空间边界不由客户端游标决定。前端在load开始清空旧页，序号和AbortController丢弃旧上下文，详情先重新授权，拒绝后回队列清除旧信息。
+
+- 第十三阶段导出使用现有GET result新响应，不能复用已缓存正文。只导出结构化结论和原文引用，不含输入全文；动态文本纯文本围栏长度大于最长反引号段，避免Markdown活动内容。无后端变化可复用109项记录，浏览器夹具验证真正下载。
+
+- 新用浏览器API已核对MDN createObjectURL/revokeObjectURL及anchor.download；下载属性仅表示发起下载，不声称实际保存。文本围栏按CommonMark0.31.2规则，结束围栏至少同长度；因此动态围栏超过所有内容反引号段。参考：https://developer.mozilla.org/en-US/docs/Web/API/URL/revokeObjectURL_static 和 https://spec.commonmark.org/0.31.2/#fenced-code-blocks 。
+
+- 第十三阶段自审：导出/查看共用带AbortController的正文读取，序号、任务/空间/主体/视图与可见性双重校验；过期响应不生成Blob，失败清空旧内容。每次文件仅由新GET响应组成，URL和临时节点释放；没有模型、后端、依赖或迁移变化。动态文本围栏覆盖所有内容字段，输入全文不参与格式化，文件名只取过滤后的任务ID。
