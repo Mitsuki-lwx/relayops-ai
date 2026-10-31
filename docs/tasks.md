@@ -1,12 +1,12 @@
-# 第十阶段任务
+# 第十一阶段任务
 
 | 编号 | 任务 | 文件 | 依赖 | 参考 |
 | --- | --- | --- | --- | --- |
-| 01 | 在线保留范围与锁序 | spec/checklist、ADR0008 | 无 | BR14/RB06 |
-| 02 | V7可空密文与删除标记 | migration、升级测试 | 01 | V1–V6不改 |
-| 03 | 到期Job执行与恢复边界 | JobWorker | 02 | SENT前TTL、UNKNOWN不重发 |
-| 04 | 到期交付恢复 | DeliveryWorker | 02 | 不依赖MQ领取结束责任 |
-| 05 | 事务分批清理 | PayloadRetention | 03/04 | 终态重查、标记/审计/回滚 |
-| 06 | 正文访问防线 | JobService、ReplayService、错误文案 | 05 | 410、删除标记、当前权限 |
-| 07 | 接入调度与运行说明 | application、README | 05/06 | 一分钟/每类25、保留边界 |
-| 08 | 集成与发布 | 隔离测试、verification | 07 | 并发/回滚/迟到/迁移、自审推送 |
+| 01 | 权限与统计契约 | spec/checklist、ADR0009 | 无 | 全保留记录、最新Run、OWNER审计 |
+| 02 | 概览查询 | OperationsService/Controller | 01 | 一致快照、安全字段、零与空时间 |
+| 03 | 审计查询 | OperationsService/Controller | 02 | beforeId/limit、精确过滤、白名单 |
+| 04 | 真实库负例与统计 | OperationsIntegrationTest | 03 | 隔离、撤权、最新轮次、分页 |
+| 05 | 工作台概览页 | OperationsPanel、App | 03 | taste、单轮询、隐藏/切空间清除 |
+| 06 | 审计筛选与分页 | OperationsPanel | 05 | OWNER入口、手动刷新、游标 |
+| 07 | 接入主流程 | 导航、README、既有回归 | 04/06 | 登录→切空间→概览→审计 |
+| 08 | 验收与发布 | 浏览器、verification | 07 | 三档/拒绝清除、只读对账及推送 |

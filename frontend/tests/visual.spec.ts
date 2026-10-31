@@ -88,7 +88,7 @@ for (const width of [1440, 768, 390]) {
       fullPage: true,
     });
     if (width === 1440) await snapshot(page, "editor");
-    if (width === 390) {
+    if (width <= 900) {
       await page.getByRole("button", { name: "展开导航", exact: true }).click();
       await page.getByRole("button", { name: "组织管理", exact: true }).click();
       await expect(

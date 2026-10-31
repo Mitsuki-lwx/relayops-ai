@@ -9,7 +9,7 @@ AI 技术文档任务与结果交付平台。当前链路：登录 → 公司与
 - [LLM 与组织隔离扩展建议](docs/product-directions.md)：已实现边界与后续扩展。
 
 - [需求范围](docs/spec.md)：当前做什么，以及完成条件。
-- [实施任务](docs/tasks.md)：第十阶段的 8 项任务及依赖。
+- [实施任务](docs/tasks.md)：第十一阶段的 8 项任务及依赖。
 - [前端设计](docs/frontend-design.md)：taste app风格、信息层级和验证方式。
 - [验收清单](docs/checklist.md)：只勾选已有证据的项。
 - [首阶段决策](docs/adr/0001-first-slice.md)：先打通纵向链路的取舍。
@@ -20,6 +20,7 @@ AI 技术文档任务与结果交付平台。当前链路：登录 → 公司与
 - [受控回调决策](docs/adr/0006-controlled-delivery.md)：冻结目标、签名、独立重试与接收端去重。
 - [单条补投决策](docs/adr/0007-delivery-replay.md)：两分钟预览、当前权限与版本绑定、原确认键恢复。
 - [在线载荷清理决策](docs/adr/0008-online-payload-retention.md)：到期结算、终态清理、分批审计及备份边界。
+- [空间运行概览决策](docs/adr/0009-workspace-operations.md)：全量状态、最新交付、待发布消息与 OWNER 安全审计。
 - [原理与代码导读](docs/walkthrough.md)：202、事务和 SENT 边界。
 - [验证记录](docs/verification.md)：实际命令、结果及限制。
 
@@ -54,6 +55,14 @@ RabbitMQ 无需手动下载：Compose 自动拉取锁定摘要的官方镜像并
 当前开发机 Docker 数据目录为 `F:/DockerData`，迁移与验证记录见 [Docker 存储说明](docs/docker-storage.md)。
 
 停止依赖使用 `docker compose --project-name relayops -f ops/compose.yml --env-file ops/.env stop`，保留数据卷。后端/前端在各自终端 Ctrl+C 停止。不要删除密钥来重置界面，旧数据需要原主密钥解密。
+
+## 空间运行概览
+
+登录后选择侧栏的“运行概览”，查看当前空间全部保留任务、每个交付的最新轮次、待发布消息、失效租约及正文清理状态。概览每15秒刷新，页面隐藏时暂停。待发布数来自数据库，不代表RabbitMQ实时队列长度；任务页仍按最多50条已载入记录统计。
+
+空间OWNER还可按事件类型和完整资源UUID筛选安全审计，向前翻查更早记录。OPERATOR/VIEWER可以看概览；审计查询只允许OWNER，公司ADMIN身份不自动授予此权限。审计只返回事件、资源、操作者和时间，不返回操作原因、正文或密钥。公司级组织审计、趋势、告警和生产监控尚未接入。
+
+只读接口：`GET /api/v1/workspaces/{id}/operations` 和 `GET /api/v1/workspaces/{id}/audit-events?limit=25`。审计支持精确`operation`、`resourceId`及`beforeId`游标；事件ID与游标均为字符串，`limit`范围1–100。
 
 ## 验证
 

@@ -6,6 +6,7 @@ import AppIcon from "./AppIcon.vue";
 import ResultView from "./ResultView.vue";
 import DestinationPanel, { type Destination } from "./DestinationPanel.vue";
 import DeliveryPanel from "./DeliveryPanel.vue";
+import OperationsPanel from "./OperationsPanel.vue";
 import { jobError } from "./jobErrors";
 import type { ResultBody } from "./resultTypes";
 
@@ -91,7 +92,7 @@ async function refreshDestinations() {
   );
   if (id === workspaceId.value) destinations.value = items;
 }
-type View = "tasks" | "new" | "organization" | "destinations";
+type View = "tasks" | "new" | "organization" | "destinations" | "operations";
 const activeView = ref<View>("tasks"),
   menuOpen = ref(false),
   hasOrganization = ref(false);
@@ -140,7 +141,7 @@ function navigate(view: View) {
 }
 function syncView() {
   const view = window.location.hash.slice(1);
-  activeView.value = ["new", "organization", "destinations"].includes(view)
+  activeView.value = ["new", "organization", "destinations", "operations"].includes(view)
     ? (view as View)
     : "tasks";
   menuOpen.value = false;
@@ -660,6 +661,7 @@ onUnmounted(() => {
         >
           <AppIcon name="arrow" />回调目的地
         </button>
+        <button :aria-current="activeView === 'operations' ? 'page' : undefined" :disabled="busy || !!pending || !!commandPending" @click="navigate('operations')"><AppIcon name="tasks" />运行概览</button>
       </nav>
       <div class="sidebar-bottom">
         <span class="avatar">{{ me.username.slice(0, 1).toUpperCase() }}</span>
@@ -700,7 +702,7 @@ onUnmounted(() => {
             <span>{{ workspace?.tenantName ?? "RelayOps" }}</span
             ><span aria-hidden="true">/</span
             ><strong>{{
-              activeView === "destinations"
+              activeView === "operations" ? "运行概览" : activeView === "destinations"
                 ? "回调目的地"
                 : activeView === "organization"
                   ? "组织管理"
@@ -793,7 +795,7 @@ onUnmounted(() => {
             <div>
               <h1>
                 {{
-                  activeView === "destinations"
+                  activeView === "operations" ? "空间运行概览" : activeView === "destinations"
                     ? "回调目的地"
                     : activeView === "organization"
                       ? "公司与组织管理"
@@ -804,7 +806,7 @@ onUnmounted(() => {
               </h1>
               <p class="muted">
                 {{
-                  activeView === "destinations"
+                  activeView === "operations" ? "核对全部保留任务、当前交付与消息责任。" : activeView === "destinations"
                     ? "配置受控接收端，交付结果并跟踪每次尝试。"
                     : activeView === "organization"
                       ? "管理部门、小组和空间访问权限。"
@@ -836,6 +838,7 @@ onUnmounted(() => {
             @available="hasOrganization = $event"
             @changed="refreshAccess"
           />
+          <OperationsPanel v-if="activeView === 'operations'" :workspace-id="workspaceId" :owner="workspace?.role === 'OWNER'" :disabled="busy || !!pending || !!commandPending" />
           <DestinationPanel
             v-if="activeView === 'destinations'"
             :workspace-id="workspaceId"
@@ -845,7 +848,7 @@ onUnmounted(() => {
           />
           <template
             v-if="
-              activeView !== 'organization' && activeView !== 'destinations'
+              activeView !== 'organization' && activeView !== 'destinations' && activeView !== 'operations'
             "
           >
             <div class="metrics">

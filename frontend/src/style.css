@@ -1109,10 +1109,8 @@ footer {
     grid-template-columns: minmax(0, 1fr) 360px;
   }
 }
-@media (max-width: 700px) {
-  body {
-    font-size: 14px;
-  }
+/* Five navigation destinations fold before they crowd the tablet header. */
+@media (max-width: 900px) {
   .sidebar {
     height: auto;
     min-height: 56px;
@@ -1144,6 +1142,11 @@ footer {
     margin-top: 0;
     padding-bottom: 12px;
     width: 100%;
+  }
+}
+@media (max-width: 700px) {
+  body {
+    font-size: 14px;
   }
   .topbar {
     height: 56px;
@@ -1498,3 +1501,24 @@ footer {
   gap: 4px;
   font-size: 13px;
 }
+
+.operations-panel > .section-heading { margin-bottom: 12px; flex-wrap: wrap; }
+.operations-panel > .section-heading button { white-space: nowrap; }
+.operations-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin: 20px 0 24px; }
+.operations-grid .section-heading, .audit-panel .section-heading { gap: 12px; flex-wrap: wrap; }
+.operation-counts { margin: 20px 0; }
+.operation-counts > div { display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-bottom: 1px solid var(--rule); }
+.operation-counts dt { color: var(--muted); }
+.operation-counts dd { margin: 0; font-variant-numeric: tabular-nums; }
+.operations-grid p, .audit-panel > p { margin: 12px 0; line-height: 1.8; }
+.outbox-summary { border-top: 1px solid var(--rule); margin-top: 16px; padding-top: 16px; }
+.audit-filters { display: grid; grid-template-columns: 1fr 1.4fr auto; gap: 16px; align-items: end; margin: 24px 0 16px; }
+.audit-filters input { margin-top: 8px; }
+.audit-list { list-style: none; padding: 0; margin: 20px 0; }
+.audit-list li { display: grid; grid-template-columns: 1.1fr 1fr 1.4fr .7fr; gap: 20px; border-top: 1px solid var(--border); padding: 16px 0; align-items: start; font-size: 13px; }
+.audit-list li > div { display: grid; gap: 6px; }
+.audit-list li > div, .audit-list time { min-width: 0; overflow-wrap: anywhere; }
+.audit-list small { font-size: 12px; color: var(--muted); }
+.audit-pagination { display: flex; gap: 16px; flex-wrap: wrap; }
+@media (max-width: 1000px) { .audit-filters { grid-template-columns: 1fr 1fr; } .audit-list li { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 700px) { .operations-grid { grid-template-columns: 1fr; gap: 20px; } .audit-filters { grid-template-columns: 1fr; } }

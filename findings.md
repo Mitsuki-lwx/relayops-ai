@@ -74,3 +74,7 @@
 - MySQL8.4官方ALTER TABLE文档核对了ADD/DROP CHECK语法：https://dev.mysql.com/doc/refman/8.4/en/alter-table.html 。回滚测试使用专用库临时CHECK，未修改二进制日志信任或提升数据库权限。
 
 - 2026-10-31用户明确批准清理后，本机自动调度成功清除7条过期Fake输入及2条结果正文；密文hash对账确认66/52未到期载荷、73/54元数据及预算/尝试/密钥保留。先前自动审批阻断条件已由明确授权解除；源码默认false保留，仅本地配置true。
+
+- 第十一阶段选择只读运行概览与OWNER审计，原设计含概览/审计及15秒刷新。全局quarantine_message无workspace_id，明确不纳入空间概览；审计detail_json可能含原因/正文片段，仅读白名单列。历史交付DEAD与最新成功必须分开，概览只数最新Run。
+
+- 第十一阶段自审：两端点所有查询限定workspace，审计先按当前有效OWNER授权再校验筛选，白名单不读取detail_json；只读RR中无业务写入或外发，SENT/UNKNOWN路径和V1-V7均未修改。前端epoch/序列/AbortController阻止旧上下文回填，单15秒定时器在隐藏/卸载停止；最终23浏览器及103后端验证通过。

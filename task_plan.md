@@ -4,10 +4,10 @@
 完成 Outbox/RabbitMQ、Docker 存储迁移到 F 盘，并继续实现排队取消与明确重跑；以真实数据库、Broker 和浏览器验证责任与用量边界。
 
 ## Next Step
-主库自动清理已按授权启用并完成对账；后续按需求继续开发。
+实现并验证空间概览/OWNER安全审计，接入工作台独立视图。
 
 ## Current Phase
-Phase 30
+Phase 33
 
 ## Phases
 
@@ -175,3 +175,16 @@ Phase 30
 ### Phase 30: Main-database cleanup activation
 - [x] 用户于2026-10-31明确批准启用主库自动清理；完成清理与前后对账。
 - **Status:** complete
+
+### Phase 31: Operations visibility design
+- [x] 定义全量保留数据/最新交付轮次/待发布/清理口径，OWNER审计白名单与分页，更新三份文档及ADR。
+- **Status:** complete
+
+### Phase 32: Operations visibility implementation
+- [x] 空间只读概览、OWNER审计分页/筛选，工作台页面与可见性轮询。
+- **Status:** complete
+
+### Phase 33: Operations visibility verification and publication
+- [x] 真实库权限/隔离/统计/分页负例、浏览器三档与切空间/撤权清除，构建及自审。
+- [ ] 凭据检查、自动提交推送并核对远程。
+- **Status:** in_progress

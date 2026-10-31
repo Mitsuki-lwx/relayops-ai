@@ -1,5 +1,19 @@
 # 验证记录
 
+## 第十一阶段空间运行概览与安全审计
+
+2026-10-31，Sol Advisor solo实现、自审与验证。新增两个只读接口和独立运行概览页面，无迁移，V1–V7未改。
+
+- **103项后端测试全部通过**：`scripts/test-backend.ps1`使用独立relayops_test/relayops_messaging_test/relayops_upgrade_test和relayops-test vhost、Fake模型。新增6项真实MySQL用例覆盖当前角色/公司撤权、空间隔离、全量Job、最新Delivery Run、Outbox SENT排除/零值/最早时间、恢复与清理、安全列、边界过滤、超2^53字符串游标及分页期间新增事件。查询不增加审计、预算分录或模型调用。首轮新增测试的var复合声明编译错误已修正后重跑。
+- **23项浏览器测试全部通过**：`npx playwright test operations.spec.ts llm-results.spec.ts visual.spec.ts`，其中11项运行概览、9项既有结果夹具及3项既有真实元数据布局。运行概览含3档、2角色无审计入口、2个延迟响应切空间、拒绝清除、空态/暂时故障恢复、唯一轮询/隐藏恢复/卸载及主库只读核对。夹具拦截所有API请求并拒绝写入，不创建付费任务。主库用例仅登录及GET，核对页面总数、清理开关、审计列与过滤。
+- **前端类型检查和构建通过**：`npm run build`。首轮浏览器20/22通过，手机用例缺少展开导航步骤，新增第五项导航也暴露768px横向溢出；现将导航折叠阈值提前到900px，并调整既有导航用例。补入空态/故障恢复后最终23/23通过。
+- **taste检查**：沿用framed-sheet/seed1361095215；最终源文件lint为0FAIL/3条既有ID等宽字体WARN。原生`inspect.mjs --app`本次可用，对最终DOM快照1440/768/390检查0FAIL/0WARN，三档截图已目视检查；手机刷新按钮保持完整文字，审计UUID可换行。快照为本地API夹具，71个任务/10个交付由各状态求和，未冒充生产数据；另留主库实际只读截图；最终将主库筛选用例明确等待带resourceId的响应并验证全部返回行，单项复验通过，复用其余22项记录。
+- **主库只读对账**：18080服务加载新接口后记录基线，最终浏览器回归后12类业务数据哈希一致，覆盖Job/Result密文hash与元数据、预算账户/分录、AI尝试、目的地签名密钥hash、交付/轮次/尝试、审计和两种Outbox。未新增模型调用。本机清理维持用户已授权的true，主库仍V7，无新增迁移。
+
+证据保留于本机忽略目录：`artifacts/stage11-tests.log`、`stage11-browser.log`、`stage11-build.log`、`stage11-taste-lint.log`、`stage11-inspect/`、三档`stage11-operations-fixture-*.png`、`stage11-operations-main-readonly.png`和`stage11-readonly-before.json`。首次对账脚本误用不存在的model_calls列，仅只读查询失败；删去该派生列后重新记录基线，对比ai_attempt保证调用事实不变。
+
+范围限制：审计只涵盖workspace audit_event安全元数据，不返回detail_json或公司级organization_audit。数据库聚合与轮询不代表Broker深度、时序监控、告警、生产性能或SLO验收；全局隔离表没有workspace_id，未向空间成员泄露。
+
 ## 第十阶段到期在线载荷清理
 
 功能提交814bfff已推送origin/main，远程完整哈希一致。23个暂存文件核对19个真实本地凭据/回调密钥值均无命中；配置、数据库、密文核对记录及构建产物未提交。
