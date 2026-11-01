@@ -1,0 +1,42 @@
+name: Verify and package
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      RELAYOPS_DATABASE_BACKEND: docker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: pwsh -File scripts/init-local.ps1
+      - run: docker compose --project-name relayops -f ops/compose.yml --env-file ops/.env up -d --wait
+      - run: pwsh -File scripts/prepare-test-env.ps1
+      - run: pwsh -File scripts/test-backend.ps1
+      - run: npm ci
+        working-directory: frontend
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - run: pwsh -File scripts/package-release.ps1
+      - run: pwsh -File scripts/test-browser.ps1 -Channel chromium
+      - run: python3 scripts/test-demo-receiver.py
+      - run: node scripts/test-backup-restore.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: relayops-1.0.0
+          path: |
+            artifacts/releases/relayops-1.0.0.zip
+            artifacts/releases/SHA256SUMS
+          if-no-files-found: error

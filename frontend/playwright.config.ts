@@ -10,12 +10,12 @@ export default defineConfig({
     ["json", { outputFile: "../artifacts/playwright-results.json" }],
   ],
   use: {
-    baseURL: "http://127.0.0.1:5173",
-    channel: "msedge",
+    baseURL: process.env.RELAYOPS_BROWSER_BASE ?? "http://127.0.0.1:5173",
+    channel: process.env.RELAYOPS_BROWSER_CHANNEL ?? "msedge",
     headless: true,
     screenshot: "only-on-failure",
   },
-  webServer: {
+  webServer: process.env.RELAYOPS_BROWSER_BASE ? undefined : {
     command: "npm run dev -- --port 5173 --strictPort",
     url: "http://127.0.0.1:5173",
     reuseExistingServer: true,

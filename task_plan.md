@@ -1,13 +1,13 @@
-# Task Plan: RelayOps Outbox and RabbitMQ
+# Task Plan: RelayOps 1.0 Release
 
 ## Goal
-完成 Outbox/RabbitMQ、Docker 存储迁移到 F 盘，并继续实现排队取消与明确重跑；以真实数据库、Broker 和浏览器验证责任与用量边界。
+在既有任务可靠性和组织隔离之上，按OpenSpec完成单机自托管1.0发布，交付可运行包、真实账号初始化、隔离验证和备份恢复说明。
 
 ## Next Step
-本批分析报告Markdown导出已完成并推送，等待下一批功能需求。
+候选已通过120后端/79前端/实际release JAR及27表恢复。等待用户配置ops/mysql-native.cnf，随后核对本机MySQL版本/迁移/hash，加载主服务并完成CI/最终1.0发布；保留原卷和主库，先提交已验证候选。
 
 ## Current Phase
-Phase 39
+Phase 44
 
 ## Phases
 
@@ -216,3 +216,36 @@ Phase 39
 - [x] 下载/格式/拒绝/竞争与三档浏览器、构建/只读对账及自审。
 - [x] 暂存凭据检查、自动提交推送并核对远程。
 - **Status:** complete
+
+### Phase 40: Organization audit design
+- [x] 明确当前ADMIN只读安全六列、筛选/分页和前端上下文保护，更新三份文档。
+- **Status:** complete
+
+### Phase 41: Organization audit implementation
+- [x] 实现租户查询、真实库负例和审计面板/浏览器夹具。
+- **Status:** complete
+
+### Phase 42: Organization audit verification and publication
+- [x] 后端、浏览器三档、构建、只读核对及自审。
+- [ ] 暂存凭据扫描、自动提交推送并核对远程。
+- **Status:** pending
+
+### Phase 43: OpenSpec release scope
+- [x] 初始化本地OpenSpec、能力/设计/任务与发布门禁，用户明确要求继续实现至1.0。
+- **Status:** complete
+
+### Phase 44: Runtime and provisioning
+- [ ] 恢复依赖、完成组织审计；实现同源JAR、健康/版本、公司成员初始化。
+- **Status:** in_progress
+
+### Phase 45: Distribution and operations
+- [ ] 打包/启动/校验、隔离测试工具、CI及备份恢复演练和文档。
+- **Status:** pending
+
+### Phase 46: Release acceptance
+- [ ] 后端/全链路浏览器、打包JAR真实运行和安全/恢复门禁通过。
+- **Status:** pending
+
+### Phase 47: Release publication
+- [ ] 自审/凭据检查、OpenSpec归档、提交推送、v1.0.0与发布附件核对。
+- **Status:** pending

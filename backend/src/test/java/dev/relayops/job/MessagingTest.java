@@ -31,7 +31,7 @@ import static org.mockito.Mockito.doThrow;
 
 @EnabledIfEnvironmentVariable(named = "RELAYOPS_MESSAGING_TESTS", matches = "true")
 @SpringBootTest(properties = {
-        "spring.datasource.url=${RELAYOPS_MESSAGING_DB_URL:jdbc:mysql://127.0.0.1:3307/relayops_messaging_test?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true}",
+        "spring.datasource.url=${RELAYOPS_MESSAGING_DB_URL:jdbc:mysql://127.0.0.1:13307/relayops_messaging_test?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true}",
         "spring.rabbitmq.virtual-host=relayops-test", "relayops.consumer-enabled=false",
         "relayops.relay-enabled=false", "relayops.recovery-enabled=false", "relayops.pending-limit=2"
 })

@@ -90,3 +90,6 @@
 - 新用浏览器API已核对MDN createObjectURL/revokeObjectURL及anchor.download；下载属性仅表示发起下载，不声称实际保存。文本围栏按CommonMark0.31.2规则，结束围栏至少同长度；因此动态围栏超过所有内容反引号段。参考：https://developer.mozilla.org/en-US/docs/Web/API/URL/revokeObjectURL_static 和 https://spec.commonmark.org/0.31.2/#fenced-code-blocks 。
 
 - 第十三阶段自审：导出/查看共用带AbortController的正文读取，序号、任务/空间/主体/视图与可见性双重校验；过期响应不生成Blob，失败清空旧内容。每次文件仅由新GET响应组成，URL和临时节点释放；没有模型、后端、依赖或迁移变化。动态文本围栏覆盖所有内容字段，输入全文不参与格式化，文件名只取过滤后的任务ID。
+
+- 第十四阶段补齐公司治理审计查询：现有organization_audit和最近20条摘要已存在，但页面仅显示数量。新增当前ADMIN安全六列只读端点，复用既有admin校验，不读取detail_json或改变空间权限。Git检查发现main引用41字节全零，reflog/对象完整；备份后恢复88aee06，fsck无错误并正常推送，未覆盖工作区。
+- OpenSpec发布缺口取证：当前package/pom为0.1.0，README标开发版，无CI/单JAR静态包，LocalSeed仅local profile。选择release profile保持演示与真实团队分开，以宿主机命令初始化身份，不开放注册。Context7当前无可调用工具，已查Spring Boot4.1.2静态资源、Spring Security7.1.2请求匹配及Maven资源官方文档。Windows端口问题通过13307和原卷修复，73/54元数据仍在。

@@ -8,12 +8,11 @@ const root = fileURLToPath(new URL("../../", import.meta.url));
 const password = readFileSync(new URL("../../ops/.env", import.meta.url), "utf8")
   .split(/\r?\n/).find(line => line.startsWith("RELAYOPS_DEMO_PASSWORD="))!.split("=").slice(1).join("=");
 function broker(action: "stop" | "start") {
-  execFileSync("docker.exe", ["compose", "--project-name", "relayops", "-f", "ops/compose.yml", "--env-file", "ops/.env", action,
+  execFileSync("docker", ["compose", "--project-name", "relayops", "-f", "ops/compose.yml", "--env-file", "ops/.env", action,
     ...(action === "start" ? ["--wait"] : []), "rabbitmq"], { cwd: root, timeout: 60000, stdio: "pipe" });
 }
 function fixtureSql(sql: string) {
-  execFileSync("docker.exe", ["exec", "-i", "relayops-mysql-1", "sh", "-c",
-    'MYSQL_PWD="$MYSQL_PASSWORD" mysql -u"$MYSQL_USER" relayops'], { cwd: root, input: sql, timeout: 15000, stdio: ["pipe", "pipe", "pipe"] });
+  execFileSync(process.execPath, [fileURLToPath(new URL("../../scripts/e2e-fixture-sql.mjs", import.meta.url))], { cwd: root, input: sql, timeout: 15000, stdio: ["pipe", "pipe", "pipe"] });
 }
 async function login(page: Page) {
   await page.goto("/");

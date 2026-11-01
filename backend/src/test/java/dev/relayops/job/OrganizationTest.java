@@ -30,6 +30,8 @@ class OrganizationTest {
     @Autowired OutboxStore outbox;
     @Autowired JdbcTemplate jdbc;
     @Autowired TransactionTemplate tx;
+    @Autowired FakeModel fake;
+    @Autowired tools.jackson.databind.json.JsonMapper json;
     String tenant, otherTenant, space, otherSpace, operator, viewer;
     String id() { return UUID.randomUUID().toString(); }
     String user(String name) { return jdbc.queryForObject("SELECT id FROM user_account WHERE username=?",String.class,name); }
@@ -51,6 +53,62 @@ class OrganizationTest {
     void denied(int status,Runnable action) { assertEquals(status,assertThrows(ApiException.class,action::run).status); }
     void finish(String job) { assertTrue(worker.execute(outbox.claim().stream().map(OutboxStore.Claimed::envelope).filter(e->e.aggregateId().equals(job)).findFirst().orElseThrow())); }
     boolean visible(String name) { return ((List<?>)access.me(name).get("workspaces")).stream().anyMatch(row->((Map<?,?>)row).get("id").equals(space)); }
+
+    @Test void organizationAuditIsScopedSafeFilteredAndKeysetPaged() {
+        jdbc.update("DELETE FROM organization_audit WHERE tenant_id=?",tenant);
+        String resource=id();
+        long base=Math.max(9007199254751000L,jdbc.queryForObject("SELECT COALESCE(MAX(id),0) FROM organization_audit",Long.class))+100;
+        for(int i=1;i<=4;i++) jdbc.update("INSERT INTO organization_audit(id,tenant_id,actor_id,resource_id,operation,detail_json) VALUES (?,?,?,?,?,?)",base+i,tenant,user("owner.a"),resource,i==1?"UNIT_CREATED":"WORKSPACE_GRANT_SET","{\"reason\":\"NEVER_EXPOSE_AUDIT_DETAIL\"}");
+        var first=org.auditEvents("owner.a",tenant,null,null,null,2);
+        assertEquals(List.of(Long.toString(base+4),Long.toString(base+3)),first.items().stream().map(OrganizationService.AuditEvent::id).toList());
+        assertEquals(Long.toString(base+3),first.nextBeforeId());
+        team(); // A newer event must not push records into the next page.
+        var next=org.auditEvents("owner.a",tenant,null,null,first.nextBeforeId(),2);
+        assertEquals(List.of(Long.toString(base+2),Long.toString(base+1)),next.items().stream().map(OrganizationService.AuditEvent::id).toList()); assertNull(next.nextBeforeId());
+        assertEquals(1,org.auditEvents("owner.a",tenant,"UNIT_CREATED",resource,null,25).items().size());
+        assertTrue(org.auditEvents("owner.a",tenant,"UNKNOWN_EVENT",null,null,25).items().isEmpty());
+        assertTrue(org.auditEvents("owner.a",tenant,null,id(),null,25).items().isEmpty());
+        assertTrue(org.auditEvents("owner.a",tenant,null,null,"1",25).items().isEmpty());
+        var serialized=json.readTree(json.writeValueAsString(first));
+        assertEquals(6,serialized.get("items").get(0).size());
+        assertFalse(serialized.toString().contains("NEVER_EXPOSE"));
+        assertEquals("owner.a",first.items().getFirst().actorName());
+        denied(404,()->org.auditEvents("owner.a",otherTenant,null,null,null,25));
+        denied(404,()->org.auditEvents("owner.b",tenant,null,null,null,25));
+    }
+    @Test void organizationAuditRejectsInvalidFiltersAfterAuthorization() {
+        for(String before:List.of("","0","-1","01","1.2","1 OR 1=1","9223372036854775808")) denied(422,()->org.auditEvents("owner.a",tenant,null,null,before,25));
+        for(int limit:List.of(0,101)) denied(422,()->org.auditEvents("owner.a",tenant,null,null,null,limit));
+        for(String op:List.of("","unit_created","UNIT_CREATED' OR 1=1","X".repeat(41))) denied(422,()->org.auditEvents("owner.a",tenant,op,null,null,25));
+        denied(422,()->org.auditEvents("owner.a",tenant,null,"bad-uuid",null,25));
+        denied(403,()->org.auditEvents("operator.a",tenant,"bad",null,"bad",0));
+        denied(404,()->org.auditEvents("owner.b",tenant,"bad",null,"bad",0));
+        assertNotNull(org.auditEvents("owner.a",tenant,null,null,"9223372036854775807",100));
+    }
+    @Test void organizationAuditRechecksActiveAccountAndCompanyRole() {
+        String actor=user("owner.a");
+        assertNotNull(org.auditEvents("owner.a",tenant,null,null,null,25));
+        jdbc.update("UPDATE tenant_member SET role='MEMBER' WHERE tenant_id=? AND user_id=?",tenant,actor);
+        denied(403,()->org.auditEvents("owner.a",tenant,null,null,null,25));
+        jdbc.update("UPDATE tenant_member SET role='ADMIN',active=FALSE WHERE tenant_id=? AND user_id=?",tenant,actor);
+        denied(404,()->org.auditEvents("owner.a",tenant,null,null,null,25));
+        jdbc.update("UPDATE tenant_member SET active=TRUE WHERE tenant_id=? AND user_id=?",tenant,actor);
+        jdbc.update("UPDATE user_account SET enabled=FALSE WHERE id=?",actor);
+        try { denied(404,()->org.auditEvents("owner.a",tenant,null,null,null,25)); }
+        finally { jdbc.update("UPDATE user_account SET enabled=TRUE WHERE id=?",actor); }
+    }
+    @Test void organizationAuditDoesNotGrantWorkspaceAccessOrWriteBusinessFacts() {
+        jdbc.update("UPDATE workspace_member SET active=FALSE WHERE workspace_id=? AND user_id=?",space,user("owner.a"));
+        denied(404,()->jobs.list("owner.a",space));
+        var tables=List.of("organization_audit","audit_event","ai_job","ai_attempt","outbox_event","delivery_outbox","budget_entry","budget_account");
+        var before=tables.stream().map(t->jdbc.queryForObject("SELECT COUNT(*) FROM "+t,Long.class)).toList();
+        long calls=fake.callCount();
+        for(int i=0;i<3;i++) assertFalse(org.auditEvents("owner.a",tenant,null,null,null,25).items().isEmpty());
+        assertEquals(before,tables.stream().map(t->jdbc.queryForObject("SELECT COUNT(*) FROM "+t,Long.class)).toList());
+        assertEquals(calls,fake.callCount());
+        denied(404,()->jobs.list("owner.a",space));
+        assertTrue(org.details("owner.a",tenant).containsKey("audit"));
+    }
 
     @Test void hierarchyAndMembershipDoNotImplicitlyGrantData() {
         String department=unit("研发部","DEPARTMENT",null), child=unit("后端组","TEAM",department);

@@ -11,6 +11,12 @@ public class OrganizationController {
     public OrganizationController(OrganizationService service) { this.service=service; }
     @GetMapping Object list(Principal p) { return service.list(p.getName()); }
     @GetMapping("/{tenantId}") Object details(Principal p,@PathVariable String tenantId) { return service.details(p.getName(),tenantId); }
+    @GetMapping("/{tenantId}/audit-events")
+    Object auditEvents(Principal p,@PathVariable String tenantId,@RequestParam(required=false) String operation,
+            @RequestParam(required=false) String resourceId,@RequestParam(required=false) String beforeId,
+            @RequestParam(defaultValue="25") int limit) {
+        return service.auditEvents(p.getName(),tenantId,operation,resourceId,beforeId,limit);
+    }
     @PostMapping("/{tenantId}/units") @ResponseStatus(HttpStatus.CREATED)
     Object createUnit(Principal p,@PathVariable String tenantId,@RequestBody OrganizationService.NewUnit request) { return service.createUnit(p.getName(),tenantId,request); }
     @PostMapping("/{tenantId}/workspaces") @ResponseStatus(HttpStatus.CREATED)

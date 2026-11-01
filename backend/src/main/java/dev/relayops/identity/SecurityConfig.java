@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.http.HttpMethod;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.userdetails.User;
@@ -39,9 +41,11 @@ public class SecurityConfig {
     }
 
     @Bean
+    @ConditionalOnWebApplication(type=ConditionalOnWebApplication.Type.SERVLET)
     SecurityFilterChain security(HttpSecurity http) throws Exception {
         // Keep Spring's session CSRF repository and XOR token handler. The client fetches /auth/csrf.
-        http.authorizeHttpRequests(auth -> auth.requestMatchers("/auth/csrf", "/auth/login").permitAll()
+        http.authorizeHttpRequests(auth -> auth.requestMatchers(HttpMethod.GET,"/","/index.html","/assets/**","/fonts/**","/healthz").permitAll()
+                        .requestMatchers("/auth/csrf", "/auth/login").permitAll()
                         .anyRequest().authenticated())
                 .formLogin(form -> form.loginProcessingUrl("/auth/login")
                         .successHandler((req, res, authentication) -> res.setStatus(204))

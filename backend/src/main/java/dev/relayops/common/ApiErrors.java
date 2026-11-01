@@ -8,6 +8,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class ApiErrors {
@@ -22,6 +24,16 @@ public class ApiErrors {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     ResponseEntity<?> malformed() {
         return ResponseEntity.badRequest().body(Map.of("code", "MALFORMED_JSON", "message", "请求 JSON 无效"));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    ResponseEntity<?> invalidParameter() {
+        return ResponseEntity.unprocessableEntity().body(Map.of("code","INVALID_INPUT","message","查询参数格式无效"));
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    ResponseEntity<?> missingResource() {
+        return ResponseEntity.status(404).body(Map.of("code","NOT_FOUND","message","资源不存在"));
     }
 
     @ExceptionHandler(Exception.class)

@@ -1,0 +1,8 @@
+# Copy to ops/mysql-native.cnf and enter the LOCAL MySQL administrator password.
+# This file is consumed by mysql/mysqldump, never by the browser or Java application.
+[client]
+host=127.0.0.1
+port=3306
+user=root
+password=replace_with_local_mysql_admin_password
+default-character-set=utf8mb4

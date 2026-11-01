@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 import { api } from "./api";
+import OrganizationAuditPanel from "./OrganizationAuditPanel.vue";
 
-const props = defineProps<{ disabled: boolean; tenantId?: string }>();
+const props = defineProps<{ disabled: boolean; tenantId?: string; active: boolean }>();
 const emit = defineEmits<{ changed: []; available: [value: boolean] }>();
 type Company = { id: string; name: string; role: string };
 type Unit = { id: string; name: string; kind: string; parentId: string | null };
@@ -334,6 +335,7 @@ onMounted(async () => {
           </p>
         </aside>
       </div>
+      <OrganizationAuditPanel v-if="active" :tenant-id="companyId" :disabled="disabled" />
     </template>
   </section>
 </template>

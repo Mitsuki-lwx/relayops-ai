@@ -1,0 +1,11 @@
+import { mysqlTools } from './mysql-tools.mjs';
+const database = process.argv[2], user = process.env.DB_USERNAME ?? 'relayops';
+if (!/^relayops_e2e_[0-9]+$/.test(database ?? '') || !/^[A-Za-z0-9_]+$/.test(user)) throw new Error('Invalid isolated test scope');
+const tools = mysqlTools();
+const quote = value => "'" + value.replaceAll("'", "''") + "'";
+if (tools.query(`SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name=${quote(database)}`).toString().trim() !== '0') throw new Error('Test schema already exists');
+tools.query(`CREATE DATABASE ${database} CHARACTER SET utf8mb4;`);
+const hosts = tools.query(`SELECT Host FROM mysql.user WHERE User=${quote(user)}`).toString().trim().split(/\r?\n/).filter(Boolean);
+if (!hosts.length) throw new Error('Application database user missing');
+for (const host of hosts) tools.query(`SET sql_mode='NO_BACKSLASH_ESCAPES'; GRANT ALL PRIVILEGES ON ${database}.* TO ${quote(user)}@${quote(host)};`);
+console.log(JSON.stringify({ database, backend: tools.backend, dedicated: true }));

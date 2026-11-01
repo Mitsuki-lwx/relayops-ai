@@ -15,8 +15,8 @@ class V2UpgradeTest {
     @Test
     void upgradePreservesAcceptedJobAndBackfillsItsOutbox() throws Exception {
         var source = new DriverManagerDataSource(
-                "jdbc:mysql://127.0.0.1:3307/relayops_upgrade_test?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true",
-                "relayops", System.getenv("DB_PASSWORD"));
+                System.getenv().getOrDefault("RELAYOPS_UPGRADE_DB_URL","jdbc:mysql://127.0.0.1:13307/relayops_upgrade_test?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true"),
+                System.getenv().getOrDefault("DB_USERNAME","relayops"), System.getenv("DB_PASSWORD"));
         try (var connection = source.getConnection()) {
             assertEquals("relayops_upgrade_test", connection.getCatalog(), "Refuse to clean a non-test schema");
         }

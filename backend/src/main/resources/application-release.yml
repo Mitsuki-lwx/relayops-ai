@@ -1,0 +1,12 @@
+# LocalSeed is @Profile("local"); this profile never creates demo identities.
+spring:
+  web:
+    resources:
+      cache:
+        cachecontrol:
+          no-cache: true
+server:
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never

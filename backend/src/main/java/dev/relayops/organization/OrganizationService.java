@@ -2,13 +2,20 @@ package dev.relayops.organization;
 
 import dev.relayops.common.ApiException;
 import dev.relayops.identity.Access;
+import dev.relayops.job.DocumentInput;
+import dev.relayops.messaging.ReadyMessage;
 import java.text.Normalizer;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 import tools.jackson.databind.json.JsonMapper;
 
 @Service
@@ -23,6 +30,31 @@ public class OrganizationService {
     public record Grant(String role) {}
     public record Created(String id) {}
     private record Actor(String id, String role) {}
+    public record AuditEvent(String id, String operation, String resourceId, String actorId, String actorName, Instant createdAt) {}
+    public record AuditPage(List<AuditEvent> items, String nextBeforeId) {}
+
+    @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
+    public AuditPage auditEvents(String username, String tenantId, String operation, String resourceId, String beforeId, int limit) {
+        admin(username,tenantId,false);
+        if(limit<1 || limit>100) throw DocumentInput.invalid("每页数量需为1至100");
+        if(operation!=null && !operation.matches("[A-Z][A-Z0-9_]{0,39}")) throw DocumentInput.invalid("事件类型格式无效");
+        if(resourceId!=null && !ReadyMessage.uuid(resourceId)) throw DocumentInput.invalid("资源ID需为有效UUID");
+        Long before=null;
+        if(beforeId!=null) {
+            try { if(!beforeId.matches("[1-9][0-9]{0,18}")) throw new IllegalArgumentException(); before=Long.parseLong(beforeId); }
+            catch(IllegalArgumentException ex) { throw DocumentInput.invalid("分页游标需为有效正整数"); }
+        }
+        var sql=new StringBuilder("SELECT a.id,a.operation,a.resource_id,a.actor_id,u.username AS actor_name,a.created_at FROM organization_audit a LEFT JOIN user_account u ON u.id=a.actor_id WHERE a.tenant_id=?");
+        var args=new ArrayList<Object>(); args.add(tenantId);
+        if(operation!=null) { sql.append(" AND a.operation=?"); args.add(operation); }
+        if(resourceId!=null) { sql.append(" AND a.resource_id=?"); args.add(resourceId); }
+        if(before!=null) { sql.append(" AND a.id<?"); args.add(before); }
+        sql.append(" ORDER BY a.id DESC LIMIT ?"); args.add(limit+1);
+        var rows=jdbc.query(sql.toString(),(rs,n)->new AuditEvent(rs.getString("id"),rs.getString("operation"),rs.getString("resource_id"),rs.getString("actor_id"),rs.getString("actor_name"),rs.getObject("created_at",LocalDateTime.class).toInstant(ZoneOffset.UTC)),args.toArray());
+        boolean more=rows.size()>limit;
+        var items=List.copyOf(rows.subList(0,Math.min(limit,rows.size())));
+        return new AuditPage(items,more?items.getLast().id():null);
+    }
 
     public List<Map<String,Object>> list(String username) {
         return jdbc.queryForList("""

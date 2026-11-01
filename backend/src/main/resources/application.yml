@@ -4,7 +4,7 @@ spring:
   profiles:
     default: local
   datasource:
-    url: ${DB_URL:jdbc:mysql://127.0.0.1:3307/relayops?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true}
+    url: ${DB_URL:jdbc:mysql://127.0.0.1:13307/relayops?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true}
     username: ${DB_USERNAME:relayops}
     password: ${DB_PASSWORD}
     hikari:

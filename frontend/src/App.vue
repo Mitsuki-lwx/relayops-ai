@@ -866,6 +866,7 @@ onUnmounted(() => {
           </div>
           <OrganizationPanel
             v-show="activeView === 'organization'"
+            :active="activeView === 'organization'"
             :disabled="busy || !!pending || !!commandPending"
             :tenant-id="workspace?.tenantId"
             @available="hasOrganization = $event"
