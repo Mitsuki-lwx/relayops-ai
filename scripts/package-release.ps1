@@ -18,7 +18,7 @@ foreach ($relayRelative in $relayFiles) {
     Copy-Item -LiteralPath (Join-Path $relayRoot $relayRelative) -Destination $relayTarget
 }
 Copy-Item -LiteralPath (Join-Path $relayRoot 'docs/release-guide.md') -Destination (Join-Path $relayBundle 'README.md')
-$relayEntries = @(Get-ChildItem -LiteralPath $relayBundle -File -Recurse | Sort-Object FullName | ForEach-Object {
+$relayEntries = @(Get-ChildItem -LiteralPath $relayBundle -File -Recurse -Force | Sort-Object FullName | ForEach-Object {
     @{path=[IO.Path]::GetRelativePath($relayBundle,$_.FullName).Replace('\','/');sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()}
 })
 @{version='1.0.0';files=$relayEntries} | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $relayBundle 'manifest.json') -Encoding utf8NoBOM

@@ -4,7 +4,7 @@
 在既有任务可靠性和组织隔离之上，按OpenSpec完成单机自托管1.0发布，交付可运行包、真实账号初始化、隔离验证和备份恢复说明。
 
 ## Next Step
-候选已通过120后端/79前端/实际release JAR及27表恢复。等待用户配置ops/mysql-native.cnf，随后核对本机MySQL版本/迁移/hash，加载主服务并完成CI/最终1.0发布；保留原卷和主库，先提交已验证候选。
+候选33bf4e6已推送且远程CI41328257662全部成功，OpenSpec9/12任务完成。等待用户配置ops/mysql-native.cnf，再核对本机MySQL版本/迁移/hash、加载18080主服务，完成余下3项和正式1.0发布；保留原卷与主库。
 
 ## Current Phase
 Phase 44
@@ -227,8 +227,8 @@ Phase 44
 
 ### Phase 42: Organization audit verification and publication
 - [x] 后端、浏览器三档、构建、只读核对及自审。
-- [ ] 暂存凭据扫描、自动提交推送并核对远程。
-- **Status:** pending
+- [x] 暂存凭据扫描、自动提交推送并核对远程（随候选33bf4e6）。
+- **Status:** complete
 
 ### Phase 43: OpenSpec release scope
 - [x] 初始化本地OpenSpec、能力/设计/任务与发布门禁，用户明确要求继续实现至1.0。
@@ -239,8 +239,8 @@ Phase 44
 - **Status:** in_progress
 
 ### Phase 45: Distribution and operations
-- [ ] 打包/启动/校验、隔离测试工具、CI及备份恢复演练和文档。
-- **Status:** pending
+- [x] 打包/启动/校验、隔离测试工具、CI及备份恢复演练和文档；原生切换验证待44/46。
+- **Status:** complete
 
 ### Phase 46: Release acceptance
 - [ ] 后端/全链路浏览器、打包JAR真实运行和安全/恢复门禁通过。

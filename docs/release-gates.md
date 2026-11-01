@@ -15,9 +15,11 @@
 | 主库保持 | 对照第十三阶段基线12类业务/密文/密钥hash不变，paidCallsCreated=0 | 通过 |
 | taste | 组织审计原生三档0FAIL/0WARN，lint0FAIL/3既有mono警告，三档图片已目视审阅 | 通过 |
 | 本机MySQL | MYSQL80运行3306，客户端8.0.42；无可用管理员连接，空密码拒绝 | 等待私密配置 |
-| CI | 已定义Ubuntu/Java21/Node22/真实MySQL与Rabbit/Fake浏览器/恢复/打包 | 待远程执行 |
+| CI | [41328257662](https://github.com/Mitsuki-lwx/relayops-ai/actions/runs/41328257662)，33bf4e6：Ubuntu/Java21/Node22/真实MySQL与Rabbit/Fake浏览器/恢复/打包，全部成功 | 通过 |
 | 原生主服务/发布 | 原数据库保留73任务/54结果，尚未切换本机库，未归档未完成任务 | 待完成 |
 
-rc3采用clean package防止旧静态资源残留；新增测试运行器和原生URL适配已完成容器环境复验，原生本机连接仍待配置。真正发布前仍需重新生成最终白名单包，核对Git提交和附件hash；不上传SQL、配置或验收截图。
+候选功能提交33bf4e6bdd56671863276651b024948e6c069734已推送origin/main，80文件核对25个实际凭据值无命中，V1–V7未变。rc3采用clean package防止旧静态资源残留；新增测试运行器和原生URL适配已完成容器环境及远程CI复验，原生本机连接仍待配置。真正发布前仍需生成最终白名单包并核对Git提交和附件hash；不上传SQL、配置或验收截图。
 
 新增框架用法核对官方[Spring Boot静态资源](https://docs.spring.io/spring-boot/reference/web/servlet.html)、[Spring Security请求授权](https://docs.spring.io/spring-security/reference/servlet/authorization/authorize-http-requests.html)和[Maven资源目录](https://maven.apache.org/plugins/maven-resources-plugin/examples/resource-directory.html)。真实供应商适配代码本批未变，复用原第七阶段真实成功证据；本批未重新外发真实文档，不声称当前供应商配额或效果已验收。
+
+下载首轮CI产物后额外发现Linux的Get-ChildItem忽略隐藏.env.example，清单14项而实际15项；ZIP总hash有效，但该模板未被逐文件覆盖。已复现并通过严格文件集合验证拒绝旧包，构建改为-Force，rc4完整15项及额外隐藏文件负例通过。该修复只涉及分发脚本，不改应用；修复后的CI产物仍需重新下载核验，旧产物不得作为正式发布附件。

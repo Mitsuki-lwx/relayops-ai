@@ -23,6 +23,8 @@ docker compose --project-name relayops -f ops/compose.yml --env-file ops/.env up
 
 ## 加入团队
 
+完整性校验针对原始解压目录；生成私密运行配置后，如需再次检查分发文件，请将ZIP重新解压到另一空目录，私密配置不应加入分发清单。
+
 ```powershell
 ./scripts/provision-user.ps1 -Username team.member -TenantId '<初始化输出的tenantId>'
 ```

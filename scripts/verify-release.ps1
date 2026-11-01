@@ -3,6 +3,8 @@ $ErrorActionPreference = 'Stop'
 $relayRoot = (Resolve-Path -LiteralPath $Directory).Path
 $relayManifest = Get-Content -LiteralPath (Join-Path $relayRoot 'manifest.json') -Raw | ConvertFrom-Json
 if ($relayManifest.version -ne '1.0.0') { throw 'Unexpected release version.' }
+$relayActual = @(Get-ChildItem -LiteralPath $relayRoot -File -Recurse -Force | ForEach-Object { [IO.Path]::GetRelativePath($relayRoot,$_.FullName).Replace('\','/') } | Where-Object { $_ -ne 'manifest.json' })
+if (Compare-Object -ReferenceObject @($relayManifest.files.path) -DifferenceObject $relayActual -CaseSensitive) { throw 'Unlisted or missing distribution files.' }
 foreach ($relayEntry in $relayManifest.files) {
     $relayFile = [IO.Path]::GetFullPath((Join-Path $relayRoot $relayEntry.path))
     if (-not $relayFile.StartsWith($relayRoot + [IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)) { throw 'Invalid manifest path.' }
