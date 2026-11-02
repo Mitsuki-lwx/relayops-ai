@@ -94,3 +94,5 @@
 - 第十四阶段补齐公司治理审计查询：现有organization_audit和最近20条摘要已存在，但页面仅显示数量。新增当前ADMIN安全六列只读端点，复用既有admin校验，不读取detail_json或改变空间权限。Git检查发现main引用41字节全零，reflog/对象完整；备份后恢复88aee06，fsck无错误并正常推送，未覆盖工作区。
 - OpenSpec发布缺口取证：当前package/pom为0.1.0，README标开发版，无CI/单JAR静态包，LocalSeed仅local profile。选择release profile保持演示与真实团队分开，以宿主机命令初始化身份，不开放注册。Context7当前无可调用工具，已查Spring Boot4.1.2静态资源、Spring Security7.1.2请求匹配及Maven资源官方文档。Windows端口问题通过13307和原卷修复，73/54元数据仍在。
 - 2026-11-02用户完成原生配置后，MYSQL80/8.0.42连接成功，目标relayops库与relayops_local用户均不存在；27表原数据/密文hash一致后迁入3306。120后端及27表原生逻辑备份/恢复通过，73任务/54结果和全部原预算/尝试保留，主库无新调用。e977faf的Linux分发15文件清单经下载重新核对通过，旧14项候选不用作发布附件。
+
+- 正式v1.0.0在2026-11-02发布，指向deac4ff；CI41383316056成功。公开附件下载与本机验收包哈希一致，15文件严格验证通过。OpenSpec四项主规范同步完成，12/12任务归档2026-11-02-release-relayops-1-0；文档收尾与发布代码分开记录。

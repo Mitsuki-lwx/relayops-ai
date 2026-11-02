@@ -1,5 +1,9 @@
 # 验证记录
 
+## 1.0正式发布
+
+2026-11-02，最终功能提交deac4ff9817cc302ed580fd371e5fbe8a16fb22c的CI [41383316056](https://github.com/Mitsuki-lwx/relayops-ai/actions/runs/41383316056)全部成功。已发布[v1.0.0](https://github.com/Mitsuki-lwx/relayops-ai/releases/tag/v1.0.0)，公开ZIP与本机验收包SHA256一致（1c8feff361f3ea2669d1e2abd03efc540f8fb7b705451b1a59fe976e471d7ab4），重新下载解压后15文件清单/哈希及JAR资源验证通过。四项主规范同步，OpenSpec12/12完成并归档为2026-11-02-release-relayops-1-0；严格验证归档前5项/归档后4项均通过。归档文档提交不改变发布代码。
+
 ## 1.0最终原生环境验收
 
 2026-11-02，原生MYSQL80/8.0.42已通过私密配置连接，原容器27表数据与密文逐表hash一致后迁入3306。原生120后端、80项Playwright（79浏览器+1格式化，零跳过）、27表新库恢复与真实持久化Fake报告下载通过。主服务18080以release profile运行，旧账号及组织/空间权限只读校验通过，主库73任务/54结果和12类业务hash保持，0新增真实模型调用。详见[发布门禁](release-gates.md)。
@@ -8,7 +12,7 @@
 
 ## 1.0候选与第十四阶段组织审计
 
-2026-11-02，Sol Advisor solo，按OpenSpec release-relayops-1-0推进。当前实际门禁、命令输出与未完成项见[候选发布门禁](release-gates.md)。120后端、79项Playwright、2项接收端、27表恢复和实际release JAR验收通过；主库12类hash与第十三阶段基线一致，无真实供应商调用。原生MySQL连接/迁移、最终主服务及正式发布仍未完成，不将候选版本冒充正式1.0。
+2026-11-02，Sol Advisor solo，按OpenSpec release-relayops-1-0推进。以下保留候选阶段的历史状态；当前已发布，见上方正式发布记录及[发布门禁](release-gates.md)。120后端、79项Playwright、2项接收端、27表恢复和实际release JAR验收通过；主库12类hash与第十三阶段基线一致，无真实供应商调用。原生MySQL连接/迁移、最终主服务及正式发布仍未完成，不将候选版本冒充正式1.0。
 
 ## 第十三阶段分析报告Markdown导出
 

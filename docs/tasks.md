@@ -1,6 +1,6 @@
 # 1.0发布任务
 
-权威实施进度见openspec/changes/release-relayops-1-0/tasks.md，共12项：范围、13307依赖恢复、组织审计、同源JAR/健康、账号初始化、打包校验、隔离全链路、CI、恢复演练、版本文档，最后为接入主流程与端到端发布。影响文件依次为ops/脚本/后端组织与identity/发布模块/pom/前端配置/.github/docs；前项验证后再发布。V1–V7不可修改。
+权威实施进度见[OpenSpec归档](../openspec/changes/archive/2026-11-02-release-relayops-1-0/tasks.md)，12/12已完成，包括本机3306迁移、组织审计、同源JAR/健康、账号初始化、打包校验、隔离全链路、CI、恢复演练、版本文档及端到端发布。[v1.0.0](https://github.com/Mitsuki-lwx/relayops-ai/releases/tag/v1.0.0)附件已重新下载核对，详见[发布门禁](release-gates.md)。V1–V7保持不变。
 
 # 第十四阶段任务
 
