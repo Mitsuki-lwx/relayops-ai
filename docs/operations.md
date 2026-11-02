@@ -14,7 +14,7 @@ node scripts/backup-database.mjs relayops artifacts/backups/manual.sql
 
 ## 恢复
 
-先核对.sql.sha256与文件，使用原密钥和相同/兼容版本。应用保持停止。新建独立空数据库后，向该库导入SQL；不要在未经核对的主库运行导入或DROP。可通过docker exec -i传入备份，由容器MYSQL_ROOT_PASSWORD环境认证，避免命令参数带明文密码。导入后检查Flyway版本、表行数、密文hash及预算/尝试/交付关系，再将DB_URL明确指向恢复库。
+先核对.sql.sha256与文件，使用原密钥和相同/兼容版本。应用保持停止。新建独立空数据库后，向该库导入SQL；不要在未经核对的主库运行导入或DROP。原生服务通过mysql客户端及私密--defaults-extra-file连接，容器可通过docker exec -i及容器环境认证，均不把密码写入命令参数。导入后检查Flyway版本、表行数、密文hash及预算/尝试/交付关系，再将DB_URL明确指向恢复库。
 
 先禁用worker/consumer/relay/recovery/retention，以只读方式核对。确认配置及目标后再启用执行器：未SENT责任可恢复；SENT且无确定结果必须保留UNKNOWN/UNCERTAIN，禁止人工把它改回QUEUED。回调确认丢失只能按既有稳定deliveryId去重，恢复接收端去重库后再启用交付。恢复数据库不等于消除已发生的供应商或接收端副作用。
 

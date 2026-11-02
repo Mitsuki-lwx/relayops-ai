@@ -648,7 +648,7 @@ onUnmounted(() => {
           />
           <circle cx="7" cy="8" r="3" fill="currentColor" />
           <circle cx="25" cy="24" r="3" fill="currentColor" /></svg
-        >RelayOps<span class="stage">开发版</span></a
+        >RelayOps<span class="stage">v1.0</span></a
       >
       <button
         class="icon-button menu-toggle"

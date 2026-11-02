@@ -1,25 +1,27 @@
-# 1.0候选发布门禁
+# 1.0发布验收门禁
 
-2026-11-02。这是候选验收记录，**尚未创建v1.0.0或正式Release**。用户要求优先使用本机MySQL，最终连接/迁移需要用户填写不入库的ops/mysql-native.cnf，不能因已有容器测试通过就宣称原生切换完成。
+2026-11-02。功能与原生部署验收已完成；正在提交最终代码、等待CI并发布正式tag/附件，发布后再完成OpenSpec最后任务及归档。
 
-| 门禁 | 证据 | 状态 |
+| 门禁 | 实际证据 | 状态 |
 | --- | --- | --- |
-| OpenSpec严格校验 | release-relayops-1-0四项能力与12项任务，validate --strict通过 | 通过 |
-| 公司组织审计 | 新增4项真实数据库测试及13项夹具浏览器，当前ADMIN/撤权/字段/大ID分页 | 通过 |
-| 后端规则/库/消息/初始化 | release-tests-adapted-fixed.log，120项0失败/错误/跳过 | 通过 |
-| 完整工作台 | release-browser-all-fixed.log，79项通过（78浏览器+1格式），新建隔离库/Fake | 通过 |
-| release profile实际JAR | release-packaged-final.log，无演示种子，真实CLI建立OWNER/MEMBER，匿名200/API401/CSRF403、非法参数422、缺资源404、Fake一次调用/幂等/隔离 | 通过 |
-| 构建及完整性 | rc3 clean package，15文件manifest/hash（rc2篡改负例），故意篡改CHANGELOG被拒绝，恢复后通过 | 通过 |
-| 接收端 | release-receiver.log，2项通过 | 通过 |
-| 备份恢复 | release-restore-docker.log，27表完整有序SQL及密文hash一致，仅新建恢复库 | Docker通路通过；原生待验证 |
-| 主库保持 | 对照第十三阶段基线12类业务/密文/密钥hash不变，paidCallsCreated=0 | 通过 |
-| taste | 组织审计原生三档0FAIL/0WARN，lint0FAIL/3既有mono警告，三档图片已目视审阅 | 通过 |
-| 本机MySQL | MYSQL80运行3306，客户端8.0.42；无可用管理员连接，空密码拒绝 | 等待私密配置 |
-| CI | [41328257662](https://github.com/Mitsuki-lwx/relayops-ai/actions/runs/41328257662)，33bf4e6：Ubuntu/Java21/Node22/真实MySQL与Rabbit/Fake浏览器/恢复/打包，全部成功 | 通过 |
-| 原生主服务/发布 | 原数据库保留73任务/54结果，尚未切换本机库，未归档未完成任务 | 待完成 |
+| OpenSpec | release-relayops-1-0四项能力，严格验证通过；11/12任务完成，剩发布本身 | 待发布归档 |
+| 原生迁移 | MYSQL80/8.0.42，3306；新建目标库/专用账号，27表数据及密文逐表hash一致，原主密钥保留 | 通过 |
+| 旧数据/容器 | 73任务/54结果保留，源容器停止且命名卷保留，RabbitMQ继续运行 | 通过 |
+| 后端 | release-native-tests.log，120项，零失败/错误/跳过 | 通过 |
+| 工作台 | release-native-browser-fixed.log，80项（79浏览器+1格式），零跳过；新建专用库/Fake | 通过 |
+| 真实报告下载 | release-report.spec.ts，无业务响应拦截，CLI建立的OWNER提交Fake任务、持久化一次调用、新GET结果、UTF-8文件/引用核对 | 通过 |
+| release profile/JAR | 原生专用库实际启动；无演示种子，真实CLI OWNER/MEMBER，匿名200/API401/CSRF403/非法参数422/缺资源404/幂等/隔离 | 通过 |
+| 备份恢复 | release-native-restore-utc.log，27表新建恢复库有序SQL及密文hash一致，演练库完成后删除 | 通过 |
+| 工具时区 | 原生CLI初始SYSTEM偏移28800秒，统一工具会话UTC后偏移0，全局SYSTEM保留；TTL竞争负例复验通过 | 通过 |
+| 分发完整性 | 最终ZIP/15文件清单、JAR内嵌前端及字体；未列隐藏文件和字节篡改均拒绝 | 通过 |
+| 主服务 | 18080健康UP/1.0.0、原生3306；旧账号登录、空间概览、公司ADMIN200/MEMBER403/跨公司404/非法422；用户模型配置保留 | 通过 |
+| 主库副作用 | 12类主库业务事实/密文/密钥hash与启动前相同，0新增模型尝试，无真实供应商调用 | 通过 |
+| 布局 | 原生1440/768/390通过，真实报告截图/文件已目视复核；taste lint0FAIL/3既有mono警告，复用既有样式原生测量 | 通过 |
+| CI | e977faf的[41329199837](https://github.com/Mitsuki-lwx/relayops-ai/actions/runs/41329199837)通过，Linux产物下载后15文件及ZIP哈希核对通过；最终小增量另待CI | 待最终CI |
+| 正式发布 | 凭据扫描、推送、v1.0.0、附件下载复核、OpenSpec归档 | 执行中 |
 
-候选功能提交33bf4e6bdd56671863276651b024948e6c069734已推送origin/main，80文件核对25个实际凭据值无命中，V1–V7未变。rc3采用clean package防止旧静态资源残留；新增测试运行器和原生URL适配已完成容器环境及远程CI复验，原生本机连接仍待配置。真正发布前仍需生成最终白名单包并核对Git提交和附件hash；不上传SQL、配置或验收截图。
+容器/MySQL8.4.7及Ubuntu/Java21/Node22/Chromium验证和原生8.0.42/Edge验证分别记录。真实供应商适配代码未变，复用原第七阶段真实成功证据；本批没有重新外发真实文档，不把Fake当作当前供应商效果或额度验收。
 
-新增框架用法核对官方[Spring Boot静态资源](https://docs.spring.io/spring-boot/reference/web/servlet.html)、[Spring Security请求授权](https://docs.spring.io/spring-security/reference/servlet/authorization/authorize-http-requests.html)和[Maven资源目录](https://maven.apache.org/plugins/maven-resources-plugin/examples/resource-directory.html)。真实供应商适配代码本批未变，复用原第七阶段真实成功证据；本批未重新外发真实文档，不声称当前供应商配额或效果已验收。
+分发历史：33bf4e6的首轮CI虽通过，但Linux清单未覆盖隐藏.env.example（14项/实际15文件）。已复现并拒绝旧包；e977faf加入-Force及完整文件集合核对，第二轮CI产物15项全部通过。旧包未作为正式发布附件。历史失败与修复过程保留在progress.md。
 
-下载首轮CI产物后额外发现Linux的Get-ChildItem忽略隐藏.env.example，清单14项而实际15项；ZIP总hash有效，但该模板未被逐文件覆盖。已复现并通过严格文件集合验证拒绝旧包，构建改为-Force，rc4完整15项及额外隐藏文件负例通过。该修复只涉及分发脚本，不改应用；修复后的CI产物仍需重新下载核验，旧产物不得作为正式发布附件。
+框架用法核对官方[Spring Boot静态资源](https://docs.spring.io/spring-boot/reference/web/servlet.html)、[Spring Security请求授权](https://docs.spring.io/spring-security/reference/servlet/authorization/authorize-http-requests.html)和[Maven资源目录](https://maven.apache.org/plugins/maven-resources-plugin/examples/resource-directory.html)。

@@ -2,9 +2,9 @@
 
 AI 技术文档任务与结果交付平台。当前链路：登录 → 公司与空间权限 → 幂等受理与事务 Outbox → RabbitMQ → 模型执行 → 结果与原文依据 → 可选本机回调。
 
-正在收口1.0单机自托管发布候选，发布门禁见[OpenSpec任务](openspec/changes/release-relayops-1-0/tasks.md)。默认假模型不调用真实供应商；可显式配置兼容接口，工作台要求外发确认。任务责任、组织隔离、回调、历史、报告和安全审计已实现；单JAR分发及初始化正在完成实际验收。当前尚未标记v1.0.0发布。
+1.0.0 单机自托管版，发布验收见[门禁记录](docs/release-gates.md)。提供同源可执行JAR、公司/空间与部门小组授权、可靠任务和回调、历史、报告及安全审计。默认假模型不调用真实供应商；可显式配置兼容接口，工作台要求外发确认。部署边界为单应用实例与受控团队。
 
-发布安装方式见[安装指南](docs/release-guide.md)，备份/恢复/升级见[运维说明](docs/operations.md)。可以直接使用本机MySQL，无需Docker MySQL；Docker仅作为可选依赖和CI环境。本机MYSQL80在3306运行，切换前需要私密管理员配置并核对原数据。
+发布安装方式见[安装指南](docs/release-guide.md)，备份/恢复/升级见[运维说明](docs/operations.md)。可以直接使用本机MySQL，无需Docker MySQL；Docker MySQL为可选开发/CI依赖。本机已使用MYSQL80/3306，原容器27表逐表哈希一致后迁入，原卷保留。
 
 ## 开始阅读
 
@@ -25,6 +25,7 @@ AI 技术文档任务与结果交付平台。当前链路：登录 → 公司与
 - [空间运行概览决策](docs/adr/0009-workspace-operations.md)：全量状态、最新交付、待发布消息与 OWNER 安全审计。
 - [完整任务历史决策](docs/adr/0010-job-history.md)：服务端字面搜索、状态筛选和时间/ID分页。
 - [分析报告导出决策](docs/adr/0011-analysis-export.md)：重新授权、纯文本Markdown报告与下载副本边界。
+- [公司组织审计决策](docs/adr/0012-organization-audit.md)：当前ADMIN、租户安全字段与历史分页。
 - [原理与代码导读](docs/walkthrough.md)：202、事务和 SENT 边界。
 - [验证记录](docs/verification.md)：实际命令、结果及限制。
 
@@ -32,13 +33,13 @@ AI 技术文档任务与结果交付平台。当前链路：登录 → 公司与
 
 前端采用taste的framed-sheet工作台布局：任务队列、文档新建、组织管理各有独立视图；任务可按已载入范围搜索或筛选，手机在列表与详情间返回。字体本地托管，包含OFL许可证。业务API、权限和调用责任边界保持原有契约。
 
-需要 JDK 21、Maven 3.9+、Node 22.12+、Docker Desktop（Linux 容器引擎）。后端使用 Spring Boot 4.1.2；前端使用 Vue 3 和 Vite 7，精确版本见 package.json / package-lock.json。
+以下是源码开发方式，需要JDK21、Maven3.9+、Node22.12+、MySQL及RabbitMQ（可由Docker运行）。直接使用发布包只需Java和运行依赖，见安装指南。后端使用Spring Boot4.1.2，前端Vue3/Vite7，精确版本见package-lock.json。
 
 以下命令在项目根目录的 PowerShell 执行。
 
 ```powershell
 ./scripts/init-local.ps1
-docker compose --project-name relayops -f ops/compose.yml --env-file ops/.env up -d --wait
+docker compose --project-name relayops -f ops/compose.yml --env-file ops/.env up -d --wait rabbitmq
 ./scripts/start-backend.ps1
 ```
 
@@ -52,7 +53,7 @@ npm run dev
 
 访问 <http://127.0.0.1:5173>。账号为 `owner.a`、`operator.a`、`viewer.a` 和空间 B 中对应的 `.b` 账号；密码在本地 `ops/.env` 的 `RELAYOPS_DEMO_PASSWORD` 中。该文件由脚本生成独立随机值，不提交 Git。账号只在第一次创建空间时初始化；改变配置中的演示密码不会重置已有数据库密码。
 
-后端监听 127.0.0.1:18080；数据库映射到 127.0.0.1:13307。前端通过 Vite 代理同源访问后端，无需关闭 CSRF 或配置跨域通配符。确认 JAVA_HOME 指向 JDK 21。项目 Maven 设置使用官方 HTTPS 仓库及项目内缓存，不修改全局 Maven 配置。
+后端监听127.0.0.1:18080；原生数据库连接由ops/.env的DB_URL/DB_USERNAME指定，本机为3306。若选择Docker MySQL，额外启动compose的mysql服务，默认映射13307。前端通过Vite同源代理访问，无需关闭CSRF或配置跨域通配符。JAVA_HOME指向JDK21；Maven使用官方HTTPS仓库和项目内缓存。
 
 RabbitMQ 无需手动下载：Compose 自动拉取锁定摘要的官方镜像并保留数据卷。AMQP 为 127.0.0.1:5672，[管理界面](http://127.0.0.1:15672) 使用 `ops/.env` 中的 `RABBITMQ_USERNAME` / `RABBITMQ_PASSWORD` 登录，应用使用 `relayops` vhost。初始化脚本只补充缺少的配置，不替换已有密码或加密密钥；已有 Broker 数据卷的密码不会随修改 .env 自动重置。
 

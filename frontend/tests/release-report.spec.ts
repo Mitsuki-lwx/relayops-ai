@@ -1,0 +1,36 @@
+import { readFileSync } from "node:fs";
+import { expect, test } from "@playwright/test";
+import { requireFakeModel } from "./require-fake";
+
+test("provisioned owner downloads a report from a persisted Fake result", async ({ page }) => {
+  test.skip(!process.env.RELAYOPS_E2E_CONFIG, "Run scripts/test-browser.ps1 against a dedicated schema");
+  const config = Object.fromEntries(readFileSync(process.env.RELAYOPS_E2E_CONFIG!, "utf8").split(/\r?\n/).filter(l => l.includes("=")).map(l => [l.slice(0, l.indexOf("=")), l.slice(l.indexOf("=") + 1)]));
+  await page.goto("/");
+  await page.getByLabel("账号", { exact: true }).fill("release.owner");
+  await page.getByLabel("密码", { exact: true }).fill(config.RELAYOPS_DEMO_PASSWORD);
+  await page.getByRole("button", { name: "登录工作台", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "AI 任务工作台", exact: true })).toBeVisible();
+  await requireFakeModel(page);
+  await page.getByRole("button", { name: "新建文档", exact: true }).click();
+  const title = `发布报告验收 ${Date.now()}`;
+  await page.getByLabel("任务标题").fill(title);
+  await page.getByLabel("技术文档").fill("发布报告必须保留准确引用。\n\n结果由本机假模型生成，不外发文档。\n\n本次验证使用专用数据库。");
+  await page.getByRole("button", { name: /^提交任务/ }).click();
+  const button = page.getByRole("button", { name: "下载分析报告", exact: true });
+  await expect(button).toBeVisible({ timeout: 25000 });
+  const response = page.waitForResponse(r => r.url().endsWith("/result") && r.request().method() === "GET");
+  const download = page.waitForEvent("download");
+  await button.click();
+  expect((await response).status()).toBe(200);
+  const report = await download;
+  const file = "../artifacts/release-persisted-report.md";
+  await report.saveAs(file);
+  const markdown = readFileSync(file, "utf8");
+  expect(markdown).toContain(title);
+  expect(markdown).toContain("发布报告必须保留准确引用");
+  expect(markdown).toContain("关键结论");
+  expect(report.suggestedFilename()).toMatch(/^relayops-analysis-[a-f0-9-]+\.md$/);
+  await expect(page.locator(".detail-meta")).toContainText("调用边界记录：1 次");
+  await expect(page.getByRole("status")).toContainText("已开始下载分析报告");
+  await page.screenshot({ path: "../artifacts/release-persisted-report.png", fullPage: true });
+});

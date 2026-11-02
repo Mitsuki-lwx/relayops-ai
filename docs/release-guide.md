@@ -8,6 +8,8 @@
 
 已有本机MySQL时，将ops/mysql-native.cnf.example复制为mysql-native.cnf，填写本机管理员连接（私密文件不提交）。以下初始化拒绝覆盖已存在的relayops库或relayops_local用户：
 
+已验证数据库为Windows原生MySQL8.0.42和Linux容器MySQL8.4.7。已有库且DB_URL/DB_USERNAME配置正确时，直接启动即可；初始化及迁移命令用于尚不存在的目标库，不是每次启动步骤。
+
 ```powershell
 ./scripts/verify-release.ps1
 ./scripts/init-local.ps1

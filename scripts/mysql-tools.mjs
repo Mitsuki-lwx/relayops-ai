@@ -13,6 +13,11 @@ export function mysqlTools(backend = process.env.RELAYOPS_DATABASE_BACKEND ?? (e
   const dump = database => backend === 'native'
     ? ['mysqldump', [`--defaults-extra-file=${config}`, ...flags, database]]
     : ['docker', ['exec', 'relayops-mysql-1', 'sh', '-c', 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysqldump -uroot "$@"', 'relayops-dump', ...flags, database]];
-  const query = (sql, database) => { const [command, args] = mysql(database); return execFileSync(command, args, { input: sql, maxBuffer: 128 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] }); };
+  const query = (sql, database) => {
+    const [command, args] = mysql(database);
+    // Match the application's UTC database session, including native servers using SYSTEM time.
+    const input = Buffer.concat([Buffer.from("SET time_zone='+00:00';\n"), Buffer.isBuffer(sql) ? sql : Buffer.from(sql)]);
+    return execFileSync(command, args, { input, maxBuffer: 128 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] });
+  };
   return { backend, mysql, dump, query };
 }
