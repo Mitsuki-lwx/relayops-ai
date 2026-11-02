@@ -7,6 +7,8 @@ $previousVhost = $env:RABBITMQ_VHOST
 $previousDbUrl = $env:DB_URL
 $previousModelMode = $env:RELAYOPS_MODEL_MODE
 $previousRetention = $env:RELAYOPS_RETENTION_ENABLED
+$previousTracing = $env:RELAYOPS_TRACING_ENABLED
+$env:RELAYOPS_TRACING_ENABLED = 'false'
 $env:RELAYOPS_MODEL_MODE = 'fake'
 $env:RELAYOPS_RETENTION_ENABLED = 'false'
 $env:RELAYOPS_DATABASE_TESTS = 'true'
@@ -31,5 +33,6 @@ try {
     $env:DB_URL = $previousDbUrl
     $env:RELAYOPS_MODEL_MODE = $previousModelMode
     $env:RELAYOPS_RETENTION_ENABLED = $previousRetention
+    $env:RELAYOPS_TRACING_ENABLED = $previousTracing
     Pop-Location
 }

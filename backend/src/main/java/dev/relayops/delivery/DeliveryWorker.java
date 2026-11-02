@@ -4,6 +4,7 @@ import dev.relayops.common.PayloadCipher;
 import dev.relayops.job.DocumentInput;
 import dev.relayops.messaging.OutboxStore;
 import dev.relayops.messaging.ReadyMessage;
+import dev.relayops.observability.TaskTracing;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -27,11 +28,13 @@ public class DeliveryWorker {
     private final OutboxStore outbox;
     private final WebhookTransport transport;
     private final boolean enabled;
+    private final TaskTracing tracing;
     public DeliveryWorker(JdbcTemplate jdbc,TransactionTemplate tx,PayloadCipher cipher,DestinationService catalog,OutboxStore outbox,WebhookTransport transport,
-            @Value("${relayops.recovery-enabled}") boolean enabled) {
+            TaskTracing tracing, @Value("${relayops.recovery-enabled}") boolean enabled) {
         this.jdbc=jdbc;this.tx=tx;this.cipher=cipher;this.catalog=catalog;this.outbox=outbox;this.transport=transport;this.enabled=enabled;
+        this.tracing=tracing;
     }
-    record Work(String workspace,String delivery,String run,String attempt,String token,String endpoint,String keyId,byte[] key,byte[] payload,String hash) {}
+    record Work(String workspace,String delivery,String run,String attempt,String token,String endpoint,String keyId,byte[] key,byte[] payload,String hash,String job) {}
     private Instant now() {return jdbc.queryForObject("SELECT CURRENT_TIMESTAMP(3)",(rs,n)->rs.getObject(1,LocalDateTime.class).toInstant(ZoneOffset.UTC));}
     private boolean lock(String workspace,String run) {
         var roots=jdbc.queryForList("SELECT delivery_id FROM delivery_run WHERE workspace_id=? AND id=?",String.class,workspace,run);
@@ -44,6 +47,9 @@ public class DeliveryWorker {
         if(!"DELIVERY_SEND".equals(envelope.kind())) throw new ReadyMessage.Invalid("WRONG_ROUTE_KIND");
         try {
             Work work=tx.execute(s->claim(envelope)); if(work==null) return true;
+            try(var observation=tracing.execution(work.workspace(),work.job(),"delivery.attempt")) {
+            observation.attribute("langfuse.observation.metadata.run_id",work.run());
+            observation.attribute("langfuse.observation.metadata.attempt_id",work.attempt());
             WebhookTransport.Outcome outcome;
             try {
                 String payload=cipher.decrypt(work.payload(),work.workspace()+":"+work.delivery()+":delivery");
@@ -52,12 +58,14 @@ public class DeliveryWorker {
                 outcome=transport.send(work.endpoint(),work.delivery(),work.run(),work.attempt(),work.keyId(),secret,payload,work.hash());
             } catch(Exception ex) {outcome=new WebhookTransport.Outcome(null,"LOCAL_DELIVERY_INVALID",false,0);}
             var finalOutcome=outcome;
+            observation.outcome(outcome.success() ? "ACKNOWLEDGED" : outcome.error()==null ? "DELIVERY_UNCONFIRMED" : outcome.error());
             tx.executeWithoutResult(s->{
                 if(!lock(work.workspace(),work.run())) return;
                 if(jdbc.queryForObject("SELECT COUNT(*) FROM delivery_run WHERE id=? AND status='IN_FLIGHT' AND lease_token=? AND lease_until>CURRENT_TIMESTAMP(3)",Integer.class,work.run(),work.token())!=1) return;
                 finish(work.run(),work.attempt(),finalOutcome);
             });
             return true;
+            }
         } catch(ReadyMessage.Invalid ex) {throw ex;}
         catch(Exception ex) {LOG.warn("operation=delivery_deferred exceptionType={}",ex.getClass().getSimpleName());return false;}
     }
@@ -78,7 +86,7 @@ public class DeliveryWorker {
         String token=UUID.randomUUID().toString(),attempt=UUID.randomUUID().toString();
         jdbc.update("UPDATE delivery_run SET status='IN_FLIGHT',attempt_count=?,lease_token=?,lease_until=DATE_ADD(CURRENT_TIMESTAMP(3),INTERVAL 30 SECOND) WHERE id=?",count,token,e.aggregateId());
         jdbc.update("INSERT INTO delivery_attempt(id,workspace_id,run_id,attempt_no,key_id) VALUES (?,?,?,?,?)",attempt,e.workspaceId(),e.aggregateId(),count,d.get("destination_id"));
-        return new Work(e.workspaceId(),(String)d.get("id"),e.aggregateId(),attempt,token,(String)d.get("endpoint"),(String)d.get("destination_id"),(byte[])targets.getFirst().get("secret_cipher"),(byte[])d.get("payload_cipher"),(String)d.get("payload_hash"));
+        return new Work(e.workspaceId(),(String)d.get("id"),e.aggregateId(),attempt,token,(String)d.get("endpoint"),(String)d.get("destination_id"),(byte[])targets.getFirst().get("secret_cipher"),(byte[])d.get("payload_cipher"),(String)d.get("payload_hash"),(String)d.get("job_id"));
     }
     private String invalid(java.util.Map<String,Object> d,java.util.Map<String,Object> r,Instant time) {
         if(payloadExpired(d,time)) return "PAYLOAD_EXPIRED";

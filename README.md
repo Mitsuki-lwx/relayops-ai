@@ -6,6 +6,8 @@ AI 技术文档任务与结果交付平台。当前链路：登录 → 公司与
 
 发布安装方式见[安装指南](docs/release-guide.md)，备份/恢复/升级见[运维说明](docs/operations.md)。可以直接使用本机MySQL，无需Docker MySQL；Docker MySQL为可选开发/CI依赖。本机已使用MYSQL80/3306，原容器27表逐表哈希一致后迁入，原卷保留。
 
+源码增量已接入可选[Langfuse任务观测](docs/observability.md)：元数据追踪、异步导出和模型用量，不包含正文。发布附件版本与后续源码增量分别记录。
+
 ## 开始阅读
 
 - [LLM 与组织隔离扩展建议](docs/product-directions.md)：已实现边界与后续扩展。

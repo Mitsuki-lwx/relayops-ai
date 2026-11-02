@@ -4,6 +4,7 @@ import dev.relayops.common.PayloadCipher;
 import dev.relayops.messaging.OutboxStore;
 import dev.relayops.messaging.ReadyMessage;
 import dev.relayops.delivery.DeliveryStore;
+import dev.relayops.observability.TaskTracing;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -28,12 +29,14 @@ public class JobWorker {
     private final boolean recoveryEnabled;
     private final OutboxStore outbox;
     private final DeliveryStore deliveries;
+    private final TaskTracing tracing;
 
     public JobWorker(JdbcTemplate jdbc, TransactionTemplate tx, PayloadCipher cipher, JsonMapper json,
-                     ModelGateway model, LeaseHeartbeat heartbeat, OutboxStore outbox, DeliveryStore deliveries, @Value("${relayops.recovery-enabled}") boolean recoveryEnabled) {
+                     ModelGateway model, LeaseHeartbeat heartbeat, OutboxStore outbox, DeliveryStore deliveries, TaskTracing tracing, @Value("${relayops.recovery-enabled}") boolean recoveryEnabled) {
         this.jdbc = jdbc; this.tx = tx; this.cipher = cipher; this.json = json; this.model = model; this.outbox = outbox; this.recoveryEnabled = recoveryEnabled;
         this.heartbeat = heartbeat;
         this.deliveries = deliveries;
+        this.tracing = tracing;
     }
 
     record Work(String id, String workspaceId, LocalDate date, String title, byte[] input, String language, String token, long generation, String modelProfile) {}
@@ -49,15 +52,20 @@ public class JobWorker {
         try {
             Work work = tx.execute(status -> claim(envelope));
             if (work == null) return true;
+            try (var observation = tracing.execution(work.workspaceId(), work.id(), "job.execute", envelope.createdAt())) {
+            tracing.queue(envelope.createdAt());
+            observation.outcome("DEFERRED");
             List<DocumentInput.Paragraph> paragraphs;
             ModelGateway.Prepared prepared;
             try {
                 paragraphs = DocumentInput.paragraphs(cipher.decrypt(work.input(), work.workspaceId() + ":" + work.id() + ":input"));
                 prepared = model.prepare(work.modelProfile(), work.title(), paragraphs, work.language());
             } catch (ModelGateway.Failure ex) {
+                observation.outcome(ex.code);
                 settle(work, null, ex.code, false);
                 return true;
             } catch (Exception ex) {
+                observation.outcome("LOCAL_PRECHECK_FAILED");
                 settle(work, null, "LOCAL_PRECHECK_FAILED", false);
                 return true;
             }
@@ -66,30 +74,56 @@ public class JobWorker {
                 // The call is deliberately outside any DB transaction. Never retry this line.
                 DocumentResult result;
                 try {
-                    result = prepared.invoke();
+                    try (var generation = tracing.stage("model.extract", "generation")) {
+                        generation.attribute("langfuse.observation.model.name", prepared.profile().modelName());
+                        generation.attribute("langfuse.observation.metadata.profile", prepared.profile().profileId());
+                        generation.attribute("langfuse.observation.metadata.prompt_version", prepared.profile().promptVersion());
+                        generation.attribute("langfuse.observation.metadata.provider", prepared.profile().provider());
+                        generation.attribute("langfuse.observation.metadata.schema_version", prepared.profile().schemaVersion());
+                        generation.attribute("langfuse.observation.metadata.usage_available", false);
+                        generation.attribute("langfuse.observation.metadata.cost_source", "unknown");
+                        generation.attribute("langfuse.observation.input", "{\"payload\":\"omitted\"}");
+                        try { result = prepared.invoke(); generation.outcome("SUCCEEDED"); }
+                        catch (ModelGateway.Failure ex) { generation.outcome(ex.code); throw ex; }
+                        catch (Exception ex) { generation.outcome("MODEL_RESULT_UNKNOWN"); throw ex; }
+                    }
                 } catch (ModelGateway.Failure ex) {
+                    observation.outcome(ex.code);
                     settle(work, null, ex.code, true);
                     return true;
                 } catch (Exception ex) {
+                    observation.outcome("MODEL_RESULT_UNKNOWN");
                     // A generic adapter exception cannot prove that a request was not executed.
                     // Retain SENT; lease recovery will conservatively classify it UNKNOWN.
                     LOG.warn("operation=model_result_unknown jobId={}", work.id());
                     return false;
                 }
-                try {
+                try (var validation = tracing.stage("result.validate", "guardrail")) {
+                    try {
                     DocumentResult.validate(result, paragraphs);
                     if (!work.modelProfile().equals(result.modelProfile())) throw new IllegalStateException("OUTPUT_INVALID");
+                    validation.outcome("VALID");
+                    } catch (Exception ex) {
+                        validation.outcome("EVIDENCE_INVALID".equals(ex.getMessage()) ? "EVIDENCE_INVALID" : "OUTPUT_INVALID");
+                        throw ex;
+                    }
                 } catch (Exception ex) {
+                    observation.outcome("EVIDENCE_INVALID".equals(ex.getMessage()) ? "EVIDENCE_INVALID" : "OUTPUT_INVALID");
                     settle(work, null, "EVIDENCE_INVALID".equals(ex.getMessage()) ? "EVIDENCE_INVALID" : "OUTPUT_INVALID", true);
                     return true;
                 }
                 String response = json.writeValueAsString(result);
                 // Retry persistence of the same response, never the model request.
                 for (int attempt = 0; attempt < 3; attempt++) {
-                    try { settle(work, response, null, true); return true; }
+                    try (var persistence = tracing.stage("result.persist", "span")) {
+                        try { settle(work, response, null, true); }
+                        catch (Exception ex) { persistence.outcome("PERSISTENCE_DEFERRED"); throw ex; }
+                        persistence.outcome("SETTLE_RETURNED"); observation.outcome("SETTLE_RETURNED"); return true;
+                    }
                     catch (Exception ex) { LOG.warn("operation=result_commit_retry jobId={} saveAttempt={}", work.id(), attempt + 1); }
                 }
                 return false;
+            }
             }
         } catch (ReadyMessage.Invalid ex) { throw ex; }
         catch (Exception ex) {

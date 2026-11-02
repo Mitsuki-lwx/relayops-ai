@@ -100,6 +100,7 @@ public class ModelGateway implements AutoCloseable {
     }
 
     private DocumentResult invoke(HttpRequest request, String title) throws Exception {
+        dev.relayops.observability.TaskTracing.parameters(maxTokens, tokenParameter, jsonMode);
         // No application retries. The future's deadline includes the entire response body, not just headers.
         var future = client.sendAsync(request, info -> new LimitedBody(info.statusCode()));
         try {
@@ -116,6 +117,7 @@ public class ModelGateway implements AutoCloseable {
                     if (envelope.path("choices").isMissingNode() && envelope.path("data").isObject()) envelope = envelope.path("data");
                 }
                 if (!envelope.path("error").isMissingNode() && !envelope.path("error").isNull()) throw invalid("ERROR_ENVELOPE");
+                dev.relayops.observability.TaskTracing.usage(envelope);
                 var choices = envelope.path("choices");
                 if (!choices.isArray() || choices.size() != 1) {
                     LOG.warn("operation=model_envelope_shape rootObject={} choicesArray={} choiceCount={} nestedChoicesArray={} successTrue={}",

@@ -50,6 +50,12 @@ server:
         http-only: true
         same-site: lax
 relayops:
+  tracing:
+    enabled: ${RELAYOPS_TRACING_ENABLED:false}
+    base-url: ${LANGFUSE_BASE_URL:}
+    public-key: ${LANGFUSE_PUBLIC_KEY:}
+    secret-key: ${LANGFUSE_SECRET_KEY:}
+    environment: ${RELAYOPS_TRACING_ENVIRONMENT:local}
   model:
     mode: ${RELAYOPS_MODEL_MODE:fake}
     endpoint: ${RELAYOPS_MODEL_ENDPOINT:}

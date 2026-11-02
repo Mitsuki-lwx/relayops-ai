@@ -100,6 +100,31 @@ class DeliveryIntegrationTest {
     String status(){return jdbc.queryForObject("SELECT status FROM delivery_run WHERE id=?",String.class,run());}
     void due(){jdbc.update("UPDATE delivery_run SET next_attempt_at=DATE_SUB(CURRENT_TIMESTAMP(3),INTERVAL 1 SECOND) WHERE id=?",run());worker.recover();}
 
+    @Test void telemetryCorrelatesAsyncAttemptsWithoutExportingPayload() throws Exception {
+        boolean local="true".equals(System.getenv("RELAYOPS_LANGFUSE_VERIFY"));
+        var collector=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);
+        var exportBodies=new java.util.concurrent.CopyOnWriteArrayList<String>();
+        collector.createContext("/",exchange->{try(exchange){exportBodies.add(new String(exchange.getRequestBody().readAllBytes(),StandardCharsets.UTF_8));exchange.sendResponseHeaders(200,-1);}});collector.start();
+        var originalAi=org.springframework.test.util.ReflectionTestUtils.getField(ai,"tracing");
+        var originalDelivery=org.springframework.test.util.ReflectionTestUtils.getField(worker,"tracing");
+        try(var tracing=new dev.relayops.observability.TaskTracing(true,local?System.getenv("LANGFUSE_BASE_URL"):"http://127.0.0.1:"+collector.getAddress().getPort(),local?System.getenv("LANGFUSE_PUBLIC_KEY"):"pk-lf-fixture",local?System.getenv("LANGFUSE_SECRET_KEY"):"sk-lf-fixture","test")) {
+            org.springframework.test.util.ReflectionTestUtils.setField(ai,"tracing",tracing);
+            org.springframework.test.util.ReflectionTestUtils.setField(worker,"tracing",tracing);
+            String job=create(); failFirst=1;
+            assertTrue(worker.execute(ready())); assertEquals("RETRY_WAIT",status());
+            due(); assertTrue(worker.execute(ready())); assertEquals("SUCCEEDED",status());
+            tracing.flush();
+            assertEquals(2,calls.get());
+            assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM ai_attempt WHERE job_id=? AND sent_at IS NOT NULL",Integer.class,job));
+            for(String body:exportBodies){assertFalse(body.contains("只有结果提交后才发回调"));assertFalse(body.contains("Signature"));}
+            if(local) System.out.println("LANGFUSE_DELIVERY_JOB="+job); else assertFalse(exportBodies.isEmpty());
+        } finally {
+            org.springframework.test.util.ReflectionTestUtils.setField(ai,"tracing",originalAi);
+            org.springframework.test.util.ReflectionTestUtils.setField(worker,"tracing",originalDelivery);
+            collector.stop(0);
+        }
+    }
+
     @Test void targetsAreScopedCanonicalAndPartOfIntentWithoutPartialAdmission() {
         int before=jdbc.queryForObject("SELECT COUNT(*) FROM ai_job",Integer.class);
         assertThrows(ApiException.class,()->jobs.create("owner.a",workspace,id(),request(List.of(id()))));

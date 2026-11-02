@@ -27,3 +27,6 @@
 | 06 | 权限与竞争验证 | report-export.spec | 03/04 | 拒绝/TTL/迟到、重复点击 |
 | 07 | 接入主流程 | 任务详情、README | 05/06 | 成功任务到重新授权到下载 |
 | 08 | 端到端验证与发布 | 浏览器、verification、checklist | 07 | 真下载三档、构建/自审/推送 |
+
+# Langfuse观测任务
+详见openspec/changes/archive/2026-11-02-add-langfuse-tracing/tasks.md：配置/SDK→阶段与usage→worker/回调接入主流程→故障与真实库验证→本机读回端到端、自审与推送。影响TaskTracing、ModelGateway、JobWorker、DeliveryWorker及配置/测试/运维。

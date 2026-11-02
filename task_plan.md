@@ -4,10 +4,10 @@
 在既有任务可靠性和组织隔离之上，按OpenSpec完成单机自托管1.0发布，交付可运行包、真实账号初始化、隔离验证和备份恢复说明。
 
 ## Next Step
-v1.0.0已正式发布，最终CI与公开附件下载/15文件哈希验证通过；OpenSpec12/12完成并归档。18个暂存文件/32个本地凭据值扫描无命中，应用代码保持发布标签deac4ff一致；主服务18080和原生MySQL3306运行。发布范围已完成，后续新工作另立增量。
+Langfuse观测已实现：127后端通过、本机trace读回及18080主服务验收完成，OpenSpec5/5同步并归档。完成暂存凭据扫描并自动推送；真实模型质量评测仍另批。
 
 ## Current Phase
-Phase 47
+Phase 48
 
 ## Phases
 
@@ -248,4 +248,8 @@ Phase 47
 
 ### Phase 47: Release publication
 - [x] 自审/凭据检查、应用提交推送、v1.0.0发布及公开附件核对，OpenSpec12/12同步/归档。
+- **Status:** complete
+
+### Phase 48: Langfuse tracing
+- [x] OpenSpec契约、脱敏异步埋点、故障负例、本机trace读回、主服务接入及自审完成。
 - **Status:** complete

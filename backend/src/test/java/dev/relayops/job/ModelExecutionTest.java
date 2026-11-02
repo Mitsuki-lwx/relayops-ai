@@ -86,6 +86,49 @@ class ModelExecutionTest {
         assertEquals("MODEL_CONFIG_CHANGED", job(id).errorCode()); assertEquals("FAILED", job(id).status());
         assertEquals("RELEASED", credit(id)); assertEquals(0, sent(id)); assertEquals(0, provider.calls.get());
     }
+
+    @Test void tracingCollectorFailureDoesNotChangeSuccessOrDuplicateCalls() throws Exception {
+        var collector = com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+        var received = new java.util.concurrent.atomic.AtomicInteger();
+        collector.createContext("/", exchange -> {
+            try (exchange) {
+                String body = new String(exchange.getRequestBody().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+                assertFalse(body.contains("必须持久化任务")); assertFalse(body.contains("test-key-not-real"));
+                received.incrementAndGet(); exchange.sendResponseHeaders(503,-1);
+            }
+        });
+        collector.start();
+        var original = ReflectionTestUtils.getField(worker,"tracing");
+        try (var tracing = new dev.relayops.observability.TaskTracing(true,"http://127.0.0.1:"+collector.getAddress().getPort(),"pk-lf-fixture","sk-lf-fixture","test")) {
+            ReflectionTestUtils.setField(worker,"tracing",tracing);
+            String id=create(); var message=ready(id);
+            assertTrue(worker.execute(message)); assertTrue(worker.execute(message));
+            tracing.flush();
+            assertEquals("SUCCEEDED",job(id).status()); assertEquals("SPENT",credit(id));
+            assertEquals(1,sent(id)); assertEquals(1,provider.calls.get()); assertTrue(received.get()>0);
+            assertFalse(io.opentelemetry.api.trace.Span.current().getSpanContext().isValid());
+        } finally { ReflectionTestUtils.setField(worker,"tracing",original); collector.stop(0); }
+    }
+
+    @Test void tracingOptionalLocalLangfuseAcceptance() throws Exception {
+        // Normal CI still verifies this path against a real local HTTP collector.
+        boolean localLangfuse="true".equals(System.getenv("RELAYOPS_LANGFUSE_VERIFY"));
+        var collector=com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1",0),0);
+        collector.createContext("/",exchange->{try(exchange){exchange.getRequestBody().readAllBytes();exchange.sendResponseHeaders(200,-1);}});
+        collector.start();
+        String base=localLangfuse?System.getenv("LANGFUSE_BASE_URL"):"http://127.0.0.1:"+collector.getAddress().getPort();
+        String publicKey=localLangfuse?System.getenv("LANGFUSE_PUBLIC_KEY"):"pk-lf-fixture";
+        String secretKey=localLangfuse?System.getenv("LANGFUSE_SECRET_KEY"):"sk-lf-fixture";
+        var original=ReflectionTestUtils.getField(worker,"tracing");
+        try(var tracing=new dev.relayops.observability.TaskTracing(true,base,publicKey,secretKey,"test")) {
+            ReflectionTestUtils.setField(worker,"tracing",tracing);
+            provider.raw=provider.json.writeValueAsString(java.util.Map.of("choices",List.of(java.util.Map.of("finish_reason","stop","message",java.util.Map.of("content",provider.validAnalysis()))),"usage",java.util.Map.of("prompt_tokens",23,"completion_tokens",11,"total_tokens",34)));
+            String id=create(); var message=ready(id);
+            assertTrue(worker.execute(message)); assertTrue(worker.execute(message)); tracing.flush();
+            assertEquals("SUCCEEDED",job(id).status()); assertEquals(1,provider.calls.get());
+            if(localLangfuse) System.out.println("LANGFUSE_VERIFY_JOB="+id);
+        } finally { ReflectionTestUtils.setField(worker,"tracing",original); collector.stop(0); }
+    }
     @Test void oldFakeTaskStillRunsAndExplicitRerunUsesCurrentProfile() {
         String old = create();
         jdbc.update("UPDATE ai_job SET model_profile='fake-extract-v1',prompt_version='extract.v1' WHERE id=?", old);

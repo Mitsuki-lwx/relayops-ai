@@ -296,3 +296,7 @@ API 与协议依据：[Spring AMQP 发布确认与 returns](https://docs.spring.
 - [Playwright 浏览器 channel](https://playwright.dev/docs/api/class-testoptions#test-options-channel)
 
 版本以实际构建和锁文件为准。安装时发现旧 Vue/Vite 补丁的已知漏洞，升级为 npm 官方审计给出的修复版本；升级后审计返回 0。
+
+## Langfuse源码增量验收（2026-11-02）
+127后端测试全通过，0失败/错误/跳过（langfuse-backend-final.log）。包括4项观测单测及3项任务/回调集成新增案例；真实Langfuse读回5阶段、500与ACK两次回调、同任务session、有效23/11/34桩usage、Fake未知用量、父子、环境与正文/密钥排除。常规测试关闭导出，专门案例显式开启；无真实供应商调用。
+主服务已加载源码JAR，18080健康UP/1.0.0，ADMIN200/MEMBER403/跨公司404/非法422只读验收通过，12类主库事实hash未变。前端未变，复用1.0的80项Playwright记录；本批未重跑浏览器。已发布v1.0.0附件未更改。详见[观测说明](observability.md)。

@@ -18,6 +18,7 @@ try { & node scripts/prepare-e2e.mjs $relayDatabase; if ($LASTEXITCODE -ne 0) { 
 $env:DB_URL = "jdbc:mysql://127.0.0.1:$DatabasePort/$($relayDatabase)?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true"
 $env:RABBITMQ_VHOST = 'relayops-test'
 $env:RELAYOPS_MODEL_MODE = 'fake'
+$env:RELAYOPS_TRACING_ENABLED = 'false'
 $env:RELAYOPS_MASTER_KEY = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
 $env:RELAYOPS_RETENTION_ENABLED = 'true'
 $env:RELAYOPS_MODEL_API_KEY = ''

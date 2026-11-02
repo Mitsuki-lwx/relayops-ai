@@ -34,3 +34,6 @@ node scripts/backup-database.mjs relayops artifacts/backups/manual.sql
 - 登录：发布包无演示种子；重名初始化不会更改密码。丢失主密钥无法解密旧载荷，不要生成新密钥覆盖旧值。
 
 备份/日志/已下载报告及接收端数据各有独立生命周期，在线七天TTL不能将这些副本撤回。公共网络部署还需独立TLS、边界访问控制、主机补丁和备份保密管理。
+
+## 可选Langfuse观测
+源码构建可通过本地ops/.env启用元数据观测，配置与验证见[观测说明](https://github.com/Mitsuki-lwx/relayops-ai/blob/main/docs/observability.md)。已发布1.0附件不变。Langfuse访问权须单独限制为可信运维人员，默认不保存文档正文。
