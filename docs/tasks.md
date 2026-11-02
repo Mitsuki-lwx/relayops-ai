@@ -30,3 +30,6 @@
 
 # Langfuse观测任务
 详见openspec/changes/archive/2026-11-02-add-langfuse-tracing/tasks.md：配置/SDK→阶段与usage→worker/回调接入主流程→故障与真实库验证→本机读回端到端、自审与推送。影响TaskTracing、ModelGateway、JobWorker、DeliveryWorker及配置/测试/运维。
+
+# 真实模型验收
+已在独立环境完成三条合成样本的真实模型、幂等、引用、签名回调、Langfuse读回及浏览器报告下载。[验收数据与局限](real-model-verification.md)。本批无产品代码或规范行为变化，沿用现有OpenSpec契约。

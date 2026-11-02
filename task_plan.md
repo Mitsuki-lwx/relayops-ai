@@ -4,10 +4,10 @@
 在既有任务可靠性和组织隔离之上，按OpenSpec完成单机自托管1.0发布，交付可运行包、真实账号初始化、隔离验证和备份恢复说明。
 
 ## Next Step
-Langfuse观测已实现：127后端通过、本机trace读回及18080主服务验收完成，OpenSpec5/5同步并归档。完成暂存凭据扫描并自动推送；真实模型质量评测仍另批。
+真实模型三样本、44处引用、3次签名回调和Langfuse/报告下载验收已完成；5557 Token，金额未知，主库/配置未变。自审凭据扫描后推送验收文档。
 
 ## Current Phase
-Phase 48
+Phase 49
 
 ## Phases
 
@@ -252,4 +252,8 @@ Phase 48
 
 ### Phase 48: Langfuse tracing
 - [x] OpenSpec契约、脱敏异步埋点、故障负例、本机trace读回、主服务接入及自审完成。
+- **Status:** complete
+
+### Phase 49: Real model end-to-end verification
+- [x] 独立环境、真实模式断言、三类样本/一次调用/引用/回调/Langfuse/浏览器报告通过，停止临时服务，完成记录和自审。
 - **Status:** complete

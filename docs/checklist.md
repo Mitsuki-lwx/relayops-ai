@@ -215,3 +215,10 @@
 - [x] 执行阶段正确父子关系，异步回调通过job session关联，重复消息不重复模型调用。
 - [x] 禁用、导出失败与队列拥塞不影响业务；上下文释放且跨任务不串联。
 - [x] 本机Langfuse实际摄入并读回检查；专用库验证、自审和自动推送完成。
+
+## 真实模型小样本验收
+- [x] 独立schema/vhost/非演示OWNER，API真实compatible/billable/model/profile断言通过。
+- [x] 三类合成样本成功；相同幂等键复用，3任务/3结果/3 SENT/3 SPENT/0 UNCERTAIN。
+- [x] 44处引用逐段匹配；3次签名回调HTTP200且接收端SQLite保存3行。
+- [x] Langfuse逐条读取真实模型、用量和5阶段/回调；累计5557 Token，金额未知。
+- [x] Edge真实结果新授权下载通过；临时服务停止，主库及主配置hash不变。

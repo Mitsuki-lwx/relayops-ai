@@ -300,3 +300,6 @@ API 与协议依据：[Spring AMQP 发布确认与 returns](https://docs.spring.
 ## Langfuse源码增量验收（2026-11-02）
 127后端测试全通过，0失败/错误/跳过（langfuse-backend-final.log）。包括4项观测单测及3项任务/回调集成新增案例；真实Langfuse读回5阶段、500与ACK两次回调、同任务session、有效23/11/34桩usage、Fake未知用量、父子、环境与正文/密钥排除。常规测试关闭导出，专门案例显式开启；无真实供应商调用。
 主服务已加载源码JAR，18080健康UP/1.0.0，ADMIN200/MEMBER403/跨公司404/非法422只读验收通过，12类主库事实hash未变。前端未变，复用1.0的80项Playwright记录；本批未重跑浏览器。已发布v1.0.0附件未更改。详见[观测说明](observability.md)。
+
+## 真实模型端到端三样本（2026-11-02）
+用户授权使用cline-pass/deepseek-v4.1-flash-1017；独立schema/vhost中3/3成功，各调用一次，44处精确引用与3次签名回调/接收保存通过。结果完成耗时9.788/11.266/13.834秒，真实Langfuse报告5557 Token；Edge重新授权读取并实际下载真实Markdown。12类主库事实及主配置hash不变。未更改应用代码，127后端/80前端只复用既有回归记录，未重跑。详见[真实验收](real-model-verification.md)。
