@@ -323,3 +323,10 @@ API 与协议依据：[Spring AMQP 发布确认与 returns](https://docs.spring.
 - 评分器`scripts/score-requirements-review-eval.mjs`不调用模型，校验结果schema、精确引用、CONFLICT双引用、必找问题/禁止问题、必找验收草稿和禁止文字；拒绝把原文引用当作生成正文检查，避免把源文本误判为编造。
 - `node --test scripts/score-requirements-review-eval.test.mjs`：10项通过；`--validate-only`：20个样本、版本`relayops.requirements-review.eval.v1`校验通过；用1个合成结果做CLI烟雾，评分器正确输出1通过/19缺失结果、结构失败0。
 - CI `verify.yml`在准备测试环境后增加评分器单测和数据集校验；本批未在CI实际执行、未调用供应商。下一步是在独立schema/vhost中用固定profile逐样本运行并保存原始结果，重复采样和模型对照另批。
+
+## 需求评审固定评测集真实运行（2026-11-03）
+- 独立schema/vhost及18081专用服务，真实兼容模型`cline-pass/deepseek-v4.1-flash-1017`，profile`review-compat-ae7e1dd91573833a38ccec90`、提示词`review.compat.v2`、评审上限8192；运行器`scripts/run-requirements-review-eval.mjs`逐例单次调用、无自动重试、无回调目的地。
+- 首轮20个任务全部成功，评分18/20：两个“完整度对照”仍被模型提出GAP/AMBIGUITY。人工复核发现输入确有未闭合范围（方法/失败响应、任务ID归属与内容检测等），严格零问题期望不成立；将两个对照收窄并明确排除项，评分改为允许澄清但禁止CONFLICT和编造值，重跑2例后通过。
+- 最终20个结果：20/20通过，`findingRecall=1`、`criterionRecall=1`、结构失败0、禁止问题/文字0；共21项必找问题、20项必找草稿全部命中。结果基线见`eval/requirements-review/baselines/2026-11-03-review-compat-v2.json`。
+- 最终20例模型span平均22.123秒，供应商报告Token合计76,439（输入11,353/输出65,086）；含重跑共24次调用/94,870 Token，金额未知。Langfuse回读`review-eval`环境120条观测、24个模型调用，模型/profile/版本一致，标题和输入片段0泄漏。
+- 注入样本被识别为不可信指令文本，未出现`SYSTEM_OVERRIDE`或注入内容；冲突样本保留两条不同引用并未替用户裁决；重复/单位等价样本未输出CONFLICT。评测仍为单次采样和固定关键词规则，不能推导总体准确率；未做人工全量语义复核、模型对照或稳定性重复采样。

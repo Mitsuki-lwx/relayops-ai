@@ -8,6 +8,7 @@
 - `schema.json`：数据集 JSON Schema（编辑器和人工校验用）。
 - `../../scripts/score-requirements-review-eval.mjs`：无依赖的确定性评分器。
 - `../../scripts/score-requirements-review-eval.test.mjs`：评分器单元测试。
+- `../../scripts/run-requirements-review-eval.mjs`：受控的真实API批量运行器。
 
 ## 覆盖范围
 
@@ -72,13 +73,31 @@ node scripts/score-requirements-review-eval.mjs --results artifacts/review-eval/
 
 ## 收集结果
 
-当前仓库不包含自动调用供应商的评测运行器，避免误用主库或产生未确认费用。建议在独立 schema/vhost 和专用端口上评测：
+运行器只接受独立本地端口（默认18081，拒绝18080/8080）和确认费用的真实模式。每个 case 只提交一次评审任务，不自动重跑，不创建回调目的地；UNKNOWN/REJECTED 连续达到阈值时停止，避免供应商故障烧掉整套额度。
+
+```powershell
+node scripts/run-requirements-review-eval.mjs `
+  --config artifacts/review-eval-<ts>/config.env `
+  --user eval.owner `
+  --out artifacts/review-eval-<ts>/run1 `
+  --acknowledge-cost
+```
+
+输出：
+- `manifest.json`：模型、profile、提示词版本、每个 case 的任务ID/状态/错误码/耗时/调用次数。
+- `results/<case-id>.json`：成功任务的结果响应，供评分器读取。
+- 失败/UNKNOWN 不写结果文件，评分器按缺失结果计失败，不用另一次调用覆盖原失败。
+
+建议流程：
 
 1. 使用固定 profile，记录模型名、provider、`profileId`、提示词版本和两个输出上限。
-2. 每个 case 只提交一次评审任务，`title` 使用样本 `title`，`inputText` 使用样本 `input`；不自动重跑。
-3. 成功结果保存为 `<id>.json`；失败/UNKNOWN 记录状态与错误码，不要用另一次调用覆盖原失败。
-4. 同一 profile 至少保留一次完整运行；比较提示词版本时，两版各自独立运行，相同 case 不共享幂等键。
-5. 评分后在报告中保留 `profileId`、模型、日期、数据集版本和原始结果目录，避免只留聚合分数。
+2. 在独立 schema/vhost 和专用端口运行；不要对主库或18080运行。
+3. 同一 profile 至少保留一次完整运行；比较提示词版本时，两版各自独立运行，相同 case 不共享幂等键。
+4. 评分后在报告中保留 `profileId`、模型、日期、数据集版本和原始结果目录，避免只留聚合分数。
+
+## 基线
+
+`baselines/2026-11-03-review-compat-v2.json`：真实兼容模型、`review.compat.v2`、8192上限下的20例运行摘要（20/20、76,439 Token、平均22.123秒、每例问题/草稿/引用计数）。这是单次基线和回归参照，不是准确率承诺；重跑或提示词变化后应新建基线，不覆盖旧文件。
 
 ## 参考
 

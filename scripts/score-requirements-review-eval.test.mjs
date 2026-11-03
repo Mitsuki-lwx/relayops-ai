@@ -39,7 +39,9 @@ test("clean case passes with no findings and one matching criterion", () => {
 });
 
 test("expected no findings fails on an unnecessary GAP", () => {
-  const report = scoreCase(byId("rr-001-clean-health"), result({ findings: [finding()], criteria: [criterion()] }));
+  const base = byId("rr-001-clean-health");
+  const strict = { ...base, expect: { ...base.expect, expectNoFindings: true, requiredFindings: [], forbiddenFindings: [] } };
+  const report = scoreCase(strict, result({ findings: [finding()], criteria: [criterion()] }));
   assert.equal(report.pass, false);
   assert.ok(report.failureReasons.some(reason => reason.includes("expected no findings")));
 });

@@ -1,0 +1,317 @@
+{
+  "date": "2026-11-03",
+  "dataset": {
+    "schemaVersion": "relayops.requirements-review.eval.v1",
+    "cases": 20
+  },
+  "model": "cline-pass/deepseek-v4.1-flash-1017",
+  "profile": "review-compat-ae7e1dd91573833a38ccec90",
+  "promptVersion": "review.compat.v2",
+  "schemaVersion": "requirements.review.result.v1",
+  "mode": "real compatible supplier, isolated schema/vhost, one task per case",
+  "runner": "scripts/run-requirements-review-eval.mjs",
+  "score": {
+    "passed": 20,
+    "failed": 0,
+    "passRate": 1,
+    "requiredFindings": 21,
+    "matchedFindings": 21,
+    "findingRecall": 1,
+    "requiredCriteria": 20,
+    "matchedCriteria": 20,
+    "criterionRecall": 1,
+    "structuralFailures": 0,
+    "forbiddenFindingHits": 0,
+    "forbiddenTermHits": 0
+  },
+  "usage": {
+    "finalCases": 20,
+    "modelCalls": 20,
+    "inputTokens": 11353,
+    "outputTokens": 65086,
+    "totalTokens": 76439,
+    "averageLatencySeconds": 22.123,
+    "cost": "unknown"
+  },
+  "actualRun": {
+    "calls": 24,
+    "note": "First full run returned 20/20 tasks but 18/20 scored; two clean controls exposed missing scope definitions. Dataset was narrowed and those two cases rerun once. Combined final results use 18 from run1 and 2 from run3. A separate intermediate rerun (run findings) is excluded."
+  },
+  "cases": [
+    {
+      "id": "rr-001-clean-health",
+      "title": "健康检查接口（完整需求）",
+      "status": "SUCCEEDED",
+      "findings": 2,
+      "kinds": [
+        "AMBIGUITY",
+        "GAP"
+      ],
+      "criteria": 1,
+      "evidence": 3,
+      "latency": 36.799,
+      "tokens": 6645
+    },
+    {
+      "id": "rr-002-clean-export",
+      "title": "导出文件命名（完整需求）",
+      "status": "SUCCEEDED",
+      "findings": 1,
+      "kinds": [
+        "AMBIGUITY"
+      ],
+      "criteria": 2,
+      "evidence": 5,
+      "latency": 28.17,
+      "tokens": 5243
+    },
+    {
+      "id": "rr-003-gap-upload-limits",
+      "title": "上传限制缺失",
+      "status": "SUCCEEDED",
+      "findings": 3,
+      "kinds": [
+        "GAP",
+        "AMBIGUITY"
+      ],
+      "criteria": 2,
+      "evidence": 5,
+      "latency": 21.01,
+      "tokens": 3480
+    },
+    {
+      "id": "rr-004-gap-error-contract",
+      "title": "失败契约缺失",
+      "status": "SUCCEEDED",
+      "findings": 3,
+      "kinds": [
+        "GAP"
+      ],
+      "criteria": 1,
+      "evidence": 5,
+      "latency": 31.338,
+      "tokens": 5196
+    },
+    {
+      "id": "rr-005-ambiguity-vague",
+      "title": "不可验证措辞",
+      "status": "SUCCEEDED",
+      "findings": 3,
+      "kinds": [
+        "AMBIGUITY"
+      ],
+      "criteria": 3,
+      "evidence": 6,
+      "latency": 21.404,
+      "tokens": 3857
+    },
+    {
+      "id": "rr-006-conflict-timeout",
+      "title": "超时数值冲突",
+      "status": "SUCCEEDED",
+      "findings": 3,
+      "kinds": [
+        "CONFLICT",
+        "GAP",
+        "AMBIGUITY"
+      ],
+      "criteria": 1,
+      "evidence": 7,
+      "latency": 5.505,
+      "tokens": 1081
+    },
+    {
+      "id": "rr-007-conflict-retention",
+      "title": "保留期限冲突",
+      "status": "SUCCEEDED",
+      "findings": 1,
+      "kinds": [
+        "CONFLICT"
+      ],
+      "criteria": 1,
+      "evidence": 4,
+      "latency": 23.17,
+      "tokens": 3819
+    },
+    {
+      "id": "rr-008-conflict-scope",
+      "title": "删除权限范围冲突",
+      "status": "SUCCEEDED",
+      "findings": 2,
+      "kinds": [
+        "CONFLICT",
+        "GAP"
+      ],
+      "criteria": 2,
+      "evidence": 8,
+      "latency": 5.14,
+      "tokens": 1076
+    },
+    {
+      "id": "rr-009-mixed-gap-conflict",
+      "title": "分页冲突与失败策略缺失",
+      "status": "SUCCEEDED",
+      "findings": 2,
+      "kinds": [
+        "CONFLICT",
+        "GAP"
+      ],
+      "criteria": 3,
+      "evidence": 7,
+      "latency": 11.424,
+      "tokens": 2093
+    },
+    {
+      "id": "rr-010-injection",
+      "title": "文档内提示注入",
+      "status": "SUCCEEDED",
+      "findings": 3,
+      "kinds": [
+        "GAP",
+        "AMBIGUITY"
+      ],
+      "criteria": 2,
+      "evidence": 5,
+      "latency": 34.313,
+      "tokens": 5409
+    },
+    {
+      "id": "rr-011-assumption-status",
+      "title": "拒绝行为缺状态码",
+      "status": "SUCCEEDED",
+      "findings": 1,
+      "kinds": [
+        "GAP"
+      ],
+      "criteria": 2,
+      "evidence": 3,
+      "latency": 41.635,
+      "tokens": 6609
+    },
+    {
+      "id": "rr-012-numeric-verifiable",
+      "title": "可用性与延迟指标",
+      "status": "SUCCEEDED",
+      "findings": 3,
+      "kinds": [
+        "GAP",
+        "AMBIGUITY"
+      ],
+      "criteria": 3,
+      "evidence": 12,
+      "latency": 22.968,
+      "tokens": 4050
+    },
+    {
+      "id": "rr-013-duplicate-consistent",
+      "title": "重复但一致的要求",
+      "status": "SUCCEEDED",
+      "findings": 1,
+      "kinds": [
+        "AMBIGUITY"
+      ],
+      "criteria": 1,
+      "evidence": 2,
+      "latency": 29.942,
+      "tokens": 4913
+    },
+    {
+      "id": "rr-014-privacy-vague",
+      "title": "个人数据清除期限模糊",
+      "status": "SUCCEEDED",
+      "findings": 3,
+      "kinds": [
+        "AMBIGUITY",
+        "GAP"
+      ],
+      "criteria": 3,
+      "evidence": 8,
+      "latency": 9.797,
+      "tokens": 1970
+    },
+    {
+      "id": "rr-015-access-control",
+      "title": "空间角色权限（基本完整）",
+      "status": "SUCCEEDED",
+      "findings": 3,
+      "kinds": [
+        "GAP",
+        "AMBIGUITY"
+      ],
+      "criteria": 3,
+      "evidence": 10,
+      "latency": 28.189,
+      "tokens": 4365
+    },
+    {
+      "id": "rr-016-minimal-audit",
+      "title": "单句审计需求",
+      "status": "SUCCEEDED",
+      "findings": 1,
+      "kinds": [
+        "GAP"
+      ],
+      "criteria": 1,
+      "evidence": 2,
+      "latency": 16.462,
+      "tokens": 2545
+    },
+    {
+      "id": "rr-017-multi-paragraph",
+      "title": "缓存失效与审计（多段）",
+      "status": "SUCCEEDED",
+      "findings": 3,
+      "kinds": [
+        "CONFLICT",
+        "AMBIGUITY",
+        "GAP"
+      ],
+      "criteria": 3,
+      "evidence": 9,
+      "latency": 5.445,
+      "tokens": 1296
+    },
+    {
+      "id": "rr-018-equivalent-units",
+      "title": "单位不同但数值等价",
+      "status": "SUCCEEDED",
+      "findings": 2,
+      "kinds": [
+        "AMBIGUITY",
+        "GAP"
+      ],
+      "criteria": 2,
+      "evidence": 7,
+      "latency": 18.578,
+      "tokens": 3287
+    },
+    {
+      "id": "rr-019-long-release",
+      "title": "发布与恢复清单（长文本）",
+      "status": "SUCCEEDED",
+      "findings": 3,
+      "kinds": [
+        "CONFLICT",
+        "GAP"
+      ],
+      "criteria": 3,
+      "evidence": 8,
+      "latency": 14.066,
+      "tokens": 2581
+    },
+    {
+      "id": "rr-020-long-spec",
+      "title": "文档网关长文本（多冲突与缺失）",
+      "status": "SUCCEEDED",
+      "findings": 3,
+      "kinds": [
+        "CONFLICT",
+        "GAP"
+      ],
+      "criteria": 3,
+      "evidence": 9,
+      "latency": 37.106,
+      "tokens": 6924
+    }
+  ]
+}

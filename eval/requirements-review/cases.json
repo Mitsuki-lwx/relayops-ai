@@ -4,16 +4,20 @@
     {
       "id": "rr-001-clean-health",
       "title": "健康检查接口（完整需求）",
-      "input": "健康检查接口必须在2秒内返回HTTP 200。\n\n响应体必须是JSON对象，且只包含status字段，值为UP。\n\n健康检查不得访问数据库、缓存或消息队列。\n\n本条需求不要求版本号、主机名或依赖状态。",
+      "input": "GET /healthz 必须返回HTTP 200，响应体必须是UTF-8编码的字节串 {\"status\":\"UP\"}。\n\n本需求只规定该成功响应的状态码和字节内容；不规定失败响应、鉴权、请求体、路径参数、缓存或任何其他行为。\n\n本条需求不要求版本号、主机名或依赖状态。",
       "tags": [
         "clean",
         "api",
         "observability"
       ],
       "expect": {
-        "expectNoFindings": true,
+        "expectNoFindings": false,
         "requiredFindings": [],
-        "forbiddenFindings": [],
+        "forbiddenFindings": [
+          {
+            "kind": "CONFLICT"
+          }
+        ],
         "requiredCriteria": [
           {
             "anyOf": [
@@ -22,23 +26,32 @@
             ]
           }
         ],
-        "forbiddenTerms": []
+        "forbiddenTerms": [
+          "必须返回404",
+          "必须返回500",
+          "必须返回503",
+          "版本号为"
+        ]
       },
-      "notes": "干净对照：需求已经给出时限、状态码、响应体和明确排除项。任何GAP/CONFLICT都视为误报。"
+      "notes": "完整度对照：允许提出澄清，但不得把一致文本判成冲突，也不得编造未规定的状态码或版本字段；验收草稿仍需覆盖状态码和字节内容。"
     },
     {
       "id": "rr-002-clean-export",
       "title": "导出文件命名（完整需求）",
-      "input": "导出文件必须使用UTF-8编码。\n\n文件名必须为relayops-review-<任务ID>.md，其中任务ID只允许小写字母、数字和连字符。\n\n导出内容不得包含输入全文、密钥或回调签名。\n\n单次导出只包含一个任务，不提供批量导出。",
+      "input": "导出文件名必须完全等于 relayops-review-<任务ID>.md。\n\n任务ID是平台签发的36字符小写UUID（8-4-4-4-12十六进制，含连字符）。\n\n本需求只规定文件名格式；编码、内容、ID校验、错误处理和导出范围由其他需求规定。",
       "tags": [
         "clean",
         "export",
         "security"
       ],
       "expect": {
-        "expectNoFindings": true,
+        "expectNoFindings": false,
         "requiredFindings": [],
-        "forbiddenFindings": [],
+        "forbiddenFindings": [
+          {
+            "kind": "CONFLICT"
+          }
+        ],
         "requiredCriteria": [
           {
             "anyOf": [
@@ -47,9 +60,12 @@
             ]
           }
         ],
-        "forbiddenTerms": []
+        "forbiddenTerms": [
+          "文件名包含<",
+          "文件名包含尖括号"
+        ]
       },
-      "notes": "干净对照：编码、命名、排除内容和范围均明确。用于检查模型是否对完整需求仍强行找问题。"
+      "notes": "完整度对照：文件名格式明确且其他方面显式排除；允许澄清，但不得把一致文本判成冲突或断言最终文件名包含尖括号。"
     },
     {
       "id": "rr-003-gap-upload-limits",
