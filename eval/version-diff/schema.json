@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://relayops.local/schema/version-diff-eval.v1.json",
+  "title": "RelayOps version diff evaluation set",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "cases"],
+  "properties": {
+    "schemaVersion": { "const": "relayops.version-diff.eval.v1" },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title", "base", "revised", "tags", "expect", "notes"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^vd-[0-9]{3}-[a-z0-9-]+$" },
+          "title": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "base": { "type": "string", "minLength": 1, "maxLength": 6000 },
+          "revised": { "type": "string", "minLength": 1, "maxLength": 6000 },
+          "tags": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+          "notes": { "type": "string", "minLength": 1 },
+          "expect": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["expectNoChanges", "requiredChanges", "forbiddenChanges", "requiredImpacts", "requiredCriteria", "forbiddenTerms"],
+            "properties": {
+              "expectNoChanges": { "type": "boolean" },
+              "requireDistinctChanges": { "type": "boolean" },
+              "requiredChanges": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["kinds", "anyOf"],
+                  "properties": {
+                    "kinds": { "type": "array", "minItems": 1, "items": { "enum": ["ADDED", "REMOVED", "MODIFIED"] } },
+                    "anyOf": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+                    "minBefore": { "type": "integer", "minimum": 0, "maximum": 10 },
+                    "minAfter": { "type": "integer", "minimum": 0, "maximum": 10 }
+                  }
+                }
+              },
+              "forbiddenChanges": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "minProperties": 1,
+                  "properties": {
+                    "kinds": { "type": "array", "minItems": 1, "items": { "enum": ["ADDED", "REMOVED", "MODIFIED"] } },
+                    "anyOf": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+                  }
+                }
+              },
+              "requiredImpacts": { "type": "array", "items": { "type": "object", "required": ["anyOf"], "properties": { "anyOf": { "type": "array", "items": { "type": "string" } } } } },
+              "requiredCriteria": { "type": "array", "items": { "type": "object", "required": ["anyOf"], "properties": { "anyOf": { "type": "array", "items": { "type": "string" } } } } },
+              "forbiddenTerms": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+            }
+          }
+        }
+      }
+    }
+  }
+}

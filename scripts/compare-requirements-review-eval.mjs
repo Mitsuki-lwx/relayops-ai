@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-const METRICS = ["passRate", "repeatPassRate", "findingRecall", "criterionRecall", "structuralFailures", "forbiddenFindingHits", "forbiddenTermHits"];
+const METRICS = ["passRate", "repeatPassRate", "findingRecall", "changeRecall", "impactRecall", "criterionRecall", "structuralFailures", "forbiddenFindingHits", "forbiddenTermHits", "forbiddenChangeHits"];
 
 export function parseArgs(argv) {
   const args = { baseline: "", current: "", json: false, allowRegressions: false, maxPassDrop: 0, maxRecallDrop: 0, help: false };
@@ -56,8 +56,9 @@ export function compareReports(baseline, current) {
     deltas[metric] = Number((after - before).toFixed(4));
   }
   const passDrop = (baseSummary.passRate ?? 0) - (currentSummary.passRate ?? 0);
+  const recall = (summary, key) => summary.findingRecall ?? summary.changeRecall ?? summary[key] ?? null;
   const recallDrop = Math.max(
-    (baseSummary.findingRecall ?? 1) - (currentSummary.findingRecall ?? 1),
+    (recall(baseSummary, "impactRecall") ?? 1) - (recall(currentSummary, "impactRecall") ?? 1),
     (baseSummary.criterionRecall ?? 1) - (currentSummary.criterionRecall ?? 1),
   );
   return {
@@ -87,7 +88,12 @@ function main(argv) {
   if (args.json) console.log(JSON.stringify(result, null, 2));
   else {
     console.log(`passRate ${result.baseline.summary.passRate} -> ${result.current.summary.passRate} (${result.deltas.passRate >= 0 ? "+" : ""}${result.deltas.passRate})`);
-    console.log(`findingRecall ${result.baseline.summary.findingRecall} -> ${result.current.summary.findingRecall} (${result.deltas.findingRecall >= 0 ? "+" : ""}${result.deltas.findingRecall})`);
+    const baselineRecall = result.baseline.summary.findingRecall ?? result.baseline.summary.changeRecall;
+    const currentRecall = result.current.summary.findingRecall ?? result.current.summary.changeRecall;
+    if (baselineRecall !== undefined || currentRecall !== undefined) {
+      const delta = (currentRecall ?? 0) - (baselineRecall ?? 0);
+      console.log(`recall ${baselineRecall} -> ${currentRecall} (${delta >= 0 ? "+" : ""}${Number(delta.toFixed(4))})`);
+    }
     console.log(`criterionRecall ${result.baseline.summary.criterionRecall} -> ${result.current.summary.criterionRecall} (${result.deltas.criterionRecall >= 0 ? "+" : ""}${result.deltas.criterionRecall})`);
     console.log(`regressions ${result.regressions.length}, fixes ${result.fixes.length}, new ${result.newCases.length}, removed ${result.removedCases.length}`);
     for (const item of result.regressions) console.log(`REGRESSION ${item.id} ${item.title} [${item.passRate} repeats] ${item.failureReasons.slice(0, 2).join("; ")}`);

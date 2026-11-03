@@ -7,7 +7,7 @@
 需求评审已完成137后端、88浏览器、4条成功真实评审及Langfuse/报告验证；OpenSpec同步归档、自审凭据扫描和提交推送收尾。
 
 ## Current Phase
-Phase 55 (complete)
+Phase 56 (complete)
 
 ## Phases
 
@@ -282,4 +282,8 @@ Phase 55 (complete)
 ### Phase 53: Requirements review fixed evaluation set
 - [x] 20个固定合成样本、JSON Schema、确定性评分器、10项单元测试、CLI烟雾与CI接入。
 - [x] 独立真实模型运行器与基线：单次20/20；三次重复60任务57成功、稳定16/20、重复通过93.33%；2次UNKNOWN、1次截断、1次语义漏项；10例人工复核9通过。
+- **Status:** complete
+
+### Phase 56: Version diff fixed evaluation
+- [x] 16样本、评分器/运行器/测试/CI；三次48任务稳定15/16、重复通过97.92%，83,368 Token；人工复核7/8。
 - **Status:** complete

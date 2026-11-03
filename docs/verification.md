@@ -356,3 +356,9 @@ API 与协议依据：[Spring AMQP 发布确认与 returns](https://docs.spring.
 - 主服务18080加载最终JAR，健康UP/1.0.0；无新增迁移，V8保持；12类主库事实hash未变，临时18081停止。限制：仅2条合成真实样本，未做版本对比固定评测集、重复采样或自动合并。
 
 提交0e92c86已推送origin/main，33个暂存文件扫描8个本地敏感值0命中；OpenSpec归档后7份主规范严格校验通过。
+
+## 版本对比固定评测集（2026-11-03）
+- 新增`eval/version-diff`：16个合成样本，覆盖无变化/重排/空白、ADDED、REMOVED、MODIFIED、多项变化、注入、单位、冲突引入和长文本；确定性评分器检查结构、双侧引用、必找/禁止变化、影响约束/验收和禁止文字。
+- 首轮真实运行11/16，暴露两个rubric问题和一个prompt缺口：修订引入冲突可按ADDED呈现、删除上限可降级为MODIFIED/待确认；模型常省略受影响验收草稿。修正rubric并在提示词要求可测试变化至少一条验收草稿后，单次达到16/16；随后用当前profile完成三次独立运行。
+- 三次共48个任务全部成功；稳定15/16，重复通过47/48=97.92%，changeRecall 100%，criterionRecall 100%，结构失败0；唯一不稳定项`vd-009-injection`：两次正确忽略，一次虽注明“非需求文本”仍把注入段落列为ADDED变化。模型Token合计83,368，平均span 8.528秒，金额未知。
+- 8例人工语义复核7通过/1失败（同`vd-009`），`confirmedByUser=false`；基线`eval/version-diff/baselines/2026-11-03-version-compat-v1-3x.json`。未做模型对照和跨供应商比较。

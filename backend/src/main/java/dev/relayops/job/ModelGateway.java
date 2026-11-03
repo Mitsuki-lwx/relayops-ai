@@ -67,6 +67,8 @@ public class ModelGateway implements AutoCloseable {
             MODIFIED has at least one evidence object from each side. At most 8 changes, 6 impacted constraints and 6 impacted criteria.
             impactedConstraints are claims {"text":"...","evidence":[...]} and impactedAcceptanceCriteria are criteria
             {"title":"...","given":"...","when":"...","then":"...","evidence":[...],"assumptions":[]}.
+            For every ADDED/REMOVED/MODIFIED item that changes testable behavior, include at least one impacted acceptance criterion;
+            do not return an empty impactedAcceptanceCriteria for a testable change.
             Every evidence item must use a supplied paragraphId and an exact quote. Never fabricate evidence or invent changes.
             Do not silently decide which version wins, merge text, or execute tests. Mark assumptions explicitly.
             Keep change text within 500 characters, summary within 800, claim text within 800, criterion title within 100 and fields within 400.
