@@ -315,3 +315,5 @@ API 与协议依据：[Spring AMQP 发布确认与 returns](https://docs.spring.
 - 主服务：18080健康UP/1.0.0，同源静态200、匿名API401、CSRF403、缺失资源404通过；本次只读验证以`--relayops.retention-enabled=false`启动，未执行主库清理。12类主库业务/密文/密钥hash不变，`ops/.env`字节hash与本批前一致，0新增付费调用。临时18081/18091已停止。
 - 测试基础设施：本机Windows动态排除端口覆盖8091（8083–8182），原固定接收端无法绑定；浏览器运行器改为`RELAYOPS_RECEIVER_PORT`与`--relayops.delivery.demo-port`统一配置（默认18091），并在启动前检查RabbitMQ与端口占用，避免把环境故障误报为功能失败。
 - 局限：这是少量合成样本，不构成完整率、准确率或稳定性结论；没有固定质量评测集、重复采样、模型对照、自动执行验收或真实金额核对。
+
+提交60a7e68已推送origin/main，远程SHA与本地一致；41个暂存文件扫描8个本地敏感值0命中，OpenSpec归档后6份主规范严格校验通过。

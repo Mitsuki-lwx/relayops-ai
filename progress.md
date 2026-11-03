@@ -298,3 +298,5 @@
 - 最终真实分工：4个成功评审任务（missing/conflict/ambiguity/final）各1次调用，精确引用7/10/8/4处，签名回调4/4 ACK并接收端4行；另1次UNKNOWN、1次OUTPUT_TRUNCATED保留为失败证据。成功Token合计16,160，失败截断另4,624，金额未知；Langfuse 30条`review-e2e`观测父子/session/参数/usage/脱敏通过，最终任务记录v2/8192。Edge只读打开真实评审并下载Markdown通过，无新任务。
 - 主服务18080以新JAR启动，健康UP/1.0.0；同源静态200、匿名API401、CSRF403、404通过。为只读核对显式关闭retention，未执行主库清理；12类主库事实hash与ops/.env字节hash不变，0新增付费调用。临时18081/18091停止。
 - 已补ADR0013、README评审说明、spec/tasks/checklist/product-directions/verification；修复浏览器接收端端口配置文档。接下来完成OpenSpec规范同步/归档、自审与凭据扫描、自动提交推送。
+
+- 自审完成：41个暂存文件字节扫描8个本地敏感值0命中；OpenSpec归档生成requirements-review主规范，6份主规范严格校验通过。功能提交60a7e68已自动推送origin/main且本地/远程SHA一致；工作树无未提交应用改动。主服务18080继续以最终JAR只读运行（retention显式关闭），12类主库hash与ops/.env字节hash不变。
