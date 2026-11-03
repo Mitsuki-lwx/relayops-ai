@@ -108,6 +108,14 @@ class DeliveryIntegrationTest {
         assertTrue(payload.path("result").path("review").path("acceptanceCriteria").isArray());assertEquals(1,calls.get());
     }
 
+    @Test void versionDiffKeepsItsSchemaInsideSignedCallback() {
+        String job=jobs.create("owner.a",workspace,id(),new JobService.CreateJob(app,"版本回调","基线要求：上传必须登录。",List.of(destination),"zh-CN",null,"VERSION_DIFF","修订要求：上传必须登录，并限制文件大小为20MB。")).jobId();
+        assertTrue(ai.execute(envelope("outbox_event",job,"AI_EXECUTE")));assertTrue(worker.execute(ready()));assertEquals("SUCCEEDED",status());
+        var payload=json.readTree(bodies.getFirst());assertEquals("relay.webhook.v1",payload.path("schemaVersion").asText());
+        assertEquals(TaskType.VERSION_DIFF.schemaVersion,payload.path("result").path("schemaVersion").asText());
+        assertTrue(payload.path("result").path("diff").path("changes").isArray());assertEquals(1,calls.get());
+    }
+
     @Test void telemetryCorrelatesAsyncAttemptsWithoutExportingPayload() throws Exception {
         boolean local="true".equals(System.getenv("RELAYOPS_LANGFUSE_VERIFY"));
         var collector=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);

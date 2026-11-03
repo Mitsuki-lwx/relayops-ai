@@ -16,6 +16,30 @@ function claimReport(claim: Claim) {
 }
 
 export function analysisReport(job: ReportJob, result: ResultBody, exportedAt: Date) {
+  if (result.data.diff) {
+    const diff = result.data.diff;
+    const changes = diff.changes.map((change, i) => [
+      literal(`${i + 1}. ${change.kind}\n${change.text}`),
+      ...(change.before.length ? ["基线原文：\n", ...change.before.map(e => literal(`段落：${e.paragraphId}\n引用：${e.quote}`))] : []),
+      ...(change.after.length ? ["修订原文：\n", ...change.after.map(e => literal(`段落：${e.paragraphId}\n引用：${e.quote}`))] : []),
+    ].join("\n"));
+    return [
+      "# RelayOps 文档版本对比与影响分析\n",
+      "生成建议，待人工确认。变化分类和影响范围可能遗漏，不应直接作为合并依据。\n",
+      "报告含原文摘录；下载副本不受平台后续撤权或自动清理控制。\n",
+      "## 任务信息\n", literal(`任务ID：${job.jobId}\n任务标题：${job.title}\n冻结配置：${job.modelProfile}\n受理时间：${job.createdAt}\n导出时间：${exportedAt.toISOString()}`),
+      "## 模型报告标题\n", literal(result.data.title),
+      "## 摘要\n", claimReport(result.data.summary),
+      "## 版本变化\n", ...(changes.length ? changes : ["模型未列出变化，不代表两个版本相同。\n"]),
+      "## 受影响约束\n", ...(diff.impactedConstraints.length ? diff.impactedConstraints.map(claimReport) : ["模型未列出受影响约束。\n"]),
+      "## 受影响验收草稿\n", ...(diff.impactedAcceptanceCriteria.length ? diff.impactedAcceptanceCriteria.map((criterion, i) => [
+        literal(`${i + 1}. ${criterion.title}\n前置条件（Given）：${criterion.given}\n执行操作（When）：${criterion.when}\n预期行为（Then）：${criterion.then}`),
+        "待确认假设：\n", ...(criterion.assumptions.length ? criterion.assumptions.map(literal) : ["模型未列出额外假设，仍需人工审核。\n"]),
+        ...criterion.evidence.map(e => literal(`段落：${e.paragraphId}\n引用：${e.quote}`)),
+      ].join("\n")) : ["模型未列出受影响的验收项。\n"]),
+      "引用匹配仅说明原文可定位，不代表事实判断完全正确。\n",
+    ].join("\n");
+  }
   if (result.data.review) {
     const review = result.data.review;
     return [

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import EvidenceList from "./EvidenceList.vue";
 import RequirementsReviewView from "./RequirementsReviewView.vue";
+import VersionDiffView from "./VersionDiffView.vue";
 import type { ResultBody } from "./resultTypes";
 defineProps<{ result: ResultBody }>();
 </script>
@@ -14,7 +15,8 @@ defineProps<{ result: ResultBody }>();
         :paragraphs="result.paragraphs"
       />
     </section>
-    <RequirementsReviewView v-if="result.data.review" :review="result.data.review" :paragraphs="result.paragraphs" />
+    <VersionDiffView v-if="result.data.diff" :diff="result.data.diff" :paragraphs="result.paragraphs" />
+    <RequirementsReviewView v-else-if="result.data.review" :review="result.data.review" :paragraphs="result.paragraphs" />
     <template v-else>
     <section class="result-section" data-result-section="keyPoints">
       <h3>

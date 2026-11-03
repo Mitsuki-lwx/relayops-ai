@@ -271,6 +271,10 @@ Phase 53 (complete)
 - [x] OpenSpec同步归档、自审凭据扫描和推送；提交60a7e68与origin/main一致。
 - **Status:** complete
 
+### Phase 55: Version diff and impact analysis
+- [x] 双输入/双侧引用/独立结果/profile、前端视图/报告、145后端+97浏览器、2例真实验收及失败修复。
+- **Status:** complete (awaiting final self-review/push)
+
 ### Phase 54: Evaluation regression and owner quota
 - [x] 三次重复/缺失计失败/回归比较/人工复核；V8空间额度策略、OWNER编辑、审计/锁序；138后端+90浏览器通过。
 - **Status:** complete

@@ -138,3 +138,7 @@ RelayOps 为开发者异步处理技术文档，并可靠交付结构化结果�
 
 ## 空间每日额度策略（源码增量）
 空间OWNER可在部署硬上限`RELAYOPS_MAX_DAILY_LIMIT`内调整每日调用额度。策略保存于workspace并带乐观版本；当天额度同步更新且不得低于`reserved+spent+uncertain`，历史日期不改写。成员可读取策略、硬上限和当天占用，只有OWNER可修改；变更写`BUDGET_POLICY_UPDATED`审计。额度仍是平台受理次数护栏，不是供应商账单；公司总额度、按用户额度和密钥级成本上限尚未实现。
+
+
+## 文档版本对比与影响分析（源码增量）
+`VERSION_DIFF` 接受基线与修订文本（`inputText`/`inputTextB`），分别校验后组合存入现有加密输入，不新增迁移。结果`version.diff.result.v1`含最多8项ADDED/REMOVED/MODIFIED、最多6项受影响约束和6项验收草稿；增/删只引用对应侧，修改必须双侧精确引用。独立提示/profile，复用一次性调用、权限、预算、TTL、回调与脱敏观测；不自动合并、修改需求或执行测试。旧用途和旧结果保持兼容。

@@ -346,3 +346,11 @@ API 与协议依据：[Spring AMQP 发布确认与 returns](https://docs.spring.
 - 评审profile指纹修正：只绑定`name/timeout/reviewMaxTokens/tokenParameter/jsonMode/REVIEW_PROMPT_VERSION/REVIEW_PROMPT`，不再因普通分析`maxTokens`变化而旋转；提示词版本常量参与指纹。新增回归断言确认评审上限变化旋转、普通上限变化不旋转、提示词版本为`review.compat.v2`。
 - 注意：指纹修正会生成新的review profile ID；历史三次重复基线仍记录旧ID，行为/提示词未变，只用于历史对照。主服务18080已加载新JAR并迁移V8；本次仍以`--relayops.retention-enabled=false`只读启动，未执行主库清理。
 - 限制：公司总额度、按用户额度、供应商金额/并发控制未实现；额度不是供应商账单。策略变更前端按版本冲突提示刷新，不做自动重试。
+
+## 文档版本对比与影响分析（2026-11-03）
+- 后端145项通过，0失败/错误/跳过。覆盖组合输入/双前缀段落/拆分、ADDED/REMOVED/MODIFIED双侧引用、影响约束/验收草稿、非法引用失败、重跑用途恢复、旧EXTRACT/REVIEW兼容、签名回调schema及供应商`data.choices`无success包裹。
+- 浏览器97项通过（2.6分钟，含7项版本对比：三档渲染/真实下载、双输入幂等草稿、撤权、VIEWER、恶意Markdown）；隔离发布包/既有用途继续通过。
+- 真实模型：独立schema/vhost/18081，真实兼容模型、`version.compat.v1`、8192上限；共5次产品调用，2成功、3次`OUTPUT_INVALID`。成功任务分别11.064/22.205秒，精确引用20/6处，变化2 MODIFIED+1 ADDED、1 REMOVED；影响约束/验收草稿均通过结构校验。供应商报告Token合计14,168（输入2,766/输出11,402，含失败尝试），金额未知。
+- 真实失败定位了两个问题：①供应商返回`{"data":{"choices":...}}`且无`success`，原网关只解包带success的data，导致`INVALID_CHOICES`；②提示词的before/after示例不够明确，模型输出字符串数组而非带段落ID的evidence对象。已分别修复解包和提示词，新增回归断言；修复后2例成功。失败消耗保留在额度/审计中，不自动重试。
+- Edge只读打开真实持久化版本结果并下载Markdown，确认版本变化/基线原文/修订原文/受影响验收草稿、UTF-8和新授权读取通过；0新增模型任务。回调schema由Fake集成测试覆盖，真实样本未建目的地。
+- 主服务18080加载最终JAR，健康UP/1.0.0；无新增迁移，V8保持；12类主库事实hash未变，临时18081停止。限制：仅2条合成真实样本，未做版本对比固定评测集、重复采样或自动合并。

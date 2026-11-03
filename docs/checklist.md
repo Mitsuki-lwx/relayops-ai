@@ -244,3 +244,11 @@
 - [x] OWNER可在1–RELAYOPS_MAX_DAILY_LIMIT内调整，VIEWER/OPERATOR只读；当天不得低于reserved+spent+uncertain，历史日期不改写。
 - [x] 策略变更更新当天预算行、写BUDGET_POLICY_UPDATED审计，版本冲突409；受理与策略变更使用tenant锁避免死锁。
 - [x] 运行概览显示策略/当天占用并提供OWNER编辑；VIEWER无编辑控件；浏览器测试通过。
+
+## 文档版本对比与影响分析
+- [x] 双输入（基线/修订）各≤6000字符，组合存储/拆分/重跑用途冻结；旧用途指纹和结果不变。
+- [x] ADDED只引用修订、REMOVED只引用基线、MODIFIED双侧；变化≤8、影响约束/验收≤6，非法引用失败不自动重试。
+- [x] 独立提示/profile、一次调用、预算/撤权/TTL/签名回调及`version.diff.result.v1`外壳。
+- [x] 双文本框/切换/恢复、变化与影响视图、Markdown；VIEWER/迟到/撤权负例。
+- [x] 三档浏览器、隔离发布包和2例真实双版本文本通过；145后端/97浏览器，真实失败/修复已记录。
+- [ ] 自审、凭据扫描、OpenSpec同步/归档和自动推送。

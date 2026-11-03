@@ -11,6 +11,9 @@ import java.util.List;
 public final class DocumentInput {
     private DocumentInput() {}
     public record Paragraph(String paragraphId, String text) {}
+    public record VersionInput(String base, String revised) {}
+    public static final String VERSION_A = "<<<VERSION_A>>>";
+    public static final String VERSION_B = "<<<VERSION_B>>>";
 
     public static String normalize(String text) {
         if (text == null) throw invalid("请填写技术文档");
@@ -42,6 +45,52 @@ public final class DocumentInput {
             }
         }
         return List.copyOf(result);
+    }
+
+    public static List<Paragraph> versionParagraphs(String base, String revised) {
+        if (base.contains(VERSION_A) || base.contains(VERSION_B) || revised.contains(VERSION_A) || revised.contains(VERSION_B))
+            throw invalid("输入不能包含版本保留标记");
+        List<Paragraph> result = new ArrayList<>();
+        appendPrefixed(result, base, "a");
+        appendPrefixed(result, revised, "b");
+        return List.copyOf(result);
+    }
+
+    public static String versionInput(String base, String revised) {
+        versionParagraphs(base, revised);
+        return VERSION_A + "\n" + base + "\n" + VERSION_B + "\n" + revised;
+    }
+
+    public static VersionInput splitVersion(String text) {
+        if (text == null || !text.startsWith(VERSION_A + "\n")) throw new IllegalStateException("UNSUPPORTED_VERSION_INPUT");
+        int split = text.indexOf("\n" + VERSION_B + "\n");
+        if (split < 0) throw new IllegalStateException("UNSUPPORTED_VERSION_INPUT");
+        String base = text.substring((VERSION_A + "\n").length(), split).strip();
+        String revised = text.substring(split + ("\n" + VERSION_B + "\n").length()).strip();
+        if (base.isBlank() || revised.isBlank()) throw new IllegalStateException("UNSUPPORTED_VERSION_INPUT");
+        return new VersionInput(base, revised);
+    }
+
+    public static List<Paragraph> versionParagraphs(String stored) {
+        VersionInput input = splitVersion(stored);
+        return versionParagraphs(input.base(), input.revised());
+    }
+
+    public static List<Paragraph> paragraphsFor(String schemaVersion, String text) {
+        return TaskType.VERSION_DIFF.schemaVersion.equals(schemaVersion) ? versionParagraphs(text) : paragraphs(text);
+    }
+
+    private static void appendPrefixed(List<Paragraph> result, String text, String prefix) {
+        int before = result.size();
+        for (String block : text.split("\n[\t ]*\n+")) {
+            if (block.isBlank()) continue;
+            while (!block.isEmpty()) {
+                int end = block.offsetByCodePoints(0, Math.min(1000, block.codePointCount(0, block.length())));
+                result.add(new Paragraph(prefix + "%04d".formatted(result.size() - before + 1), block.substring(0, end)));
+                block = block.substring(end);
+                if (result.size() - before > 100) throw invalid("每份文档段落数量最多 100");
+            }
+        }
     }
 
     public static String hash(String text) {

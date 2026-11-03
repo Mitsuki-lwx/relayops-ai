@@ -44,3 +44,7 @@ OpenSpec add-requirements-review共10项已完成：契约→TaskType/DocumentRe
 
 # 空间每日额度策略（2026-11-03）
 V8追加workspace策略/版本列；OWNER在部署硬上限内调整每日额度，预算行按天快照；当天降低不得低于已占用，变更审计，GET/PATCH接口及运行概览编辑。后端138项通过，浏览器套件见verification；公司总额度/按用户额度仍为后续。
+
+
+# 文档版本对比与影响分析（已完成，2026-11-03）
+OpenSpec add-version-diff共10项已完成：组合输入/双前缀引用→结果校验→受理/重跑/读取→模型/Fake→真实库负例→双文本框/结果/报告→三档浏览器→2例真实双版本文本→自审推送。145后端/97浏览器通过；真实首次暴露data-only包裹和before/after字符串数组，修复后成功。不新增V9迁移，V1–V8不变；旧EXTRACT/REVIEW请求与结果保持。

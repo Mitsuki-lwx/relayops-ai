@@ -87,6 +87,33 @@ class ModelExecutionTest {
         assertNotNull(second);
     }
 
+    @Test void versionDiffIsFrozenSingleCallAndRetriesFromBothInputs() {
+        String base = "基线要求：上传必须登录。", revised = "修订要求：上传必须登录，并限制文件大小为20MB。";
+        var a = List.of(new DocumentResult.Evidence("a0001", base));
+        var b = List.of(new DocumentResult.Evidence("b0001", revised));
+        var summary = new DocumentResult.Claim("版本变化", a);
+        var diff = new DocumentResult.VersionDiff(List.of(new DocumentResult.Change("MODIFIED", "上传限制变化", a, b)), List.of(), List.of());
+        provider.content = provider.json.writeValueAsString(java.util.Map.of("summary", summary, "diff", diff));
+        var request = new JobService.CreateJob(application, "版本对比", base, List.of(), "zh-CN", true, "VERSION_DIFF", revised);
+        String key = UUID.randomUUID().toString(), id = jobs.create("owner.a", workspace, key, request).jobId();
+        assertEquals(id, jobs.create("owner.a", workspace, key, request).jobId());
+        assertTrue(worker.execute(ready(id))); assertEquals("SUCCEEDED", job(id).status()); assertEquals("VERSION_DIFF", job(id).taskType());
+        assertEquals(1, provider.calls.get()); assertEquals(1, sent(id));
+        assertEquals("version.diff.result.v1", jdbc.queryForObject("SELECT schema_version FROM ai_job WHERE id=?", String.class, id));
+        @SuppressWarnings("unchecked") var result = (java.util.Map<String,Object>) jobs.result("owner.a", workspace, id);
+        var data = (tools.jackson.databind.JsonNode) result.get("data");
+        assertFalse(data.path("diff").isMissingNode()); assertTrue(data.path("review").isMissingNode());
+        // A failed version task must explicitly retry with both documents reconstructed from the stored combined input.
+        var bad = new DocumentResult.VersionDiff(List.of(new DocumentResult.Change("ADDED", "错误", a, b)), List.of(), List.of());
+        provider.content = provider.json.writeValueAsString(java.util.Map.of("summary", summary, "diff", bad));
+        String failed = jobs.create("owner.a", workspace, UUID.randomUUID().toString(), new JobService.CreateJob(application, "版本失败", base, List.of(), "zh-CN", true, "VERSION_DIFF", revised)).jobId();
+        assertTrue(worker.execute(ready(failed))); assertEquals("FAILED", job(failed).status()); assertEquals("OUTPUT_INVALID", job(failed).errorCode());
+        provider.content = provider.json.writeValueAsString(java.util.Map.of("summary", summary, "diff", diff));
+        var retry = jobs.retry("owner.a", workspace, failed, UUID.randomUUID().toString(), new JobService.RetryJob(job(failed).version(), "重新核对双侧引用", true));
+        assertEquals("VERSION_DIFF", job(retry.jobId()).taskType());
+        assertTrue(worker.execute(ready(retry.jobId()))); assertEquals("SUCCEEDED", job(retry.jobId()).status());
+    }
+
     @Test void rejectsMissingExternalAcknowledgementWithoutAdmission() {
         var missing = new JobService.CreateJob(application, "未确认", "必须持久化任务", List.of(), "zh-CN");
         assertEquals(422, assertThrows(ApiException.class, () -> jobs.create("owner.a", workspace, "missing-ack", missing)).status);

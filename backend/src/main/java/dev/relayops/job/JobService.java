@@ -47,12 +47,16 @@ public class JobService {
 
     public record CreateJob(String applicationId, String title, String inputText, List<String> destinationIds, String outputLanguage,
                             @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL) Boolean acknowledgeExternalProcessing,
-                            @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL) String taskType) {
+                            @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL) String taskType,
+                            @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL) String inputTextB) {
+        public CreateJob(String applicationId, String title, String inputText, List<String> destinationIds, String outputLanguage, Boolean acknowledgeExternalProcessing, String taskType) {
+            this(applicationId,title,inputText,destinationIds,outputLanguage,acknowledgeExternalProcessing,taskType,null);
+        }
         public CreateJob(String applicationId, String title, String inputText, List<String> destinationIds, String outputLanguage, Boolean acknowledgeExternalProcessing) {
-            this(applicationId,title,inputText,destinationIds,outputLanguage,acknowledgeExternalProcessing,null);
+            this(applicationId,title,inputText,destinationIds,outputLanguage,acknowledgeExternalProcessing,null,null);
         }
         public CreateJob(String applicationId, String title, String inputText, List<String> destinationIds, String outputLanguage) {
-            this(applicationId, title, inputText, destinationIds, outputLanguage, null, null);
+            this(applicationId, title, inputText, destinationIds, outputLanguage, null, null, null);
         }
     }
     public record Accepted(String jobId, String status, long version, Instant payloadExpiresAt) {}
@@ -106,11 +110,19 @@ public class JobService {
             throw DocumentInput.invalid("最多选择三个不同的有效目的地");
         String language = request.outputLanguage() == null ? "zh-CN" : request.outputLanguage();
         if (!List.of("zh-CN", "en-US").contains(language)) throw DocumentInput.invalid("语言只支持 zh-CN 或 en-US");
-        String input = DocumentInput.normalize(request.inputText());
-        DocumentInput.paragraphs(input);
+        TaskType type = TaskType.parse(request.taskType());
+        String input;
+        if (type == TaskType.VERSION_DIFF) {
+            String revised = DocumentInput.normalize(request.inputTextB());
+            input = DocumentInput.versionInput(DocumentInput.normalize(request.inputText()), revised);
+        } else {
+            if (request.inputTextB() != null) throw DocumentInput.invalid("该用途不支持第二份文档");
+            input = DocumentInput.normalize(request.inputText());
+            DocumentInput.paragraphs(input);
+        }
         return new CreateJob(request.applicationId(), request.title().strip(), input, targets.stream().sorted().toList(), language,
                 Boolean.TRUE.equals(request.acknowledgeExternalProcessing()) ? true : null,
-                TaskType.parse(request.taskType()) == TaskType.EXTRACT ? null : TaskType.REQUIREMENTS_REVIEW.name());
+                type == TaskType.EXTRACT ? null : type.name(), null);
     }
 
     private Accepted replay(Access.Member member, String workspaceId, String operation, String key, String fingerprint) {
@@ -245,7 +257,10 @@ public class JobService {
         if (!List.of("FAILED", "UNKNOWN").contains(current.status())) throw new ApiException(409, "STATE_CONFLICT", "只有失败或结果未知的任务可以明确重跑");
         String input = cipher.decrypt(current.input(), workspaceId + ":" + jobId + ":input");
         var targetIds=jdbc.queryForList("SELECT destination_id FROM job_destination WHERE workspace_id=? AND job_id=? ORDER BY destination_id",String.class,workspaceId,jobId);
-        CreateJob normalized = normalize(new CreateJob(current.applicationId(), current.title(), input, targetIds, current.language(),null,TaskType.fromSchema(current.schemaVersion()).name()));
+        TaskType sourceType = TaskType.fromSchema(current.schemaVersion());
+        String baseInput = input, revisedInput = null;
+        if (sourceType == TaskType.VERSION_DIFF) { var versions = DocumentInput.splitVersion(input); baseInput = versions.base(); revisedInput = versions.revised(); }
+        CreateJob normalized = normalize(new CreateJob(current.applicationId(), current.title(), baseInput, targetIds, current.language(), null, sourceType.name(), revisedInput));
         Accepted response = admit(member, workspaceId, date, normalized, jobId);
         jdbc.update("INSERT INTO audit_event(workspace_id, actor_id, resource_id, operation, detail_json) VALUES (?, ?, ?, 'JOB_RERUN_REQUESTED', ?)",
                 workspaceId, member.userId(), jobId, json.writeValueAsString(Map.of("reason", reason, "newJobId", response.jobId(),
@@ -313,7 +328,7 @@ public class JobService {
     public Object result(String username, String workspaceId, String id) {
         Access.Member member = access.require(username, workspaceId, false, true, true);
         var rows = jdbc.queryForList("""
-                SELECT j.status, j.input_cipher, (j.payload_expires_at <= CURRENT_TIMESTAMP(3)
+                SELECT j.status, j.schema_version, j.input_cipher, (j.payload_expires_at <= CURRENT_TIMESTAMP(3)
                   OR j.payload_deleted_at IS NOT NULL OR j.input_cipher IS NULL
                   OR r.payload_deleted_at IS NOT NULL) AS expired, r.result_cipher
                 FROM ai_job j LEFT JOIN ai_result r ON r.job_id = j.id AND r.workspace_id = j.workspace_id
@@ -326,7 +341,7 @@ public class JobService {
         if (row.get("result_cipher") == null) throw new ApiException(410, "PAYLOAD_EXPIRED", "结果正文已清除或不可用");
         String context = workspaceId + ":" + id;
         Object result = json.readTree(cipher.decrypt((byte[]) row.get("result_cipher"), context + ":result"));
-        var paragraphs = DocumentInput.paragraphs(cipher.decrypt((byte[]) row.get("input_cipher"), context + ":input"));
+        var paragraphs = DocumentInput.paragraphsFor((String) row.get("schema_version"), cipher.decrypt((byte[]) row.get("input_cipher"), context + ":input"));
         audit(workspaceId, member.userId(), id, "RESULT_READ");
         return Map.of("data", result, "paragraphs", paragraphs);
     }

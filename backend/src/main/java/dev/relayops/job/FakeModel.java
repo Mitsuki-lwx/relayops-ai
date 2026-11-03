@@ -14,6 +14,19 @@ public class FakeModel {
         return new DocumentResult(TaskType.REQUIREMENTS_REVIEW.schemaVersion,title,base.summary(),List.of(),List.of(),List.of(),"fake-review-v1",
                 new DocumentResult.Review(List.of(),List.of(criterion)));
     }
+    public DocumentResult diff(String title, List<DocumentInput.Paragraph> paragraphs, String language) {
+        var base = extract(title, paragraphs, language);
+        var before = paragraphs.stream().filter(p -> p.paragraphId().startsWith("a")).findFirst();
+        var after = paragraphs.stream().filter(p -> p.paragraphId().startsWith("b")).findFirst();
+        var kind = before.isPresent() && after.isPresent() ? "MODIFIED" : before.isPresent() ? "REMOVED" : "ADDED";
+        var beforeEvidence = before.map(p -> new Evidence(p.paragraphId(), p.text().substring(0, p.text().offsetByCodePoints(0, Math.min(240, p.text().codePointCount(0, p.text().length())))))).stream().toList();
+        var afterEvidence = after.map(p -> new Evidence(p.paragraphId(), p.text().substring(0, p.text().offsetByCodePoints(0, Math.min(240, p.text().codePointCount(0, p.text().length())))))).stream().toList();
+        var change = new Change(kind, "开发预览：检测到版本段落变化", beforeEvidence, afterEvidence);
+        var criterion = new Criterion("开发预览：人工确认版本影响", "人工已比较两份原文", "按修订版本执行需求", "人工确认行为符合修订原文",
+                kind.equals("REMOVED") ? beforeEvidence : afterEvidence, List.of("假模型只演示结构，不生成真实语义影响分析。"));
+        return new DocumentResult(TaskType.VERSION_DIFF.schemaVersion, title, base.summary(), List.of(), List.of(), List.of(), "fake-version-v1", null,
+                new VersionDiff(List.of(change), List.of(base.summary()), List.of(criterion)));
+    }
     private final AtomicLong calls = new AtomicLong();
     public DocumentResult extract(String title, List<DocumentInput.Paragraph> paragraphs, String language) {
         calls.incrementAndGet();

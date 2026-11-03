@@ -39,7 +39,11 @@ public class JobWorker {
         this.tracing = tracing;
     }
 
-    record Work(String id, String workspaceId, LocalDate date, String title, byte[] input, String language, String token, long generation, String modelProfile) {}
+    record Work(String id, String workspaceId, LocalDate date, String title, byte[] input, String language, String token, long generation, String modelProfile, String schemaVersion) {
+        Work(String id, String workspaceId, LocalDate date, String title, byte[] input, String language, String token, long generation, String modelProfile) {
+            this(id, workspaceId, date, title, input, language, token, generation, modelProfile, TaskType.EXTRACT.schemaVersion);
+        }
+    }
 
     @Scheduled(fixedDelay = 5000)
     public void tick() {
@@ -58,7 +62,7 @@ public class JobWorker {
             List<DocumentInput.Paragraph> paragraphs;
             ModelGateway.Prepared prepared;
             try {
-                paragraphs = DocumentInput.paragraphs(cipher.decrypt(work.input(), work.workspaceId() + ":" + work.id() + ":input"));
+                paragraphs = DocumentInput.paragraphsFor(work.schemaVersion(), cipher.decrypt(work.input(), work.workspaceId() + ":" + work.id() + ":input"));
                 prepared = model.prepare(work.modelProfile(), work.title(), paragraphs, work.language());
             } catch (ModelGateway.Failure ex) {
                 observation.outcome(ex.code);
@@ -140,7 +144,7 @@ public class JobWorker {
                   AND payload_deleted_at IS NULL AND input_cipher IS NOT NULL) AS in_time
                 FROM ai_job WHERE id = ? AND workspace_id = ? FOR UPDATE
                 """, (rs, row) -> new Candidate(new Work(rs.getString("id"), rs.getString("workspace_id"), rs.getDate("accepted_date").toLocalDate(),
-                rs.getString("title"), rs.getBytes("input_cipher"), rs.getString("output_language"), UUID.randomUUID().toString(), rs.getLong("dispatch_generation"), rs.getString("model_profile")),
+                rs.getString("title"), rs.getBytes("input_cipher"), rs.getString("output_language"), UUID.randomUUID().toString(), rs.getLong("dispatch_generation"), rs.getString("model_profile"), rs.getString("schema_version")),
                 rs.getString("status"), rs.getBoolean("in_time")), envelope.aggregateId(), envelope.workspaceId());
         if (jobs.isEmpty()) throw new ReadyMessage.Invalid("AGGREGATE_NOT_FOUND");
         Candidate candidate = jobs.getFirst();
@@ -222,7 +226,7 @@ public class JobWorker {
                   OR (status IN ('QUEUED','RUNNING') AND (payload_expires_at <= CURRENT_TIMESTAMP(3)
                     OR payload_deleted_at IS NOT NULL OR input_cipher IS NULL)) LIMIT 10
                 """, (rs, row) -> new Work(rs.getString("id"), rs.getString("workspace_id"), rs.getDate("accepted_date").toLocalDate(),
-                null, null, null, rs.getString("lease_token"), rs.getLong("dispatch_generation"), rs.getString("model_profile")));
+                null, null, null, rs.getString("lease_token"), rs.getLong("dispatch_generation"), rs.getString("model_profile"), rs.getString("schema_version")));
         for (Work work : candidates) tx.executeWithoutResult(transaction -> {
             lockBudget(work);
             var rows = jdbc.queryForList("""

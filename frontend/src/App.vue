@@ -31,7 +31,7 @@ type Job = {
   modelCalls: number;
   version: number;
   parentJobId: string | null;
-  taskType?: "EXTRACT" | "REQUIREMENTS_REVIEW";
+  taskType?: "EXTRACT" | "REQUIREMENTS_REVIEW" | "VERSION_DIFF";
 };
 type Profile = {
   profileId: string;
@@ -63,7 +63,8 @@ type Draft = {
     destinationIds: string[];
     outputLanguage: string;
     acknowledgeExternalProcessing?: boolean;
-    taskType?: "REQUIREMENTS_REVIEW";
+    taskType?: "REQUIREMENTS_REVIEW" | "VERSION_DIFF";
+    inputTextB?: string;
   };
 };
 
@@ -79,6 +80,7 @@ const selected = ref<Job | null>(null),
 const credits = ref({ dailyLimit: 20, reserved: 0, spent: 0, uncertain: 0 });
 const title = ref("技术文档提取"),
   input = ref(""),
+  inputB = ref(""),
   error = ref(""),
   traceId = ref(""),
   busy = ref(true);
@@ -87,25 +89,34 @@ const pending = ref<Draft | null>(null),
 const exporting = ref(false), reportNotice = ref("");
 const commandPending = ref<Command | null>(null);
 const profile = ref<Profile | null>(null);
-const taskType = ref<"EXTRACT" | "REQUIREMENTS_REVIEW">("EXTRACT");
-const reviewProfile = ref<Profile | null>(null);
-const submissionProfile = computed(() => taskType.value === "REQUIREMENTS_REVIEW" ? reviewProfile.value : profile.value);
-const commandProfile = computed(() => selected.value?.taskType === "REQUIREMENTS_REVIEW" ? reviewProfile.value : profile.value);
-let reviewProfileSequence = 0;
-async function loadReviewProfile() {
-  const sequence = ++reviewProfileSequence, current = generation, space = workspaceId.value, actor = me.value?.username;
-  reviewProfile.value = null;
+type Purpose = "REQUIREMENTS_REVIEW" | "VERSION_DIFF";
+const taskType = ref<"EXTRACT" | Purpose>("EXTRACT");
+const reviewProfile = ref<Profile | null>(null), versionProfile = ref<Profile | null>(null);
+const profileFor = (type?: string) => type === "REQUIREMENTS_REVIEW" ? reviewProfile.value : type === "VERSION_DIFF" ? versionProfile.value : profile.value;
+const submissionProfile = computed(() => profileFor(taskType.value));
+const commandProfile = computed(() => profileFor(selected.value?.taskType));
+let reviewProfileSequence = 0, versionProfileSequence = 0;
+async function loadPurposeProfile(type: Purpose) {
+  const sequence = type === "REQUIREMENTS_REVIEW" ? ++reviewProfileSequence : ++versionProfileSequence;
+  const current = generation, space = workspaceId.value, actor = me.value?.username;
+  if (type === "REQUIREMENTS_REVIEW") reviewProfile.value = null; else versionProfile.value = null;
   try {
-    const value = await api<Profile>(`/api/v1/workspaces/${space}/model-profile?taskType=REQUIREMENTS_REVIEW`);
-    if (sequence === reviewProfileSequence && current === generation && workspaceId.value === space && me.value?.username === actor) reviewProfile.value = value;
+    const value = await api<Profile>(`/api/v1/workspaces/${space}/model-profile?taskType=${type}`);
+    if (sequence === (type === "REQUIREMENTS_REVIEW" ? reviewProfileSequence : versionProfileSequence) && current === generation && workspaceId.value === space && me.value?.username === actor) {
+      if (type === "REQUIREMENTS_REVIEW") reviewProfile.value = value; else versionProfile.value = value;
+    }
   } catch (ex) {
-    if (sequence === reviewProfileSequence && current === generation && workspaceId.value === space && me.value?.username === actor) showError(ex);
+    if (sequence === (type === "REQUIREMENTS_REVIEW" ? reviewProfileSequence : versionProfileSequence) && current === generation && workspaceId.value === space && me.value?.username === actor) showError(ex);
   }
 }
+function clearPurposeProfiles() {
+  reviewProfileSequence++; versionProfileSequence++;
+  reviewProfile.value = null; versionProfile.value = null;
+}
 async function changeTaskType() {
-  reviewProfileSequence++; reviewProfile.value = null;
+  clearPurposeProfiles();
   externalAcknowledged.value = false; error.value = "";
-  if (taskType.value === "REQUIREMENTS_REVIEW") await loadReviewProfile();
+  if (taskType.value !== "EXTRACT") await loadPurposeProfile(taskType.value);
 }
 const externalAcknowledged = ref(false);
 const destinations = ref<Destination[]>([]),
@@ -190,6 +201,9 @@ const workspace = computed(() =>
 const viewer = computed(() => workspace.value?.role === "VIEWER");
 const characters = computed(() => Array.from(input.value).length);
 const bytes = computed(() => new TextEncoder().encode(input.value).length);
+const charactersB = computed(() => Array.from(inputB.value).length);
+const bytesB = computed(() => new TextEncoder().encode(inputB.value).length);
+const invalidB = computed(() => taskType.value === "VERSION_DIFF" && (!inputB.value.trim() || charactersB.value > 6000 || bytesB.value > 24576));
 const terminal = (status: string) =>
   ["SUCCEEDED", "FAILED", "UNKNOWN", "CANCELLED"].includes(status);
 const states: Record<string, string> = {
@@ -230,11 +244,12 @@ function showError(ex: unknown) {
     pending.value = null;
     commandPending.value = null;
     input.value = "";
+    inputB.value = "";
     retryReason.value = "";
     retryAcknowledged.value = false;
     externalAcknowledged.value = false;
     profile.value = null;
-    reviewProfileSequence++; reviewProfile.value = null;
+    clearPurposeProfiles();
   }
 }
 function path(suffix: string) {
@@ -287,7 +302,7 @@ async function select(job: Job) {
   error.value = "";
   traceId.value = "";
   await refreshSelected();
-  if (selected.value?.jobId === job.jobId && selected.value.taskType === "REQUIREMENTS_REVIEW") await loadReviewProfile();
+  if (selected.value?.jobId === job.jobId && selected.value.taskType !== undefined && selected.value.taskType !== "EXTRACT") await loadPurposeProfile(selected.value.taskType);
 }
 async function openHistory(job: Job) {
   const current = generation, space = workspaceId.value;
@@ -344,7 +359,7 @@ async function switchWorkspace() {
   clearResult();
   jobs.value = [];
   profile.value = null;
-  reviewProfileSequence++; reviewProfile.value = null; taskType.value = "EXTRACT";
+  clearPurposeProfiles(); taskType.value = "EXTRACT"; inputB.value = "";
   destinations.value = [];
   selectedDestinations.value = [];
   externalAcknowledged.value = false;
@@ -421,7 +436,7 @@ async function restoreIntents() {
       ? [...(pending.value.body.destinationIds ?? [])]
       : [];
   taskType.value = pending.value?.body.taskType ?? "EXTRACT";
-  if (taskType.value === "REQUIREMENTS_REVIEW") await loadReviewProfile();
+  if (taskType.value !== "EXTRACT") await loadPurposeProfile(taskType.value);
 }
 async function login() {
   busy.value = true;
@@ -469,7 +484,7 @@ async function logout() {
     navigate("tasks");
     externalAcknowledged.value = false;
     profile.value = null;
-    reviewProfileSequence++; reviewProfile.value = null;
+    clearPurposeProfiles();
     await refreshCsrf();
   } catch (ex) {
     showError(ex);
@@ -492,7 +507,8 @@ async function submit() {
           destinationIds: [...selectedDestinations.value],
           outputLanguage: "zh-CN",
           acknowledgeExternalProcessing: externalAcknowledged.value,
-          ...(taskType.value === "REQUIREMENTS_REVIEW" ? { taskType: "REQUIREMENTS_REVIEW" as const } : {}),
+          ...(taskType.value !== "EXTRACT" ? { taskType: taskType.value } : {}),
+          ...(taskType.value === "VERSION_DIFF" ? { inputTextB: inputB.value } : {}),
         },
       };
       sessionStorage.setItem(
@@ -960,7 +976,7 @@ onUnmounted(() => {
                 </p>
                 <form v-else @submit.prevent="submit">
                   <fieldset :disabled="busy || !!pending || !!commandPending">
-                    <label for="task-type">任务用途</label><select id="task-type" v-model="taskType" @change="changeTaskType"><option value="EXTRACT">技术文档分析</option><option value="REQUIREMENTS_REVIEW">需求评审与验收草稿</option></select><p v-if="taskType === 'REQUIREMENTS_REVIEW'" class="muted">识别疑似缺漏、歧义、冲突，并生成带依据的验收草稿，待人工确认。</p>
+                    <label for="task-type">任务用途</label><select id="task-type" v-model="taskType" @change="changeTaskType"><option value="EXTRACT">技术文档分析</option><option value="REQUIREMENTS_REVIEW">需求评审与验收草稿</option><option value="VERSION_DIFF">文档版本对比与影响分析</option></select><p v-if="taskType === 'REQUIREMENTS_REVIEW'" class="muted">识别疑似缺漏、歧义、冲突，并生成带依据的验收草稿，待人工确认。</p><p v-if="taskType === 'VERSION_DIFF'" class="muted">比较基线与修订文本，列出新增/删除/修改、受影响约束和验收草稿，待人工确认。</p>
                     <label for="application">应用</label
                     ><select id="application" v-model="applicationId" required>
                       <option
@@ -977,14 +993,14 @@ onUnmounted(() => {
                       maxlength="100"
                       required
                     /><label for="input"
-                      >技术文档
+                      >{{ taskType === "VERSION_DIFF" ? "基线文档" : "技术文档" }}
                       <span class="muted">文本或 Markdown</span></label
                     ><textarea
                       id="input"
                       v-model="input"
                       rows="12"
                       required
-                      placeholder="粘贴技术说明、接口约束或设计笔记…"
+                      :placeholder="taskType === 'VERSION_DIFF' ? '粘贴基线版本文档…' : '粘贴技术说明、接口约束或设计笔记…'"
                     ></textarea>
                     <div
                       class="input-count"
@@ -992,6 +1008,24 @@ onUnmounted(() => {
                     >
                       {{ characters }} / 6000 字符 · {{ bytes }} / 24576 字节
                     </div>
+                    <template v-if="taskType === 'VERSION_DIFF'">
+                      <label for="input-b"
+                        >修订文档
+                        <span class="muted">文本或 Markdown</span></label
+                      ><textarea
+                        id="input-b"
+                        v-model="inputB"
+                        rows="12"
+                        required
+                        placeholder="粘贴修订版本文档…"
+                      ></textarea>
+                      <div
+                        class="input-count"
+                        :class="{ invalid: charactersB > 6000 || bytesB > 24576 }"
+                      >
+                        {{ charactersB }} / 6000 字符 · {{ bytesB }} / 24576 字节
+                      </div>
+                    </template>
                   </fieldset>
                   <fieldset
                     class="destination-choice"
@@ -1028,13 +1062,13 @@ onUnmounted(() => {
                   </fieldset>
                   <p class="muted">
                     每个任务预留 1 次额度。{{
-                      profile?.billable
+                      submissionProfile?.billable
                         ? "文档将发送给服务端配置的模型供应商，可能产生费用。"
                         : "假模型只摘录原文，不发起外部模型调用。"
                     }}输入和结果保留 7 天。
                   </p>
                   <label
-                    v-if="profile?.billable"
+                    v-if="submissionProfile?.billable"
                     class="risk-check"
                     for="external-ack"
                     ><input
@@ -1059,7 +1093,8 @@ onUnmounted(() => {
                           !input.trim() ||
                           !applicationId ||
                           characters > 6000 ||
-                          bytes > 24576))
+                          bytes > 24576 ||
+                          invalidB))
                     "
                   >
                     {{

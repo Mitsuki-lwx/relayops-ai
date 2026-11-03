@@ -2,13 +2,15 @@ package dev.relayops.job;
 
 public enum TaskType {
     EXTRACT("document.extract.result.v1"),
-    REQUIREMENTS_REVIEW("requirements.review.result.v1");
+    REQUIREMENTS_REVIEW("requirements.review.result.v1"),
+    VERSION_DIFF("version.diff.result.v1");
 
     public final String schemaVersion;
     TaskType(String schemaVersion) { this.schemaVersion = schemaVersion; }
     public static TaskType parse(String value) {
         if (value == null || value.equals("EXTRACT")) return EXTRACT;
         if (value.equals("REQUIREMENTS_REVIEW")) return REQUIREMENTS_REVIEW;
+        if (value.equals("VERSION_DIFF")) return VERSION_DIFF;
         throw DocumentInput.invalid("任务用途不支持");
     }
     public static TaskType fromSchema(String schema) {

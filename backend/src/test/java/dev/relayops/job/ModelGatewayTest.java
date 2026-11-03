@@ -15,8 +15,10 @@ class ModelGatewayTest {
                     java.util.Map.of("role", "assistant", "content", stub.validAnalysis()))));
             stub.raw = stub.json.writeValueAsString(java.util.Map.of("success", true, "data", completion));
             DocumentResult.validate(prepare(gateway).invoke(), PARAGRAPHS);
+            stub.raw = stub.json.writeValueAsString(java.util.Map.of("data", completion));
+            DocumentResult.validate(prepare(gateway).invoke(), PARAGRAPHS);
             for (var envelope : List.of(java.util.Map.of("success", false, "data", completion),
-                    java.util.Map.of("success", "true", "data", completion), java.util.Map.of("data", completion),
+                    java.util.Map.of("success", "true", "data", completion),
                     java.util.Map.of("success", true, "error", "private-provider-body", "data", completion),
                     java.util.Map.of("success", true, "data", java.util.Map.of("error", "private-provider-body")))) {
                 stub.raw = stub.json.writeValueAsString(envelope);
@@ -64,6 +66,17 @@ class ModelGatewayTest {
             assertEquals(0, stub.calls.get());
         }
     }
+    @Test void supportsDataEnvelopeWithoutSuccessFlag() throws Exception {
+        try (var stub = new StubProvider(); var gateway = stub.gateway(3)) {
+            var completion = java.util.Map.of("choices", List.of(java.util.Map.of("finish_reason", "stop", "message",
+                    java.util.Map.of("role", "assistant", "content", stub.validAnalysis()))));
+            stub.raw = stub.json.writeValueAsString(java.util.Map.of("data", completion));
+            var result = prepare(gateway).invoke();
+            DocumentResult.validate(result, PARAGRAPHS);
+            assertEquals(1, stub.calls.get());
+        }
+    }
+
     @Test void sendsProtocolAndBindsServerMetadata() throws Exception {
         try (var stub = new StubProvider(); var gateway = stub.gateway(3)) {
             var result = prepare(gateway).invoke();
