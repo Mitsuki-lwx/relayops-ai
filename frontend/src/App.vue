@@ -31,6 +31,7 @@ type Job = {
   modelCalls: number;
   version: number;
   parentJobId: string | null;
+  taskType?: "EXTRACT" | "REQUIREMENTS_REVIEW";
 };
 type Profile = {
   profileId: string;
@@ -62,6 +63,7 @@ type Draft = {
     destinationIds: string[];
     outputLanguage: string;
     acknowledgeExternalProcessing?: boolean;
+    taskType?: "REQUIREMENTS_REVIEW";
   };
 };
 
@@ -85,6 +87,26 @@ const pending = ref<Draft | null>(null),
 const exporting = ref(false), reportNotice = ref("");
 const commandPending = ref<Command | null>(null);
 const profile = ref<Profile | null>(null);
+const taskType = ref<"EXTRACT" | "REQUIREMENTS_REVIEW">("EXTRACT");
+const reviewProfile = ref<Profile | null>(null);
+const submissionProfile = computed(() => taskType.value === "REQUIREMENTS_REVIEW" ? reviewProfile.value : profile.value);
+const commandProfile = computed(() => selected.value?.taskType === "REQUIREMENTS_REVIEW" ? reviewProfile.value : profile.value);
+let reviewProfileSequence = 0;
+async function loadReviewProfile() {
+  const sequence = ++reviewProfileSequence, current = generation, space = workspaceId.value, actor = me.value?.username;
+  reviewProfile.value = null;
+  try {
+    const value = await api<Profile>(`/api/v1/workspaces/${space}/model-profile?taskType=REQUIREMENTS_REVIEW`);
+    if (sequence === reviewProfileSequence && current === generation && workspaceId.value === space && me.value?.username === actor) reviewProfile.value = value;
+  } catch (ex) {
+    if (sequence === reviewProfileSequence && current === generation && workspaceId.value === space && me.value?.username === actor) showError(ex);
+  }
+}
+async function changeTaskType() {
+  reviewProfileSequence++; reviewProfile.value = null;
+  externalAcknowledged.value = false; error.value = "";
+  if (taskType.value === "REQUIREMENTS_REVIEW") await loadReviewProfile();
+}
 const externalAcknowledged = ref(false);
 const destinations = ref<Destination[]>([]),
   selectedDestinations = ref<string[]>([]);
@@ -212,6 +234,7 @@ function showError(ex: unknown) {
     retryAcknowledged.value = false;
     externalAcknowledged.value = false;
     profile.value = null;
+    reviewProfileSequence++; reviewProfile.value = null;
   }
 }
 function path(suffix: string) {
@@ -264,6 +287,7 @@ async function select(job: Job) {
   error.value = "";
   traceId.value = "";
   await refreshSelected();
+  if (selected.value?.jobId === job.jobId && selected.value.taskType === "REQUIREMENTS_REVIEW") await loadReviewProfile();
 }
 async function openHistory(job: Job) {
   const current = generation, space = workspaceId.value;
@@ -320,6 +344,7 @@ async function switchWorkspace() {
   clearResult();
   jobs.value = [];
   profile.value = null;
+  reviewProfileSequence++; reviewProfile.value = null; taskType.value = "EXTRACT";
   destinations.value = [];
   selectedDestinations.value = [];
   externalAcknowledged.value = false;
@@ -395,6 +420,8 @@ async function restoreIntents() {
     pending.value?.workspaceId === workspaceId.value
       ? [...(pending.value.body.destinationIds ?? [])]
       : [];
+  taskType.value = pending.value?.body.taskType ?? "EXTRACT";
+  if (taskType.value === "REQUIREMENTS_REVIEW") await loadReviewProfile();
 }
 async function login() {
   busy.value = true;
@@ -442,13 +469,14 @@ async function logout() {
     navigate("tasks");
     externalAcknowledged.value = false;
     profile.value = null;
+    reviewProfileSequence++; reviewProfile.value = null;
     await refreshCsrf();
   } catch (ex) {
     showError(ex);
   }
 }
 async function submit() {
-  if (commandPending.value) return;
+  if (commandPending.value || (!pending.value && !submissionProfile.value)) return;
   busy.value = true;
   error.value = "";
   traceId.value = "";
@@ -464,6 +492,7 @@ async function submit() {
           destinationIds: [...selectedDestinations.value],
           outputLanguage: "zh-CN",
           acknowledgeExternalProcessing: externalAcknowledged.value,
+          ...(taskType.value === "REQUIREMENTS_REVIEW" ? { taskType: "REQUIREMENTS_REVIEW" as const } : {}),
         },
       };
       sessionStorage.setItem(
@@ -931,6 +960,7 @@ onUnmounted(() => {
                 </p>
                 <form v-else @submit.prevent="submit">
                   <fieldset :disabled="busy || !!pending || !!commandPending">
+                    <label for="task-type">任务用途</label><select id="task-type" v-model="taskType" @change="changeTaskType"><option value="EXTRACT">技术文档分析</option><option value="REQUIREMENTS_REVIEW">需求评审与验收草稿</option></select><p v-if="taskType === 'REQUIREMENTS_REVIEW'" class="muted">识别疑似缺漏、歧义、冲突，并生成带依据的验收草稿，待人工确认。</p>
                     <label for="application">应用</label
                     ><select id="application" v-model="applicationId" required>
                       <option
@@ -1024,8 +1054,8 @@ onUnmounted(() => {
                       busy ||
                       !!commandPending ||
                       (!pending &&
-                        (!profile ||
-                          (profile.billable && !externalAcknowledged) ||
+                        (!submissionProfile ||
+                          (submissionProfile.billable && !externalAcknowledged) ||
                           !input.trim() ||
                           !applicationId ||
                           characters > 6000 ||
@@ -1254,15 +1284,15 @@ onUnmounted(() => {
                     </div>
                     <div>
                       <dt>新模型配置</dt>
-                      <dd>{{ profile?.profileId ?? "配置加载中…" }}</dd>
+                      <dd>{{ commandProfile?.profileId ?? "配置加载中…" }}</dd>
                     </div>
                   </dl>
                   <p class="muted">
                     {{
-                      profile?.billable
+                      commandProfile?.billable
                         ? "新调用可能产生额外费用。"
                         : "当前使用开发假模型，不收费。"
-                    }}新任务预留 {{ profile?.creditsPerJob ?? 1 }} 次额度。
+                    }}新任务预留 {{ commandProfile?.creditsPerJob ?? 1 }} 次额度。
                   </p>
                   <fieldset :disabled="busy || !!pending || !!commandPending">
                     <label for="retry-reason">重跑原因</label>
@@ -1295,7 +1325,7 @@ onUnmounted(() => {
                       busy ||
                       !!pending ||
                       !!commandPending ||
-                      !profile ||
+                      !commandProfile ||
                       !retryAcknowledged ||
                       reasonLength < 1 ||
                       reasonLength > 300

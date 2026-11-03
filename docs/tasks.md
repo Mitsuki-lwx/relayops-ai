@@ -33,3 +33,6 @@
 
 # 真实模型验收
 已在独立环境完成三条合成样本的真实模型、幂等、引用、签名回调、Langfuse读回及浏览器报告下载。[验收数据与局限](real-model-verification.md)。本批无产品代码或规范行为变化，沿用现有OpenSpec契约。
+
+# 需求评审任务（已完成，2026-11-03）
+OpenSpec add-requirements-review共10项已完成：契约→TaskType/DocumentResult→ModelGateway/Fake→JobService/Controller→真实库负例→用途/竞态恢复→评审组件/analysisReport→浏览器三档→接入主流程→端到端验收和推送。V1–V7未修改，使用既有schema_version冻结用途；137后端、88浏览器及4条成功真实评审（另2次失败驱动独立输出上限）通过，详见[验证记录](verification.md)。

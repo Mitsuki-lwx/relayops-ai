@@ -63,6 +63,7 @@ relayops:
     name: ${RELAYOPS_MODEL_NAME:}
     timeout-seconds: ${RELAYOPS_MODEL_TIMEOUT_SECONDS:60}
     max-tokens: ${RELAYOPS_MODEL_MAX_TOKENS:4096}
+    review-max-tokens: ${RELAYOPS_MODEL_REVIEW_MAX_TOKENS:8192}
     token-parameter: ${RELAYOPS_MODEL_TOKEN_PARAMETER:max_tokens}
     json-mode: ${RELAYOPS_MODEL_JSON_MODE:true}
   master-key: ${RELAYOPS_MASTER_KEY}

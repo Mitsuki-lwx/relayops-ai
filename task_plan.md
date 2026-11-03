@@ -4,10 +4,10 @@
 在既有任务可靠性和组织隔离之上，按OpenSpec完成单机自托管1.0发布，交付可运行包、真实账号初始化、隔离验证和备份恢复说明。
 
 ## Next Step
-真实模型三样本、44处引用、3次签名回调和Langfuse/报告下载验收已完成；5557 Token，金额未知，主库/配置未变。自审凭据扫描后推送验收文档。
+需求评审已完成137后端、88浏览器、4条成功真实评审及Langfuse/报告验证；OpenSpec同步归档、自审凭据扫描和提交推送收尾。
 
 ## Current Phase
-Phase 49
+Phase 52
 
 ## Phases
 
@@ -257,3 +257,16 @@ Phase 49
 ### Phase 49: Real model end-to-end verification
 - [x] 独立环境、真实模式断言、三类样本/一次调用/引用/回调/Langfuse/浏览器报告通过，停止临时服务，完成记录和自审。
 - **Status:** complete
+
+### Phase 50: LLM product exploration and review design
+- [x] 调研当前能力/真实测评及主流用法，确认需求评审优先并形成OpenSpec和三份文档。
+- **Status:** complete
+
+### Phase 51: Requirements review implementation
+- [x] 用途/结构/模型/受理重跑、评审独立输出上限及前端评审与报告接入。
+- **Status:** complete
+
+### Phase 52: Requirements review verification and delivery
+- [x] 隔离后端/浏览器三档/真实模型验收、Langfuse与报告复核。
+- [ ] OpenSpec同步归档、自审凭据扫描和推送。
+- **Status:** in_progress

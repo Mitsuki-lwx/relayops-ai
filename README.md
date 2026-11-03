@@ -28,6 +28,7 @@ AI 技术文档任务与结果交付平台。当前链路：登录 → 公司与
 - [完整任务历史决策](docs/adr/0010-job-history.md)：服务端字面搜索、状态筛选和时间/ID分页。
 - [分析报告导出决策](docs/adr/0011-analysis-export.md)：重新授权、纯文本Markdown报告与下载副本边界。
 - [公司组织审计决策](docs/adr/0012-organization-audit.md)：当前ADMIN、租户安全字段与历史分页。
+- [需求评审决策](docs/adr/0013-requirements-review.md)：用途冻结、评审引用、验收草稿与输出上限。
 - [原理与代码导读](docs/walkthrough.md)：202、事务和 SENT 边界。
 - [验证记录](docs/verification.md)：实际命令、结果及限制。
 
@@ -68,6 +69,12 @@ RabbitMQ 无需手动下载：Compose 自动拉取锁定摘要的官方镜像并
 在成功任务详情点击“下载分析报告”。OWNER/OPERATOR可下载包含摘要、关键结论、约束、未确定信息与原文引用的UTF-8 Markdown文件；VIEWER无入口。每次导出都会重新读取受授权的结果并留下RESULT_READ审计，拒绝/过期或切换上下文后不会使用旧缓存下载，不重新调用模型或增加AI用量。
 
 文件包含任务/时间/冻结配置标识及引用校验说明，不包含输入全文或密钥。模型文字以纯文本代码块保存，HTML、图片和链接不会成为报告活动内容。下载副本由用户本地管理，不受平台后续撤权或自动清理控制；页面只提示已开始下载，实际保存请查看浏览器下载记录。目前不支持批量、PDF或Word格式。
+
+## 需求评审与验收草稿
+
+新建任务时可将用途切换为“需求评审与验收草稿”。模型在原有摘要之外输出最多6项疑似缺漏、歧义或冲突及澄清问题，并生成最多6项Given/When/Then验收草稿。每项关联精确原文；冲突至少给出两条不同引用；缺失项的引用只用于定位背景，不证明全文没有规定。草稿和新增假设统一标注待人工确认，不自动执行测试、不替用户选择冲突值。
+
+评审任务冻结用途、提示词和结果版本，重跑保持用途；与普通分析共用空间授权、外发确认、一次调用、预算、加密、TTL、回调与脱敏观测。查看和导出仍重新鉴权，VIEWER没有结果或导出入口。评审Markdown包含摘要、问题、澄清问题、验收草稿和假设，不包含输入全文。评审输出上限独立配置为`RELAYOPS_MODEL_REVIEW_MAX_TOKENS`（默认8192），因为它可能包含推理型模型的内部推理token。
 
 ## 完整任务历史
 
@@ -142,6 +149,7 @@ RELAYOPS_MODEL_NAME=your-model-name
 RELAYOPS_MODEL_API_KEY=fill_your_key_locally
 RELAYOPS_MODEL_TIMEOUT_SECONDS=60
 RELAYOPS_MODEL_MAX_TOKENS=4096
+RELAYOPS_MODEL_REVIEW_MAX_TOKENS=8192
 RELAYOPS_MODEL_TOKEN_PARAMETER=max_tokens
 RELAYOPS_MODEL_JSON_MODE=true
 ```
@@ -150,7 +158,7 @@ RELAYOPS_MODEL_JSON_MODE=true
 
 工作台展示服务端模型名，并要求提交者确认文档外发和潜在费用；API 新建兼容任务要求 `acknowledgeExternalProcessing=true`。密钥不返回前端、不写任务或审计。配置为所有空间共享的本地管理员配置，尚无按租户管理供应商密钥的界面。
 
-超时允许 1–300 秒，输出 token 上限允许 256–16384；完整 HTTP 响应体上限 128 KiB。默认租约 120 秒，执行中每 40 秒按 token/代次续租，续租最多持续调用时限加 30 秒；响应超时、断连或不明服务端故障最终进入 UNKNOWN，不再次调用供应商。平台调用额度不是实际供应商账单。
+超时允许 1–300 秒，普通分析与需求评审的输出 token 上限分别允许 256–16384；评审默认 8192，为可能计入输出的推理留出余量，避免小样本被 4096 截断。配置变化会生成新的冻结 profile。完整 HTTP 响应体上限 128 KiB。默认租约 120 秒，执行中每 40 秒按 token/代次续租，续租最多持续调用时限加 30 秒；响应超时、断连或不明服务端故障最终进入 UNKNOWN，不再次调用供应商。平台调用额度不是实际供应商账单。
 
 配置标识绑定地址、模型、提示、超时和输出参数；更改后旧兼容排队任务以 MODEL_CONFIG_CHANGED 在发送前失败并释放预留。旧 Fake 任务仍可处理，明确重跑使用当前配置。已受理请求的幂等重放仍返回原任务。本机模拟供应商覆盖协议与故障；2026-10-30另以用户配置的ClinePass型号完成一篇自拟短文的真实链路验收，不能代表其他供应商或实际账单已验证。
 
@@ -175,7 +183,7 @@ python scripts/demo-receiver.py
 
 2xx 表示传输确认；408、429、5xx、网络未知自动退避重试，每轮最多六次且不超过一小时或原任务七天保留期。重定向不跟随，其他非2xx停止。停用目的地阻止后续领取，已经发出的请求仍可能到达。回调重试不重跑模型、不增减 AI 额度。任务明确重跑则创建新任务，并沿用来源目标、重新检查是否启用。
 
-验签与去重测试：`python scripts/test-demo-receiver.py`。`delivery.spec.ts` 为独立接收端浏览器用例，需 Fake 后端和未占用的8091；默认浏览器命令还包含其他会写任务的用例，不应在真实模型模式运行。本批验收使用隔离测试数据库及专用 vhost，未动演示空间额度。
+验签与去重测试：`python scripts/test-demo-receiver.py`。`delivery.spec.ts` 为独立接收端浏览器用例，需 Fake 后端和未占用的接收端端口；`scripts/test-browser.ps1` 通过 `RELAYOPS_RECEIVER_PORT` 与 `--relayops.delivery.demo-port` 统一配置（默认18091），避免Windows动态排除端口。默认浏览器命令还包含其他会写任务的用例，不应在真实模型模式运行。本批验收使用隔离测试数据库及专用 vhost，未动演示空间额度。
 
 当前不包含外网 HTTPS 目录、密钥轮换、批量补投、接收端外部业务动作或底层存储安全擦除；两个系统无共享事务，不承诺端到端恰好一次。
 

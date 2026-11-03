@@ -102,6 +102,7 @@ public class JobWorker {
                     try {
                     DocumentResult.validate(result, paragraphs);
                     if (!work.modelProfile().equals(result.modelProfile())) throw new IllegalStateException("OUTPUT_INVALID");
+                    if (!prepared.profile().schemaVersion().equals(result.schemaVersion())) throw new IllegalStateException("OUTPUT_INVALID");
                     validation.outcome("VALID");
                     } catch (Exception ex) {
                         validation.outcome("EVIDENCE_INVALID".equals(ex.getMessage()) ? "EVIDENCE_INVALID" : "OUTPUT_INVALID");

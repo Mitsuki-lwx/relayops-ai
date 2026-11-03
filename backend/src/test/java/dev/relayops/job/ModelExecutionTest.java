@@ -87,6 +87,41 @@ class ModelExecutionTest {
         assertEquals("RELEASED", credit(id)); assertEquals(0, sent(id)); assertEquals(0, provider.calls.get());
     }
 
+    @Test void reviewPurposeIsFrozenIdempotentScopedAndSingleCall() {
+        provider.content=ReviewFixtures.json(provider.json);
+        String key=UUID.randomUUID().toString();
+        var request=new JobService.CreateJob(application,"需求评审",ReviewFixtures.INPUT,List.of(),"zh-CN",true,"REQUIREMENTS_REVIEW");
+        String id=jobs.create("owner.a",workspace,key,request).jobId();
+        assertEquals(id,jobs.create("owner.a",workspace,key,request).jobId());
+        assertEquals(409,assertThrows(ApiException.class,()->jobs.create("owner.a",workspace,key,new JobService.CreateJob(application,"需求评审",ReviewFixtures.INPUT,List.of(),"zh-CN",true))).status);
+        var message=ready(id);assertTrue(worker.execute(message));assertTrue(worker.execute(message));
+        assertEquals("REQUIREMENTS_REVIEW",job(id).taskType());assertEquals("SUCCEEDED",job(id).status());assertEquals(1,provider.calls.get());assertEquals(1,sent(id));
+        assertEquals(TaskType.REQUIREMENTS_REVIEW.schemaVersion,jdbc.queryForObject("SELECT schema_version FROM ai_job WHERE id=?",String.class,id));
+        assertEquals(403,assertThrows(ApiException.class,()->jobs.result("viewer.a",workspace,id)).status);
+        assertEquals(404,assertThrows(ApiException.class,()->jobs.result("owner.b",workspace,id)).status);
+    }
+
+    @Test void defaultAndExplicitExtractShareLegacyNormalizedIntent() {
+        var ordinary=request();String key=UUID.randomUUID().toString();String id=jobs.create("owner.a",workspace,key,ordinary).jobId();
+        var explicit=new JobService.CreateJob(ordinary.applicationId(),ordinary.title(),ordinary.inputText(),ordinary.destinationIds(),ordinary.outputLanguage(),true,"EXTRACT");
+        assertEquals(id,jobs.create("owner.a",workspace,key,explicit).jobId());
+        var normalized=ReflectionTestUtils.invokeMethod(jobs,"normalize",explicit);
+        assertFalse(provider.json.readTree(provider.json.writeValueAsString(normalized)).has("taskType"));
+        assertEquals(422,assertThrows(ApiException.class,()->jobs.modelProfile("owner.a",workspace,"UNKNOWN")).status);
+        assertEquals(404,assertThrows(ApiException.class,()->jobs.modelProfile("owner.b",workspace,"UNKNOWN")).status);
+    }
+
+    @Test void invalidReviewFailsOnceAndExplicitRerunRetainsPurpose() {
+        provider.content=ReviewFixtures.json(provider.json).replace("超时30秒","虚构引用");
+        var request=new JobService.CreateJob(application,"评审失败",ReviewFixtures.INPUT,List.of(),"zh-CN",true,"REQUIREMENTS_REVIEW");
+        String id=jobs.create("owner.a",workspace,UUID.randomUUID().toString(),request).jobId();
+        assertTrue(worker.execute(ready(id)));assertEquals("FAILED",job(id).status());assertEquals("EVIDENCE_INVALID",job(id).errorCode());assertEquals(1,provider.calls.get());assertEquals("SPENT",credit(id));
+        var retry=jobs.retry("owner.a",workspace,id,UUID.randomUUID().toString(),new JobService.RetryJob(job(id).version(),"重新核对引用",true));
+        assertEquals("REQUIREMENTS_REVIEW",job(retry.jobId()).taskType());
+        provider.content=ReviewFixtures.json(provider.json);assertTrue(worker.execute(ready(retry.jobId())));
+        assertEquals("SUCCEEDED",job(retry.jobId()).status());assertEquals(2,provider.calls.get());assertEquals("SPENT",credit(id));
+    }
+
     @Test void tracingCollectorFailureDoesNotChangeSuccessOrDuplicateCalls() throws Exception {
         var collector = com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1", 0), 0);
         var received = new java.util.concurrent.atomic.AtomicInteger();

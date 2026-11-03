@@ -41,9 +41,13 @@ public class JobService {
     }
 
     public record CreateJob(String applicationId, String title, String inputText, List<String> destinationIds, String outputLanguage,
-                            @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL) Boolean acknowledgeExternalProcessing) {
+                            @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL) Boolean acknowledgeExternalProcessing,
+                            @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL) String taskType) {
+        public CreateJob(String applicationId, String title, String inputText, List<String> destinationIds, String outputLanguage, Boolean acknowledgeExternalProcessing) {
+            this(applicationId,title,inputText,destinationIds,outputLanguage,acknowledgeExternalProcessing,null);
+        }
         public CreateJob(String applicationId, String title, String inputText, List<String> destinationIds, String outputLanguage) {
-            this(applicationId, title, inputText, destinationIds, outputLanguage, null);
+            this(applicationId, title, inputText, destinationIds, outputLanguage, null, null);
         }
     }
     public record Accepted(String jobId, String status, long version, Instant payloadExpiresAt) {}
@@ -52,17 +56,17 @@ public class JobService {
     private record CancelIntent(String jobId, long expectedVersion) {}
     private record RetryIntent(String jobId, long expectedVersion, String reason, boolean acknowledgeDuplicateCost) {}
     public record Job(String jobId, String applicationId, String title, String status, String modelProfile,
-                      String errorCode, long version, Instant createdAt, Instant payloadExpiresAt, int modelCalls, String parentJobId) {}
+                      String errorCode, long version, Instant createdAt, Instant payloadExpiresAt, int modelCalls, String parentJobId, String taskType) {}
 
     private Job map(ResultSet rs, int row) throws SQLException {
         return new Job(rs.getString("id"), rs.getString("application_id"), rs.getString("title"), rs.getString("status"),
                 rs.getString("model_profile"), rs.getString("error_code"), rs.getLong("version"),
                 rs.getObject("created_at", LocalDateTime.class).toInstant(ZoneOffset.UTC),
-                rs.getObject("payload_expires_at", LocalDateTime.class).toInstant(ZoneOffset.UTC), rs.getInt("model_calls"), rs.getString("parent_job_id"));
+                rs.getObject("payload_expires_at", LocalDateTime.class).toInstant(ZoneOffset.UTC), rs.getInt("model_calls"), rs.getString("parent_job_id"),TaskType.nameIfKnown(rs.getString("schema_version")));
     }
 
     private static final String SELECT = """
-            SELECT j.id,j.application_id,j.title,j.status,j.model_profile,j.error_code,j.version,j.created_at,j.payload_expires_at,j.parent_job_id,
+            SELECT j.id,j.application_id,j.title,j.status,j.model_profile,j.error_code,j.version,j.created_at,j.payload_expires_at,j.parent_job_id,j.schema_version,
               (SELECT COUNT(*) FROM ai_attempt a WHERE a.workspace_id=j.workspace_id AND a.job_id=j.id AND a.sent_at IS NOT NULL) AS model_calls
             FROM ai_job j
             """;
@@ -75,7 +79,7 @@ public class JobService {
         String fingerprint = DocumentInput.hash(json.writeValueAsString(normalized));
         Accepted previous = replay(member, workspaceId, "CREATE_JOB", key, fingerprint);
         if (previous != null) return previous;
-        if (models.currentProfile().billable() && !Boolean.TRUE.equals(normalized.acknowledgeExternalProcessing()))
+        if (models.currentProfile(TaskType.parse(normalized.taskType())).billable() && !Boolean.TRUE.equals(normalized.acknowledgeExternalProcessing()))
             throw DocumentInput.invalid("请确认将文档发送给已配置的模型供应商及可能的费用");
         LocalDate date = lockAdmission(workspaceId, normalized.applicationId());
         Accepted response = admit(member, workspaceId, date, normalized, null);
@@ -98,7 +102,8 @@ public class JobService {
         String input = DocumentInput.normalize(request.inputText());
         DocumentInput.paragraphs(input);
         return new CreateJob(request.applicationId(), request.title().strip(), input, targets.stream().sorted().toList(), language,
-                Boolean.TRUE.equals(request.acknowledgeExternalProcessing()) ? true : null);
+                Boolean.TRUE.equals(request.acknowledgeExternalProcessing()) ? true : null,
+                TaskType.parse(request.taskType()) == TaskType.EXTRACT ? null : TaskType.REQUIREMENTS_REVIEW.name());
     }
 
     private Accepted replay(Access.Member member, String workspaceId, String operation, String key, String fingerprint) {
@@ -131,7 +136,7 @@ public class JobService {
                 """, workspaceId, date);
         if (reserved == 0) throw new ApiException(429, "QUOTA_EXCEEDED", "本空间当日调用额度已用尽");
         String id = UUID.randomUUID().toString();
-        var profile = models.currentProfile();
+        var profile = models.currentProfile(TaskType.parse(request.taskType()));
         jdbc.update("""
                 INSERT INTO ai_job(id, workspace_id, application_id, actor_id, title, status, input_cipher, input_hash,
                   accepted_date, output_language, parent_job_id, model_profile, prompt_version, schema_version, queue_expires_at, payload_expires_at)
@@ -159,13 +164,13 @@ public class JobService {
                 (rs, row) -> new Accepted(id, "QUEUED", 0, rs.getObject(1, LocalDateTime.class).toInstant(ZoneOffset.UTC)), workspaceId, id);
     }
 
-    private record Source(String id, String applicationId, String title, String status, String modelProfile,
+    private record Source(String id, String applicationId, String title, String status, String modelProfile, String schemaVersion,
                           String language, LocalDate acceptedDate, long version, Instant expiresAt, byte[] input, boolean deleted) {}
 
     private Source source(String workspaceId, String id, boolean lock) {
         return jdbc.query("SELECT * FROM ai_job WHERE workspace_id = ? AND id = ?" + (lock ? " FOR UPDATE" : ""),
                 (rs, row) -> new Source(rs.getString("id"), rs.getString("application_id"), rs.getString("title"), rs.getString("status"),
-                        rs.getString("model_profile"), rs.getString("output_language"), rs.getDate("accepted_date").toLocalDate(),
+                        rs.getString("model_profile"), rs.getString("schema_version"), rs.getString("output_language"), rs.getDate("accepted_date").toLocalDate(),
                         rs.getLong("version"), rs.getObject("payload_expires_at", LocalDateTime.class).toInstant(ZoneOffset.UTC), rs.getBytes("input_cipher"),rs.getObject("payload_deleted_at")!=null),
                 workspaceId, id).stream().findFirst().orElseThrow(() -> new ApiException(404, "NOT_FOUND", "任务不存在或不可访问"));
     }
@@ -232,18 +237,21 @@ public class JobService {
         if (!List.of("FAILED", "UNKNOWN").contains(current.status())) throw new ApiException(409, "STATE_CONFLICT", "只有失败或结果未知的任务可以明确重跑");
         String input = cipher.decrypt(current.input(), workspaceId + ":" + jobId + ":input");
         var targetIds=jdbc.queryForList("SELECT destination_id FROM job_destination WHERE workspace_id=? AND job_id=? ORDER BY destination_id",String.class,workspaceId,jobId);
-        CreateJob normalized = normalize(new CreateJob(current.applicationId(), current.title(), input, targetIds, current.language()));
+        CreateJob normalized = normalize(new CreateJob(current.applicationId(), current.title(), input, targetIds, current.language(),null,TaskType.fromSchema(current.schemaVersion()).name()));
         Accepted response = admit(member, workspaceId, date, normalized, jobId);
         jdbc.update("INSERT INTO audit_event(workspace_id, actor_id, resource_id, operation, detail_json) VALUES (?, ?, ?, 'JOB_RERUN_REQUESTED', ?)",
                 workspaceId, member.userId(), jobId, json.writeValueAsString(Map.of("reason", reason, "newJobId", response.jobId(),
-                        "acknowledgeDuplicateCost", true, "previousModelProfile", current.modelProfile(), "newModelProfile", models.currentProfile().profileId())));
+                        "acknowledgeDuplicateCost", true, "previousModelProfile", current.modelProfile(), "newModelProfile", models.currentProfile(TaskType.parse(normalized.taskType())).profileId())));
         remember(member, workspaceId, "RERUN_JOB", key, fingerprint, response);
         return response;
     }
 
     public ModelGateway.Profile modelProfile(String username, String workspaceId) {
+        return modelProfile(username,workspaceId,null);
+    }
+    public ModelGateway.Profile modelProfile(String username, String workspaceId, String taskType) {
         access.require(username, workspaceId, false, false, false);
-        return models.currentProfile();
+        return models.currentProfile(TaskType.parse(taskType));
     }
 
     public List<Job> list(String username, String workspaceId) {

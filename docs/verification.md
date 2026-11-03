@@ -303,3 +303,15 @@ API 与协议依据：[Spring AMQP 发布确认与 returns](https://docs.spring.
 
 ## 真实模型端到端三样本（2026-11-02）
 用户授权使用cline-pass/deepseek-v4.1-flash-1017；独立schema/vhost中3/3成功，各调用一次，44处精确引用与3次签名回调/接收保存通过。结果完成耗时9.788/11.266/13.834秒，真实Langfuse报告5557 Token；Edge重新授权读取并实际下载真实Markdown。12类主库事实及主配置hash不变。未更改应用代码，127后端/80前端只复用既有回归记录，未重跑。详见[真实验收](real-model-verification.md)。
+
+## 需求评审与验收草稿（2026-11-03）
+- 后端：137项通过，0失败/错误/跳过（`artifacts/backend-review-final.log`）。覆盖默认/显式EXTRACT旧指纹、评审用途冻结、同键改用途409、结构/引用/冲突双引用验证、失败结算不自动重试、明确重跑保持用途、VIEWER及跨空间拒绝、签名回调中的独立结果schema。
+- 隔离发布包：`verify-packaged.mjs` 在原生MySQL新schema及`relayops-test` vhost中通过，包括匿名/CSRF/参数/成员隔离、普通Fake调用1次，以及评审profile、评审结果`requirements.review.result.v1`和一次调用。
+- 浏览器：88项全部通过（2.4分钟，含78项原有用例、7项新评审夹具/纯格式化、1项持久化评审；0跳过）。三档评审结果与下载截图已目视复核；撤权、迟到配置响应、待确认草稿恢复、VIEWER无入口和Markdown恶意围栏均通过。
+- 真实模型：独立schema `relayops_e2e_1793678393494`、专用vhost和18081/18091接收端；模型`cline-pass/deepseek-v4.1-flash-1017`、provider=openai-compatible、评审profile与`review.compat.v2`/8192上限断言通过。6个任务共6次供应商调用：4次成功、1次`MODEL_RESULT_UNKNOWN`（usage不可得，UNKNOWN/UNCERTAIN）、1次`OUTPUT_TRUNCATED`。4次成功均一次调用、精确引用全匹配（7/10/8/4处）、签名回调各1轮HTTP200并在接收端保存1行。
+- 成功样本模型span耗时22.862/11.945/20.769/25.966秒；供应商报告Token合计16,160（输入2,154/输出14,006）；失败尝试另报4,624 Token（截断样本），未知样本无usage。金额未知，Langfuse自动0不作免费证明。评审输出显示2/2/2/1项问题与2/2/2/1项草稿，冲突样本保留两条不同引用、未替用户选择，缺漏样本以问题呈现并单列假设。
+- 4096上限下真实模型出现UNKNOWN与截断后，评审输出上限独立为`RELAYOPS_MODEL_REVIEW_MAX_TOKENS`（默认8192）并纳入profile指纹；调整后最终配置样本成功。这是本次新增配置的直接原因，不把失败样本计为功能通过。
+- Langfuse读回30条`review-e2e`观测：4个任务各含job.execute、queue.wait、model.extract、result.validate、result.persist及独立delivery.attempt；父子/session、模型参数、usage与`cost_source=unknown`正确，标题/正文/引用/密钥未导出。提示词版本v1/v2及4096/8192上限按任务冻结记录。
+- 主服务：18080健康UP/1.0.0，同源静态200、匿名API401、CSRF403、缺失资源404通过；本次只读验证以`--relayops.retention-enabled=false`启动，未执行主库清理。12类主库业务/密文/密钥hash不变，`ops/.env`字节hash与本批前一致，0新增付费调用。临时18081/18091已停止。
+- 测试基础设施：本机Windows动态排除端口覆盖8091（8083–8182），原固定接收端无法绑定；浏览器运行器改为`RELAYOPS_RECEIVER_PORT`与`--relayops.delivery.demo-port`统一配置（默认18091），并在启动前检查RabbitMQ与端口占用，避免把环境故障误报为功能失败。
+- 局限：这是少量合成样本，不构成完整率、准确率或稳定性结论；没有固定质量评测集、重复采样、模型对照、自动执行验收或真实金额核对。

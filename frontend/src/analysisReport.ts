@@ -16,6 +16,22 @@ function claimReport(claim: Claim) {
 }
 
 export function analysisReport(job: ReportJob, result: ResultBody, exportedAt: Date) {
+  if (result.data.review) {
+    const review = result.data.review;
+    return [
+      "# RelayOps 需求评审与验收草稿\n",
+      "生成建议，待人工确认。关联原文用于定位背景，不证明某项要求缺失；模型未列出问题不代表需求完整。\n",
+      "报告含原文摘录；下载副本不受平台后续撤权或自动清理控制。\n",
+      "## 任务信息\n", literal(`任务ID：${job.jobId}\n任务标题：${job.title}\n冻结配置：${job.modelProfile}\n受理时间：${job.createdAt}\n导出时间：${exportedAt.toISOString()}`),
+      "## 模型报告标题\n", literal(result.data.title),
+      "## 摘要\n", claimReport(result.data.summary),
+      "## 需求评审\n", ...review.findings.map((f, i) => [literal(`${i + 1}. ${f.kind}\n${f.text}\n待澄清：${f.question}`), ...f.evidence.map(e => literal(`段落：${e.paragraphId}\n引用：${e.quote}`))].join("\n")),
+      ...(review.findings.length ? [] : ["模型未列出问题，不代表需求完整。\n"]),
+      "## 验收草稿\n", ...review.acceptanceCriteria.map((c, i) => [literal(`${i + 1}. ${c.title}\n前置条件（Given）：${c.given}\n执行操作（When）：${c.when}\n预期行为（Then）：${c.then}`), "待确认假设：\n", ...(c.assumptions.length ? c.assumptions.map(literal) : ["模型未列出额外假设，仍需人工审核。\n"]), ...c.evidence.map(e => literal(`段落：${e.paragraphId}\n引用：${e.quote}`))].join("\n")),
+      ...(review.acceptanceCriteria.length ? [] : ["未生成可核对的验收草稿。\n"]),
+      "引用匹配仅说明原文可定位，不代表事实判断完全正确。\n",
+    ].join("\n");
+  }
   const claims = (items: Claim[], empty: string) => items.length ? items.map(claimReport).join("\n") : empty + "\n";
   return [
     "# RelayOps 分析报告\n",

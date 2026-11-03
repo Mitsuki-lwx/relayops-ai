@@ -52,7 +52,7 @@ final class StubProvider implements AutoCloseable {
         return json.writeValueAsString(Map.of("summary", claim, "keyPoints", List.of(claim), "constraints", List.of(), "unknowns", List.of("未说明超时阈值")));
     }
     ModelGateway gateway(int timeout) {
-        return new ModelGateway(new FakeModel(), json, "compatible", endpoint(), "test-key-not-real", "fixture-model", timeout, 4096, "max_tokens", true, true);
+        return new ModelGateway(new FakeModel(), json, "compatible", endpoint(), "test-key-not-real", "fixture-model", timeout, 4096, 8192, "max_tokens", true, true);
     }
     public void close() { server.stop(0); executor.shutdownNow(); }
 }

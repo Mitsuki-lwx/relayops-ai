@@ -100,3 +100,9 @@
 - Langfuse当前自托管3.225.15/v3写模式：OTLP HTTP写入正常，最新v4 Observations API返回404。CLI1.2.4需显式--api-version 3.225.3读取observations/traces；已核验五阶段与回调session。模型usage与实际成本分开，Langfuse自算0不等于已核实免费。完整正文不导出，观测不继承工作台租户权限。
 
 - 当前完整ClinePass模型真实3样本成功：信息缺失未捏造参数，10/30秒冲突保留为未知，44处引用均准确匹配；模型span8.686/10.214/13.317秒，供应商报告5557 Token，金额未知。短样本仍有关键点/约束重复，不能据3条估计总体质量或稳定性。
+
+- 用户明确选择需求评审与验收清单作为下一开发方向。原schema_version/model_profile/prompt_version列已冻结配置且长度40足够新profile，无需迁移。默认请求新增字段须规范化为空且省略，才能保留老幂等指纹；重跑须使用来源schema映射用途。回调外壳携带result.schemaVersion，不能把新结构伪装成旧结果。
+
+- 需求评审真实复核表明该兼容模型的推理token会计入`max_tokens`：同一小样本两次人工重跑分别在4096上限出现`MODEL_RESULT_UNKNOWN`与`OUTPUT_TRUNCATED`，收紧提示词后一次输出达4079 token。评审因此使用独立上限默认8192，并与普通分析4096区分；上限参与profile指纹，提示词版本升级为`review.compat.v2`。
+- 本机Windows动态排除端口范围会变化，本次8091落入8083–8182排除区，绑定返回WinError 10013而非“端口占用”。浏览器测试改用统一的`RELAYOPS_RECEIVER_PORT`/`--relayops.delivery.demo-port`（默认18091），并在启动前检查Broker和端口，避免将环境故障误报为业务失败。
+- 真实评审输出符合预期：冲突保留两条不同引用且不替用户选择；缺漏以问题呈现并单列假设；成功任务各一次调用，签名回调携带`requirements.review.result.v1`。但4条合成样本不能证明完整率或总体准确率，仍需固定评测集和重复采样。

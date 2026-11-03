@@ -286,3 +286,15 @@
 
 - 三个真实任务均成功且各SENT一次（无自动重试），提交到结果完成轮询耗时9.788/11.266/13.834秒；对应精确引用16/12/16处全匹配。缺失样本四项未规定信息均列unknown，冲突样本保留10秒与30秒冲突并指出无法确定优先级，未强选。三个真实签名回调均首轮成功，独立库3 Job/3 Result/3 Attempt/3 SPENT/0 UNCERTAIN。Langfuse逐条读回当前真实model/provider/profile、5阶段、回调和有效usage，累计5557 tokens（959输入/4598输出）；金额未知。Edge实际只读打开持久化真实结果并重新授权下载Markdown通过，没有新建模型任务。主库12类hash不变、配置文件hash不变。
 - 已目视复核真实报告截图/文件；接收端SQLite实际3行，回调确认全链路耗时10.061/11.943/14.486秒。核对专用进程命令行后仅停止18081/18091；主18080仍UP，MySQL3306保持。报告区分任务轮询完成、model span和实际回调确认时间，未把Token或Langfuse0当金额；验收文档不提交原始正文、配置、数据或构建输出。
+
+- Sol Advisor solo；经代码/既有真实测评及官方GitLab/GitHub/Langfuse资料比较用途，用户已选择需求评审与验收草稿。探索结论收敛，按用户“开始开发”授权转入OpenSpec规划和实施；已写add-requirements-review及三份文档，后续方向明确标为建议。沿用现有taste设计并使用Impeccable原则复核界面。
+
+- 需求评审后端与前端实现已接入：独立schema/profile与prompt，复用schema_version冻结用途；原默认指纹/旧结果JSON保持，重跑继承用途。135后端全通过（0失败/错误/跳过），含新严格结构/冲突双引用/一次调用/默认幂等兼容/非法引用失败与明确重跑/跨空间与VIEWER/签名回调结构。前端实现用途/配置序列防迟到、pending恢复、评审组件和安全Markdown；早期编辑脚本因工作目录重复frontend路径未执行，已纠正。准备新浏览器与隔离JAR验收。
+
+## 需求评审实施与验收（2026-11-03）
+- 接续上一会话未完成批次：先复核后端差异、OpenSpec add-requirements-review及10项任务。137后端测试全通过（0失败/错误/跳过），含评审用途冻结、同键改用途409、结构/引用/冲突双引用、失败/重跑、VIEWER与跨域、签名回调结果schema。
+- 新评审前端7项夹具首轮全挂在budget夹具形状，修正为`{credits:{...}}`后通过；三档截图目视复核。全量隔离发布包首轮因PowerShell 5.1不支持`RandomNumberGenerator.GetBytes`失败，改用兼容实例；随后发现18081被旧release进程占用却因健康检查误判，运行器增加启动前端口检查、按命令行归属停止和RabbitMQ检查。最终`verify-packaged.mjs`与88项Playwright全通过（2.4分钟、0跳过），含持久化评审、撤权/迟到/恢复和Markdown夹具。
+- 真实评审首轮：独立schema/vhost及18081/18091，模型`deepseek-v4.1-flash-1017`，评审profile为真实compatible。首条任务26秒后返回`MODEL_RESULT_UNKNOWN`（usage不可得，预算UNCERTAIN）；用户明确重跑后返回`OUTPUT_TRUNCATED`（输出4096，SPENT）。根因是推理token计入输出上限。收紧提示词（最多3项优先、更短文本、紧凑JSON）后missing样本以4079/4096成功；随后新增评审独立输出上限`RELAYOPS_MODEL_REVIEW_MAX_TOKENS=8192`并纳入profile指纹，提示词版本升级`review.compat.v2`。
+- 最终真实分工：4个成功评审任务（missing/conflict/ambiguity/final）各1次调用，精确引用7/10/8/4处，签名回调4/4 ACK并接收端4行；另1次UNKNOWN、1次OUTPUT_TRUNCATED保留为失败证据。成功Token合计16,160，失败截断另4,624，金额未知；Langfuse 30条`review-e2e`观测父子/session/参数/usage/脱敏通过，最终任务记录v2/8192。Edge只读打开真实评审并下载Markdown通过，无新任务。
+- 主服务18080以新JAR启动，健康UP/1.0.0；同源静态200、匿名API401、CSRF403、404通过。为只读核对显式关闭retention，未执行主库清理；12类主库事实hash与ops/.env字节hash不变，0新增付费调用。临时18081/18091停止。
+- 已补ADR0013、README评审说明、spec/tasks/checklist/product-directions/verification；修复浏览器接收端端口配置文档。接下来完成OpenSpec规范同步/归档、自审与凭据扫描、自动提交推送。

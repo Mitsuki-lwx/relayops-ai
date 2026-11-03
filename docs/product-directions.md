@@ -56,3 +56,20 @@ Workspace已属于一个Tenant；组织单元通过明确授权获得空间角�
 组织基础链路的迁移、接口、管理页面和负例已实现，证据见verification.md。后续仍先更新spec/tasks/checklist，新增知识检索或任务类型时继续验证跨公司、跨部门/组、撤权与派生结果范围。
 
 参考：[OWASP Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html) 建议默认拒绝并逐请求验证权限；[AWS 租户隔离说明](https://docs.aws.amazon.com/whitepapers/latest/saas-architecture-fundamentals/tenant-isolation.html) 区分登录身份与实际资源隔离。本文组织结构与实施顺序是针对 RelayOps 的设计建议。
+
+## 2026-11-02探索与优先级
+当前1.0、Langfuse元数据观测和3条真实模型验收已完成。以下是针对RelayOps的产品判断，只有需求评审已由用户选定进入开发，其余仍为方案。
+
+| 顺序 | 方向 | 实际收益与依赖 | 边界 |
+| --- | --- | --- | --- |
+| 1 | 需求评审与验收草稿（已实现，2026-11-03） | 将已有缺失/冲突识别变成澄清问题和Given/When/Then，复用现有文本与引用管道 | 人工确认，不自动执行测试或补齐参数 |
+| 2 | 文档版本对比与影响分析（建议） | 识别语义变化、影响的约束和验收项 | 先实现版本及双输入引用，避免仅比较模型摘要 |
+| 3 | 故障解释与排查建议（建议） | 已有安全错误码/尝试/trace可以构成脱敏上下文 | 状态、金额、是否重试由程序决定，LLM不自动重跑 |
+| 4 | 工单分类与团队建议（建议） | 将非结构化请求整理为标签和路由建议 | 需人工纠正，团队推荐不产生访问权 |
+| 5 | 空间知识问答（建议） | 在历史文档中查找可复用结论 | 需摄取/版本/权限过滤/撤权同步，当前历史只是元数据查询 |
+
+更好的用途是减少评审整理成本，让证据、问题和验收草稿相互关联；摘要仅作导航。鉴权、预算、幂等、状态机和签名计算继续使用确定性代码。评审生成不等于评审完整，引用匹配不等于推理正确；应逐步建立带人工预期的固定样本比较提示词版本。
+
+需求评审已按OpenSpec交付：用途/结果版本冻结、精确引用、人工确认、回调schema及独立输出上限；137后端、88浏览器和4条成功真实评审通过。真实复核同时暴露4096上限下的一次UNKNOWN和一次OUTPUT_TRUNCATED，因此评审输出上限独立为默认8192并纳入profile指纹；该经验说明“是否完整”仍需固定样本评测，而不是仅凭少量成功样本。
+
+参考主流工具已有[生成测试与故障解释](https://docs.gitlab.com/user/gitlab_duo_chat/examples/)和[代码评审反馈](https://docs.github.com/en/copilot/responsible-use/agents)用途；这些是可借鉴的工作模式，不是RelayOps已经拥有代码库上下文或自动执行能力。[Langfuse离线评测](https://langfuse.com/docs/evaluation/get-started/offline)提供固定数据集/实验比较方式；本地v3功能兼容性仍需逐项验证。

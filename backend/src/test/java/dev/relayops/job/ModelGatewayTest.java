@@ -57,10 +57,10 @@ class ModelGatewayTest {
     @Test void validatesEndpointAndSecretsWithoutPrintingThem() throws Exception {
         try (var stub = new StubProvider()) {
             for (String endpoint : List.of("http://example.com/chat/completions", "https://secret:password@example.com/chat/completions", "https://example.com/chat/completions?token=secret", "https://example.com/other")) {
-                var ex = assertThrows(IllegalStateException.class, () -> new ModelGateway(new FakeModel(), stub.json, "compatible", endpoint, "private-key", "model", 60, 4096, "max_tokens", true, false));
+                var ex = assertThrows(IllegalStateException.class, () -> new ModelGateway(new FakeModel(), stub.json, "compatible", endpoint, "private-key", "model", 60, 4096, 8192, "max_tokens", true, false));
                 assertFalse(ex.getMessage().contains("private-key")); assertFalse(ex.getMessage().contains(endpoint));
             }
-            assertThrows(IllegalStateException.class, () -> new ModelGateway(new FakeModel(), stub.json, "compatible", stub.endpoint(), "", "model", 60, 4096, "max_tokens", true, true));
+            assertThrows(IllegalStateException.class, () -> new ModelGateway(new FakeModel(), stub.json, "compatible", stub.endpoint(), "", "model", 60, 4096, 8192, "max_tokens", true, true));
             assertEquals(0, stub.calls.get());
         }
     }
@@ -79,7 +79,7 @@ class ModelGatewayTest {
         }
     }
     @Test void supportsExplicitTokenParameterAndDisablingJsonMode() throws Exception {
-        try (var stub = new StubProvider(); var gateway = new ModelGateway(new FakeModel(), stub.json, "compatible", stub.endpoint(), "test-key", "fixture-model", 3, 2048, "max_completion_tokens", false, true)) {
+        try (var stub = new StubProvider(); var gateway = new ModelGateway(new FakeModel(), stub.json, "compatible", stub.endpoint(), "test-key", "fixture-model", 3, 2048, 8192, "max_completion_tokens", false, true)) {
             prepare(gateway).invoke();
             assertTrue(stub.request.has("max_completion_tokens")); assertFalse(stub.request.has("response_format"));
         }

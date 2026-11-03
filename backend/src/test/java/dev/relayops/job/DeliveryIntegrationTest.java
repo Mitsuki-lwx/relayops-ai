@@ -100,6 +100,14 @@ class DeliveryIntegrationTest {
     String status(){return jdbc.queryForObject("SELECT status FROM delivery_run WHERE id=?",String.class,run());}
     void due(){jdbc.update("UPDATE delivery_run SET next_attempt_at=DATE_SUB(CURRENT_TIMESTAMP(3),INTERVAL 1 SECOND) WHERE id=?",run());worker.recover();}
 
+    @Test void reviewResultKeepsItsSchemaInsideSignedCallback() {
+        String job=jobs.create("owner.a",workspace,id(),new JobService.CreateJob(app,"评审回调",ReviewFixtures.INPUT,List.of(destination),"zh-CN",null,"REQUIREMENTS_REVIEW")).jobId();
+        assertTrue(ai.execute(envelope("outbox_event",job,"AI_EXECUTE")));assertTrue(worker.execute(ready()));assertEquals("SUCCEEDED",status());
+        var payload=json.readTree(bodies.getFirst());assertEquals("relay.webhook.v1",payload.path("schemaVersion").asText());
+        assertEquals(TaskType.REQUIREMENTS_REVIEW.schemaVersion,payload.path("result").path("schemaVersion").asText());
+        assertTrue(payload.path("result").path("review").path("acceptanceCriteria").isArray());assertEquals(1,calls.get());
+    }
+
     @Test void telemetryCorrelatesAsyncAttemptsWithoutExportingPayload() throws Exception {
         boolean local="true".equals(System.getenv("RELAYOPS_LANGFUSE_VERIFY"));
         var collector=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);

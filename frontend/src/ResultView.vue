@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import EvidenceList from "./EvidenceList.vue";
+import RequirementsReviewView from "./RequirementsReviewView.vue";
 import type { ResultBody } from "./resultTypes";
 defineProps<{ result: ResultBody }>();
 </script>
@@ -13,6 +14,8 @@ defineProps<{ result: ResultBody }>();
         :paragraphs="result.paragraphs"
       />
     </section>
+    <RequirementsReviewView v-if="result.data.review" :review="result.data.review" :paragraphs="result.paragraphs" />
+    <template v-else>
     <section class="result-section" data-result-section="keyPoints">
       <h3>
         关键结论
@@ -64,6 +67,7 @@ defineProps<{ result: ResultBody }>();
         </li>
       </ul>
     </section>
+    </template>
     <p class="disclaimer">引用匹配仅说明原文可定位，不代表事实判断完全正确。</p>
   </div>
 </template>

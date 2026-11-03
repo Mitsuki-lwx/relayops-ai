@@ -43,7 +43,7 @@ public class JobController {
     }
 
     @GetMapping("/model-profile")
-    Object modelProfile(Principal principal, @PathVariable String workspaceId) { return jobs.modelProfile(principal.getName(), workspaceId); }
+    Object modelProfile(Principal principal, @PathVariable String workspaceId, @RequestParam(required=false) String taskType) { return jobs.modelProfile(principal.getName(), workspaceId, taskType); }
 
     @GetMapping("/jobs/{jobId}")
     Object get(Principal principal, @PathVariable String workspaceId, @PathVariable String jobId) { return jobs.get(principal.getName(), workspaceId, jobId); }

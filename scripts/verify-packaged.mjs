@@ -47,10 +47,22 @@ const create = () => owner.request(prefix+'/jobs',{method:'POST',csrf:true,heade
 const accepted = await create(); assert.equal(accepted.status,202); const job = await accepted.json();
 assert.equal((await (await create()).json()).jobId,job.jobId);
 let metadata;
-for(let i=0;i<80;i++) { metadata=await (await owner.request(prefix+'/jobs/'+job.jobId)).json();if(metadata.status==='SUCCEEDED')break;await new Promise(r=>setTimeout(r,200)); }
+for(let i=0;i<150;i++) { metadata=await (await owner.request(prefix+'/jobs/'+job.jobId)).json();if(metadata.status==='SUCCEEDED')break;await new Promise(r=>setTimeout(r,200)); }
 assert.equal(metadata.status,'SUCCEEDED'); assert.equal(metadata.modelCalls,1);
 assert.equal((await owner.request(prefix+'/jobs/'+job.jobId+'/result')).status,200);
 const member = client(); assert.equal((await member.login('release.member')).status,204);
 assert.equal((await member.request(prefix+'/jobs/'+job.jobId)).status,404);
 assert.equal((await member.request(`/api/v1/organizations/${space.tenantId}/audit-events`)).status,403);
-console.log(JSON.stringify({version:'1.0.0',sameOriginJar:true,releaseProfileNoDemo:true,provisionedOwnerAndMember:true,anonymousAndCsrf:true,invalidQuery422:true,fakeModelCalls:1,memberIsolation:true}));
+const reviewProfile = await (await owner.request(prefix+'/model-profile?taskType=REQUIREMENTS_REVIEW')).json();
+assert.equal(reviewProfile.profileId,'fake-review-v1'); assert.equal(reviewProfile.billable,false);
+const reviewKey = randomUUID();
+const reviewAccepted = await owner.request(prefix+'/jobs',{method:'POST',csrf:true,headers:{'Content-Type':'application/json','Idempotency-Key':reviewKey},body:JSON.stringify({...body,title:'发布包需求评审',taskType:'REQUIREMENTS_REVIEW',inputText:'文件上传必须登录。\n\n规范甲要求超时10秒。\n\n规范乙要求超时30秒。'})});
+assert.equal(reviewAccepted.status,202); const reviewJob = await reviewAccepted.json();
+let reviewMetadata;
+for(let i=0;i<150;i++) { reviewMetadata=await (await owner.request(prefix+'/jobs/'+reviewJob.jobId)).json();if(reviewMetadata.status==='SUCCEEDED')break;await new Promise(r=>setTimeout(r,200)); }
+assert.equal(reviewMetadata.status,'SUCCEEDED'); assert.equal(reviewMetadata.modelCalls,1); assert.equal(reviewMetadata.taskType,'REQUIREMENTS_REVIEW');
+const reviewResult = await (await owner.request(prefix+'/jobs/'+reviewJob.jobId+'/result')).json();
+assert.equal(reviewResult.data.schemaVersion,'requirements.review.result.v1');
+assert.ok(Array.isArray(reviewResult.data.review.acceptanceCriteria) && reviewResult.data.review.acceptanceCriteria.length===1);
+assert.equal((await member.request(prefix+'/jobs/'+reviewJob.jobId)).status,404);
+console.log(JSON.stringify({version:'1.0.0',sameOriginJar:true,releaseProfileNoDemo:true,provisionedOwnerAndMember:true,anonymousAndCsrf:true,invalidQuery422:true,fakeModelCalls:2,reviewPurpose:true,memberIsolation:true}));

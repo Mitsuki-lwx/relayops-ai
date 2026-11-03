@@ -7,6 +7,7 @@ import { requireFakeModel } from "./require-fake";
 import { snapshot } from "./snapshot";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
+const receiverPort = process.env.RELAYOPS_RECEIVER_PORT ?? "8091";
 const password = readFileSync(
   new URL("../../ops/.env", import.meta.url),
   "utf8",
@@ -82,6 +83,8 @@ for (const {width, mode} of [{width:1440,mode:"retry"},{width:390,mode:"lost"},{
       "python",
       [
         "scripts/demo-receiver.py",
+        "--port",
+        receiverPort,
         "--keys",
         fileURLToPath(file),
         "--db",
@@ -95,10 +98,10 @@ for (const {width, mode} of [{width:1440,mode:"retry"},{width:390,mode:"lost"},{
         .poll(async () => {
           if (receiver.exitCode !== null)
             throw Error(
-              "Local receiver did not start; check that port 8091 is available",
+              `Local receiver did not start; check that port ${receiverPort} is available`,
             );
           return page.request
-            .get("http://127.0.0.1:8091/ready", { timeout: 2000 })
+            .get(`http://127.0.0.1:${receiverPort}/ready`, { timeout: 2000 })
             .then((r) => r.status())
             .catch(() => 0);
         })
