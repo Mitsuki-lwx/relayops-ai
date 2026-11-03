@@ -1537,6 +1537,9 @@ footer {
 .operations-grid p, .audit-panel > p { margin: 12px 0; line-height: 1.8; }
 .outbox-summary { border-top: 1px solid var(--rule); margin-top: 16px; padding-top: 16px; }
 .audit-filters { display: grid; grid-template-columns: 1fr 1.4fr auto; gap: 16px; align-items: end; margin: 24px 0 16px; }
+.budget-policy-form { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin: 16px 0; }
+.budget-policy-form label { flex: 0 1 180px; }
+.budget-policy-form input { margin-top: 8px; }
 .audit-filters input { margin-top: 8px; }
 .audit-list { list-style: none; padding: 0; margin: 20px 0; }
 .audit-list li { display: grid; grid-template-columns: 1.1fr 1fr 1.4fr .7fr; gap: 20px; border-top: 1px solid var(--border); padding: 16px 0; align-items: start; font-size: 13px; }

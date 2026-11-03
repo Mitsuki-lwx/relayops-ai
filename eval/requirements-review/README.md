@@ -120,7 +120,7 @@ node scripts/compare-requirements-review-eval.mjs --baseline artifacts/eval-a.js
 - `baselines/2026-11-03-review-compat-v2.json`：单次运行摘要（20/20、76,439 Token、平均22.123秒）。
 - `baselines/2026-11-03-review-compat-v2-3x.json`：三次重复的权威稳定性基线（60任务57成功、稳定16/20、重复通过93.33%、217,091 Token、人工复核9/10）。
 
-两者都是特定模型/profile/日期下的回归参照，不是准确率承诺；重跑或提示词变化后应新建基线，不覆盖旧文件。
+两者都是特定模型/profile/日期下的回归参照，不是准确率承诺；重跑或提示词变化后应新建基线，不覆盖旧文件。后续评审 profile 指纹修正会生成新 profile ID，但提示词/行为未变；历史基线保留作对照。
 
 ## 参考
 

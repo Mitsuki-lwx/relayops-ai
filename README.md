@@ -28,6 +28,7 @@ AI 技术文档任务与结果交付平台。当前链路：登录 → 公司与
 - [完整任务历史决策](docs/adr/0010-job-history.md)：服务端字面搜索、状态筛选和时间/ID分页。
 - [分析报告导出决策](docs/adr/0011-analysis-export.md)：重新授权、纯文本Markdown报告与下载副本边界。
 - [公司组织审计决策](docs/adr/0012-organization-audit.md)：当前ADMIN、租户安全字段与历史分页。
+- [每日额度决策](docs/adr/0014-owner-daily-limit.md)：空间OWNER在部署硬上限内调整额度。
 - [需求评审决策](docs/adr/0013-requirements-review.md)：用途冻结、评审引用、验收草稿与输出上限。
 - [需求评审固定评测集](eval/requirements-review/README.md)：20个合成样本、确定性评分与比较协议。
 - [原理与代码导读](docs/walkthrough.md)：202、事务和 SENT 边界。
@@ -70,6 +71,9 @@ RabbitMQ 无需手动下载：Compose 自动拉取锁定摘要的官方镜像并
 在成功任务详情点击“下载分析报告”。OWNER/OPERATOR可下载包含摘要、关键结论、约束、未确定信息与原文引用的UTF-8 Markdown文件；VIEWER无入口。每次导出都会重新读取受授权的结果并留下RESULT_READ审计，拒绝/过期或切换上下文后不会使用旧缓存下载，不重新调用模型或增加AI用量。
 
 文件包含任务/时间/冻结配置标识及引用校验说明，不包含输入全文或密钥。模型文字以纯文本代码块保存，HTML、图片和链接不会成为报告活动内容。下载副本由用户本地管理，不受平台后续撤权或自动清理控制；页面只提示已开始下载，实际保存请查看浏览器下载记录。目前不支持批量、PDF或Word格式。
+
+## 每日额度
+运行概览中的“每日调用额度”显示当天预留、已使用、结果未知和策略版本。空间OWNER可在`RELAYOPS_MAX_DAILY_LIMIT`（默认100）内修改；降低额度不能低于当天已占用，历史日期不改写，变更写安全审计。额度是平台受理次数护栏，不是供应商账单；公司总额度仍是后续范围。
 
 ## 需求评审与验收草稿
 
@@ -228,7 +232,7 @@ FAILED/UNKNOWN 详情提供明确重跑：填写原因并确认新调用风险�
 
 管理API以 `/api/v1/organizations` 为入口：GET列出当前公司；GET `/{tenantId}` 返回管理员可见的组织/成员/空间/授权；POST `/{tenantId}/units` 和 `/{tenantId}/workspaces` 创建资源；PUT `/{tenantId}/units/{unitId}/members/{userId}` 设置active；PUT `/{tenantId}/workspaces/{workspaceId}/grants/{unitId}` 设置OPERATOR/VIEWER/NONE。所有写入沿用会话CSRF；成员及授权PUT是目标状态更新。创建操作不自动重试，响应丢失时先刷新核对。
 
-当前不包含公司注册、新用户邀请、公司总额度、公司密钥配置、部门权限继承或仅本人任务可见范围；额度仍按空间，模型配置仍由服务端统一管理。
+当前不包含公司注册、新用户邀请、公司总额度、公司密钥配置、部门权限继承或仅本人任务可见范围；额度仍按空间，空间OWNER可在部署硬上限内调整，模型配置仍由服务端统一管理。
 
 ## 目录
 

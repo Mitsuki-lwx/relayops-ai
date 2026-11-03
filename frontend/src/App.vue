@@ -901,7 +901,7 @@ onUnmounted(() => {
             @available="hasOrganization = $event"
             @changed="refreshAccess"
           />
-          <OperationsPanel v-if="activeView === 'operations'" :workspace-id="workspaceId" :owner="workspace?.role === 'OWNER'" :disabled="busy || !!pending || !!commandPending" />
+          <OperationsPanel v-if="activeView === 'operations'" :workspace-id="workspaceId" :owner="workspace?.role === 'OWNER'" :disabled="busy || !!pending || !!commandPending" @budget-changed="refreshList" />
           <JobHistoryPanel v-if="activeView === 'history'" :workspace-id="workspaceId" :disabled="busy || !!pending || !!commandPending" @open="openHistory" />
           <DestinationPanel
             v-if="activeView === 'destinations'"

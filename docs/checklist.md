@@ -238,3 +238,9 @@
 - [x] 评分器10项单元测试、数据集`--validate-only`及CLI烟雾运行通过，并加入CI。
 - [x] 独立schema/vhost真实profile逐样本运行：单次20/20；三次重复60任务57成功，稳定16/20、重复通过93.33%，2次UNKNOWN/1次截断/1次语义漏项；10例人工复核9通过。
 - [ ] 模型对照、跨供应商比较和完整人工全量复核；当前`manual-review.json`仍待用户确认。
+
+## 空间每日额度策略
+- [x] V8新增workspace.daily_limit/budget_version，默认20，历史迁移不改；升级测试通过。
+- [x] OWNER可在1–RELAYOPS_MAX_DAILY_LIMIT内调整，VIEWER/OPERATOR只读；当天不得低于reserved+spent+uncertain，历史日期不改写。
+- [x] 策略变更更新当天预算行、写BUDGET_POLICY_UPDATED审计，版本冲突409；受理与策略变更使用tenant锁避免死锁。
+- [x] 运行概览显示策略/当天占用并提供OWNER编辑；VIEWER无编辑控件；浏览器测试通过。

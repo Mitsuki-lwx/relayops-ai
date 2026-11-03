@@ -52,6 +52,7 @@ class ModelExecutionTest {
         assertEquals("relayops-test", rabbit.getConnectionFactory().getVirtualHost());
         jdbc.update("UPDATE ai_job SET parent_job_id = NULL");
         for (String table : List.of("delivery_outbox", "delivery_attempt", "delivery_run", "replay_plan", "delivery", "job_destination", "destination", "quarantine_message", "outbox_event", "audit_event", "idempotency_record", "ai_result", "budget_entry", "ai_attempt", "ai_job", "budget_account")) jdbc.update("DELETE FROM " + table);
+        jdbc.update("UPDATE workspace SET daily_limit = 20, budget_version = 0");
         rabbit.execute(channel -> { channel.queuePurge(RabbitConfig.AI_QUEUE); return null; });
         provider.calls.set(0); provider.status = 200; provider.finish = "stop"; provider.raw = null;
         provider.content = provider.validAnalysis(); provider.delayMillis = 0; provider.slowBody = false; provider.disconnect = false;
@@ -64,6 +65,27 @@ class ModelExecutionTest {
     JobService.Job job(String id) { return jobs.get("owner.a", workspace, id); }
     String credit(String id) { return jdbc.queryForObject("SELECT state FROM budget_entry WHERE job_id=?", String.class, id); }
     int sent(String id) { return jdbc.queryForObject("SELECT COUNT(*) FROM ai_attempt WHERE job_id=? AND sent_at IS NOT NULL", Integer.class, id); }
+
+    @Test void ownerCanSetDailyLimitWithinUsageAndCeiling() {
+        var initial = jobs.budgetPolicy("owner.a", workspace);
+        assertEquals(20, initial.get("dailyLimit")); assertEquals(0L, initial.get("version")); assertEquals(100, initial.get("maxDailyLimit")); assertEquals(true, initial.get("canEdit"));
+        assertEquals(false, jobs.budgetPolicy("viewer.a", workspace).get("canEdit"));
+        assertEquals(403, assertThrows(ApiException.class, () -> jobs.updateBudgetPolicy("viewer.a", workspace, new JobService.BudgetPolicyRequest(5, 0L))).status);
+        var updated = jobs.updateBudgetPolicy("owner.a", workspace, new JobService.BudgetPolicyRequest(2, 0L));
+        assertEquals(2, updated.get("dailyLimit")); assertEquals(1L, updated.get("version"));
+        @SuppressWarnings("unchecked") var credits = (java.util.Map<String,Object>) jobs.budget("owner.a", workspace).get("credits");
+        assertEquals(2, credits.get("dailyLimit"));
+        String first = create(), second = create();
+        assertEquals(422, assertThrows(ApiException.class, () -> jobs.updateBudgetPolicy("owner.a", workspace, new JobService.BudgetPolicyRequest(1, 1L))).status);
+        jobs.cancel("owner.a", workspace, first, UUID.randomUUID().toString(), new JobService.CancelJob(job(first).version()));
+        assertEquals(1, jobs.updateBudgetPolicy("owner.a", workspace, new JobService.BudgetPolicyRequest(1, 1L)).get("dailyLimit"));
+        assertEquals(429, assertThrows(ApiException.class, this::create).status);
+        assertEquals(422, assertThrows(ApiException.class, () -> jobs.updateBudgetPolicy("owner.a", workspace, new JobService.BudgetPolicyRequest(101, 2L))).status);
+        assertEquals(409, assertThrows(ApiException.class, () -> jobs.updateBudgetPolicy("owner.a", workspace, new JobService.BudgetPolicyRequest(3, 0L))).status);
+        assertTrue(jdbc.queryForObject("SELECT COUNT(*) FROM audit_event WHERE operation='BUDGET_POLICY_UPDATED'", Integer.class) >= 2);
+        assertEquals(1, jdbc.queryForObject("SELECT daily_limit FROM budget_account WHERE workspace_id=? AND accepted_date=?", Integer.class, workspace, java.time.LocalDate.now(java.time.ZoneId.of("Asia/Shanghai"))));
+        assertNotNull(second);
+    }
 
     @Test void rejectsMissingExternalAcknowledgementWithoutAdmission() {
         var missing = new JobService.CreateJob(application, "未确认", "必须持久化任务", List.of(), "zh-CN");

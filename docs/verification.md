@@ -338,3 +338,11 @@ API 与协议依据：[Spring AMQP 发布确认与 returns](https://docs.spring.
 - 10例人工语义复核：9通过、1失败（`rr-017`未覆盖缺失项）；`manual-review.json`明确标记`confirmedByUser=false`，待用户签署。
 - regression比较器将单次基线`1.0`与三次重复`0.8`比较，输出4项回归；这正是重复评测要暴露的信号。三次重复基线见`eval/requirements-review/baselines/2026-11-03-review-compat-v2-3x.json`。
 - 仍未做模型对照、跨供应商比较、完整人工全量复核或质量阈值下的正式发布门禁；固定关键词评分只衡量预定义关注点。
+
+## 每日额度策略与评审profile修正（2026-11-03）
+- V8新增`workspace.daily_limit`/`budget_version`，默认20；主库和隔离库迁移到V8成功，V1–V7未改。主库12类业务/密文/密钥hash不变。
+- 后端138项通过，0失败/错误/跳过。新增集成覆盖：OWNER读取/修改策略、VIEWER只读、1–100硬上限、当天降至已占用以下422、版本冲突409、当天预算行同步、`BUDGET_POLICY_UPDATED`审计、降到1后新任务429、并发受理/重跑无死锁。修复了workspace排他锁与`Access.require`共享锁的锁序死锁，策略变更与受理统一以tenant锁串行化。
+- 浏览器90项通过（2.3分钟，含新增OWNER编辑额度/VIEWER只读2项）；隔离发布包/评审/Fake/成员隔离继续通过。运行概览展示策略版本、硬上限和当天占用；OWNER保存后刷新主额度卡，VIEWER无编辑控件。
+- 评审profile指纹修正：只绑定`name/timeout/reviewMaxTokens/tokenParameter/jsonMode/REVIEW_PROMPT_VERSION/REVIEW_PROMPT`，不再因普通分析`maxTokens`变化而旋转；提示词版本常量参与指纹。新增回归断言确认评审上限变化旋转、普通上限变化不旋转、提示词版本为`review.compat.v2`。
+- 注意：指纹修正会生成新的review profile ID；历史三次重复基线仍记录旧ID，行为/提示词未变，只用于历史对照。主服务18080已加载新JAR并迁移V8；本次仍以`--relayops.retention-enabled=false`只读启动，未执行主库清理。
+- 限制：公司总额度、按用户额度、供应商金额/并发控制未实现；额度不是供应商账单。策略变更前端按版本冲突提示刷新，不做自动重试。

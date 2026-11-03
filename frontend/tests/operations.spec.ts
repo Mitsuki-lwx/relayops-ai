@@ -21,19 +21,28 @@ const event = (id: string, actorName = "fixture.owner") => ({
 
 async function fixture(page: Page, role = "OWNER") {
   const state = {
-    mutations: 0, overviewReads: 0, auditReads: 0, delayed: false, empty: false, overviewStatus: 200, auditStatus: 200,
+    mutations: 0, policyWrites: 0, dailyLimit: 20, budgetVersion: 0, overviewReads: 0, auditReads: 0, delayed: false, empty: false, overviewStatus: 200, auditStatus: 200,
     auditQueries: [] as URLSearchParams[], delay: "" as string, release: () => {},
   };
   await page.route(/\/(?:api\/v1|auth)\//, async route => {
-    const url = new URL(route.request().url()), path = url.pathname;
-    if (route.request().method() !== "GET") { state.mutations++; await route.abort(); return; }
+    const url = new URL(route.request().url()), path = url.pathname, method = route.request().method();
+    const policyPatch = method === "PATCH" && path.endsWith("/budget-policy") && path.includes("/space/");
+    if (method !== "GET" && !policyPatch) { state.mutations++; await route.abort(); return; }
     let value: unknown, status = 200;
     if (path === "/auth/csrf") value = { token: "fixture-token", headerName: "X-CSRF-TOKEN" };
     else if (path === "/api/v1/me") value = { username: "fixture.owner", workspaces: ["space", "other"].map(id => ({ id, name: id, role, tenantId: "tenant", tenantName: "验收公司" })) };
     else if (path === "/api/v1/organizations" || path.endsWith("/destinations") || path.endsWith("/jobs")) value = [];
     else if (path.endsWith("/applications")) value = [{ id: "app", name: "文档提取" }];
     else if (path.endsWith("/model-profile")) value = { profileId: "fixture", provider: "fake", modelName: "fixture", billable: false, creditsPerJob: 1 };
-    else if (path.endsWith("/budget")) value = { credits: { dailyLimit: 20, spent: 0, reserved: 0, uncertain: 0 } };
+    else if (path.endsWith("/budget")) value = { credits: { dailyLimit: state.dailyLimit, spent: 0, reserved: 0, uncertain: 0 } };
+    else if (path.endsWith("/budget-policy") && method === "GET") value = { dailyLimit: state.dailyLimit, version: state.budgetVersion, maxDailyLimit: 100, canEdit: role === "OWNER", today: { acceptedDate: "2026-10-31", reserved: 0, spent: 0, uncertain: 0 } };
+    else if (policyPatch) {
+      state.mutations++; state.policyWrites++;
+      const body = route.request().postDataJSON() as { dailyLimit: number; expectedVersion: number };
+      if (role !== "OWNER") { status = 403; value = { code: "FORBIDDEN", message: "只有空间所有者可以调整每日额度" }; }
+      else if (body.expectedVersion !== state.budgetVersion) { status = 409; value = { code: "STATE_CONFLICT", message: "额度策略已变化" }; }
+      else { state.dailyLimit = body.dailyLimit; state.budgetVersion++; value = { dailyLimit: state.dailyLimit, version: state.budgetVersion }; }
+    }
     else if (path.endsWith("/operations")) {
       state.overviewReads++; status = state.overviewStatus;
       value = status === 200 ? (state.empty ? { ...overview, jobs: Object.fromEntries(Object.keys(overview.jobs).map(k => [k, 0])), deliveries: Object.fromEntries(Object.keys(overview.deliveries).map(k => [k, 0])), aiOutbox: overview.deliveryOutbox } : path.includes("/other/") ? { ...overview, jobs: { SUCCEEDED: 5 } } : overview) : { code: "NOT_FOUND", message: "空间运行数据读取失败" };
@@ -190,4 +199,27 @@ test("main workspace overview agrees with authenticated read-only API", async ({
   await page.evaluate(() => { scrollTo(0, 0); return new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
   await page.screenshot({ path: "../artifacts/stage11-operations-main-readonly.png", fullPage: true });
   expect(writes).toBe(0);
+});
+
+test("owner edits daily limit while viewer is read-only", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const state = await fixture(page);
+  const region = page.getByRole("region", { name: "每日调用额度" });
+  await expect(region).toContainText("20 次");
+  await region.getByLabel("每日额度", { exact: true }).fill("5");
+  await region.getByRole("button", { name: "保存每日额度", exact: true }).click();
+  await expect(region).toContainText("5 次");
+  await expect(region).toContainText("每日额度已保存");
+  expect(state.dailyLimit).toBe(5);
+  expect(state.policyWrites).toBe(1);
+});
+
+test("viewer sees the quota but has no edit control", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await fixture(page, "VIEWER");
+  const region = page.getByRole("region", { name: "每日调用额度" });
+  await expect(region).toContainText("20 次");
+  await expect(region.getByLabel("每日额度", { exact: true })).toHaveCount(0);
+  await expect(region.getByRole("button", { name: "保存每日额度", exact: true })).toHaveCount(0);
+  await expect(region).toContainText("只有空间所有者可以调整");
 });

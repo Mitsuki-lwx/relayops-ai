@@ -271,6 +271,10 @@ Phase 53 (complete)
 - [x] OpenSpec同步归档、自审凭据扫描和推送；提交60a7e68与origin/main一致。
 - **Status:** complete
 
+### Phase 54: Evaluation regression and owner quota
+- [x] 三次重复/缺失计失败/回归比较/人工复核；V8空间额度策略、OWNER编辑、审计/锁序；138后端+90浏览器通过。
+- **Status:** complete
+
 ### Phase 53: Requirements review fixed evaluation set
 - [x] 20个固定合成样本、JSON Schema、确定性评分器、10项单元测试、CLI烟雾与CI接入。
 - [x] 独立真实模型运行器与基线：单次20/20；三次重复60任务57成功、稳定16/20、重复通过93.33%；2次UNKNOWN、1次截断、1次语义漏项；10例人工复核9通过。

@@ -20,9 +20,12 @@ node scripts/backup-database.mjs relayops artifacts/backups/manual.sql
 
 源码仓库可运行`node scripts/test-backup-restore.mjs`，仅从relayops_test备份到本次新建的relayops_restore_时间戳库，对比重新导出的完整有序SQL/hash后删除该新库；不接触主库。此演练证明逻辑数据及密文完整，不代表跨机灾难恢复、备份泄漏防护或所有外部副作用都已恢复。
 
+## 每日额度策略
+空间OWNER可在运行概览调整每日额度，部署硬上限由`RELAYOPS_MAX_DAILY_LIMIT`（默认100）控制。降低额度不能低于当天`reserved+spent+uncertain`，否则返回422；历史日期不改写。该额度只限制平台受理次数，不是供应商账单，也不限制供应商并发或实际费用。公司总额度、按用户额度尚未实现。
+
 ## 停止、升级与回退
 
-停止新受理并等待活跃责任终态，Ctrl+C停止应用，备份后替换完整运行包；保留.env、主密钥和命名卷。1.0不新增迁移，Flyway V1–V7保持原文件。启动后检查healthz、登录、空间运行概览和安全审计。回退替换旧应用文件，不清空数据库；若未来版本新增迁移，先评估向后兼容，不能盲目回退schema。
+停止新受理并等待活跃责任终态，Ctrl+C停止应用，备份后替换完整运行包；保留.env、主密钥和命名卷。1.0发布附件保持V1–V7；当前源码增量追加V8（workspace每日额度策略），不回改旧迁移。启动后检查healthz、登录、空间运行概览、额度策略和安全审计。回退替换旧应用文件，不清空数据库；若未来版本新增迁移，先评估向后兼容，不能盲目回退schema。
 
 ## 故障处理
 

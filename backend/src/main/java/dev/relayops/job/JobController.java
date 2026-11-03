@@ -55,4 +55,12 @@ public class JobController {
 
     @GetMapping("/budget")
     Object budget(Principal principal, @PathVariable String workspaceId) { return jobs.budget(principal.getName(), workspaceId); }
+
+    @GetMapping("/budget-policy")
+    Object budgetPolicy(Principal principal, @PathVariable String workspaceId) { return jobs.budgetPolicy(principal.getName(), workspaceId); }
+
+    @PatchMapping("/budget-policy")
+    Object updateBudgetPolicy(Principal principal, @PathVariable String workspaceId, @RequestBody JobService.BudgetPolicyRequest request) {
+        return jobs.updateBudgetPolicy(principal.getName(), workspaceId, request);
+    }
 }

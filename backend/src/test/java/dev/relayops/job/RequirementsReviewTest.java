@@ -45,8 +45,12 @@ class RequirementsReviewTest {
         try(var stub=new StubProvider()) {
             var first=new ModelGateway(new FakeModel(),stub.json,"compatible",stub.endpoint(),"test-key-not-real","fixture-model",5,4096,8192,"max_tokens",true,true);
             var second=new ModelGateway(new FakeModel(),stub.json,"compatible",stub.endpoint(),"test-key-not-real","fixture-model",5,4096,8193,"max_tokens",true,true);
+            var extractOnly=new ModelGateway(new FakeModel(),stub.json,"compatible",stub.endpoint(),"test-key-not-real","fixture-model",5,2048,8192,"max_tokens",true,true);
             assertNotEquals(first.currentProfile(TaskType.REQUIREMENTS_REVIEW).profileId(),second.currentProfile(TaskType.REQUIREMENTS_REVIEW).profileId());
             assertEquals(first.currentProfile().profileId(),second.currentProfile().profileId());
+            assertEquals(first.currentProfile(TaskType.REQUIREMENTS_REVIEW).profileId(),extractOnly.currentProfile(TaskType.REQUIREMENTS_REVIEW).profileId());
+            assertNotEquals(first.currentProfile().profileId(),extractOnly.currentProfile().profileId());
+            assertEquals("review.compat.v2",first.currentProfile(TaskType.REQUIREMENTS_REVIEW).promptVersion());
         }
     }
     @Test void compatibleReviewUsesIndependentPromptAndProfile() throws Exception {

@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,11 +34,15 @@ public class JobService {
     private final OutboxStore outbox;
     private final ModelGateway models;
     private final DestinationService destinations;
+    private final int maxDailyLimit;
 
-    public JobService(JdbcTemplate jdbc, Access access, PayloadCipher cipher, JsonMapper json, OutboxStore outbox, ModelGateway models, DestinationService destinations) {
+    public JobService(JdbcTemplate jdbc, Access access, PayloadCipher cipher, JsonMapper json, OutboxStore outbox, ModelGateway models, DestinationService destinations,
+                        @Value("${relayops.budget.max-daily-limit:100}") int maxDailyLimit) {
         this.jdbc = jdbc; this.access = access; this.cipher = cipher; this.json = json; this.outbox = outbox;
         this.models = models;
         this.destinations = destinations;
+        if (maxDailyLimit < 1 || maxDailyLimit > 10000) throw new IllegalArgumentException("relayops.budget.max-daily-limit must be between 1 and 10000");
+        this.maxDailyLimit = maxDailyLimit;
     }
 
     public record CreateJob(String applicationId, String title, String inputText, List<String> destinationIds, String outputLanguage,
@@ -55,6 +60,8 @@ public class JobService {
     public record RetryJob(Long expectedVersion, String reason, Boolean acknowledgeDuplicateCost) {}
     private record CancelIntent(String jobId, long expectedVersion) {}
     private record RetryIntent(String jobId, long expectedVersion, String reason, boolean acknowledgeDuplicateCost) {}
+    public record BudgetPolicyRequest(Integer dailyLimit, Long expectedVersion) {}
+    private record WorkspacePolicy(int dailyLimit, long version) {}
     public record Job(String jobId, String applicationId, String title, String status, String modelProfile,
                       String errorCode, long version, Instant createdAt, Instant payloadExpiresAt, int modelCalls, String parentJobId, String taskType) {}
 
@@ -123,7 +130,8 @@ public class JobService {
         var apps = jdbc.queryForList("SELECT id FROM application WHERE id = ? AND workspace_id = ? AND enabled = TRUE FOR UPDATE", applicationId, workspaceId);
         if (apps.isEmpty()) throw new ApiException(404, "NOT_FOUND", "应用不存在或不可访问");
         LocalDate date = LocalDate.now(ZoneId.of("Asia/Shanghai"));
-        jdbc.update("INSERT IGNORE INTO budget_account(workspace_id, accepted_date) VALUES (?, ?)", workspaceId, date);
+        int policy = jdbc.queryForObject("SELECT daily_limit FROM workspace WHERE id = ?", Integer.class, workspaceId);
+        jdbc.update("INSERT IGNORE INTO budget_account(workspace_id, accepted_date, daily_limit) VALUES (?, ?, ?)", workspaceId, date, policy);
         jdbc.queryForObject("SELECT daily_limit FROM budget_account WHERE workspace_id = ? AND accepted_date = ? FOR UPDATE", Integer.class, workspaceId, date);
         return date;
     }
@@ -326,8 +334,50 @@ public class JobService {
     public Map<String, Object> budget(String username, String workspaceId) {
         access.require(username, workspaceId, false, false, false);
         LocalDate date = LocalDate.now(ZoneId.of("Asia/Shanghai"));
+        WorkspacePolicy policy = policy(workspaceId);
         var rows = jdbc.queryForList("SELECT daily_limit AS dailyLimit, reserved, spent, uncertain FROM budget_account WHERE workspace_id = ? AND accepted_date = ?", workspaceId, date);
-        return Map.of("acceptedDate", date.toString(), "credits", rows.isEmpty() ? Map.of("dailyLimit", 20, "reserved", 0, "spent", 0, "uncertain", 0) : rows.getFirst());
+        return Map.of("acceptedDate", date.toString(), "credits", rows.isEmpty() ? Map.of("dailyLimit", policy.dailyLimit(), "reserved", 0, "spent", 0, "uncertain", 0) : rows.getFirst());
+    }
+
+    public Map<String, Object> budgetPolicy(String username, String workspaceId) {
+        Access.Member member = access.require(username, workspaceId, false, false, false);
+        WorkspacePolicy policy = policy(workspaceId);
+        LocalDate date = LocalDate.now(ZoneId.of("Asia/Shanghai"));
+        var usage = jdbc.queryForList("SELECT reserved, spent, uncertain FROM budget_account WHERE workspace_id = ? AND accepted_date = ?", workspaceId, date);
+        Map<String, Object> today = usage.isEmpty() ? Map.of("acceptedDate", date.toString(), "reserved", 0, "spent", 0, "uncertain", 0)
+                : Map.of("acceptedDate", date.toString(), "reserved", usage.getFirst().get("reserved"), "spent", usage.getFirst().get("spent"), "uncertain", usage.getFirst().get("uncertain"));
+        return Map.of("dailyLimit", policy.dailyLimit(), "version", policy.version(), "maxDailyLimit", maxDailyLimit,
+                "canEdit", member.role().equals("OWNER"), "today", today);
+    }
+
+    @Transactional
+    public Map<String, Object> updateBudgetPolicy(String username, String workspaceId, BudgetPolicyRequest request) {
+        Access.Member member = access.require(username, workspaceId, true, true, true);
+        if (!member.role().equals("OWNER")) throw new ApiException(403, "FORBIDDEN", "只有空间所有者可以调整每日额度");
+        if (request == null || request.dailyLimit() == null || request.expectedVersion() == null)
+            throw DocumentInput.invalid("每日额度和版本号必填");
+        long expected = request.expectedVersion();
+        if (expected < 0 || expected > Integer.MAX_VALUE) throw DocumentInput.invalid("版本号无效");
+        int dailyLimit = request.dailyLimit(), expectedVersion = (int) expected;
+        if (dailyLimit < 1 || dailyLimit > maxDailyLimit) throw DocumentInput.invalid("每日额度需在1至" + maxDailyLimit + "之间");
+        WorkspacePolicy current = policy(workspaceId);
+        if (current.version() != expectedVersion) throw new ApiException(409, "STATE_CONFLICT", "额度策略已变化，请刷新后重试");
+        LocalDate date = LocalDate.now(ZoneId.of("Asia/Shanghai"));
+        var usage = jdbc.queryForList("SELECT reserved + spent + uncertain AS used FROM budget_account WHERE workspace_id = ? AND accepted_date = ? FOR UPDATE", Integer.class, workspaceId, date);
+        int used = usage.isEmpty() ? 0 : usage.getFirst();
+        if (dailyLimit < used) throw new ApiException(422, "LIMIT_BELOW_USAGE", "每日额度不能低于当日已预留、已使用和结果未知之和");
+        int changed = jdbc.update("UPDATE workspace SET daily_limit = ?, budget_version = budget_version + 1 WHERE id = ? AND budget_version = ?", dailyLimit, workspaceId, expectedVersion);
+        if (changed != 1) throw new ApiException(409, "STATE_CONFLICT", "额度策略已变化，请刷新后重试");
+        jdbc.update("INSERT INTO budget_account(workspace_id, accepted_date, daily_limit) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE daily_limit = ?", workspaceId, date, dailyLimit, dailyLimit);
+        jdbc.update("INSERT INTO audit_event(workspace_id, actor_id, resource_id, operation, detail_json) VALUES (?, ?, ?, 'BUDGET_POLICY_UPDATED', ?)",
+                workspaceId, member.userId(), workspaceId, json.writeValueAsString(Map.of("oldDailyLimit", current.dailyLimit(), "newDailyLimit", dailyLimit)));
+        return Map.of("dailyLimit", dailyLimit, "version", (long) expectedVersion + 1);
+    }
+
+    private WorkspacePolicy policy(String workspaceId) {
+        return jdbc.query("SELECT daily_limit, budget_version FROM workspace WHERE id = ?",
+                (rs, row) -> new WorkspacePolicy(rs.getInt("daily_limit"), rs.getLong("budget_version")), workspaceId).stream().findFirst()
+                .orElseThrow(() -> new ApiException(404, "NOT_FOUND", "空间不存在或不可访问"));
     }
 
     private void audit(String workspaceId, String actorId, String id, String operation) {

@@ -66,6 +66,8 @@ relayops:
     review-max-tokens: ${RELAYOPS_MODEL_REVIEW_MAX_TOKENS:8192}
     token-parameter: ${RELAYOPS_MODEL_TOKEN_PARAMETER:max_tokens}
     json-mode: ${RELAYOPS_MODEL_JSON_MODE:true}
+  budget:
+    max-daily-limit: ${RELAYOPS_MAX_DAILY_LIMIT:100}
   master-key: ${RELAYOPS_MASTER_KEY}
   demo-password: ${RELAYOPS_DEMO_PASSWORD}
   worker-enabled: ${RELAYOPS_WORKER_ENABLED:true}

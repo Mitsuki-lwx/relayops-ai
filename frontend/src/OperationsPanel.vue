@@ -2,6 +2,7 @@
 import { computed, onUnmounted, ref, watch } from "vue";
 import { api, ApiError } from "./api";
 const props = defineProps<{ workspaceId: string; owner: boolean; disabled: boolean }>();
+const emit = defineEmits<{ (event: "budget-changed"): void }>();
 type Queue = { pending: number; claimed: number; retried: number; oldestPendingAt: string | null };
 type Overview = {
   observedAt: string; jobs: Record<string, number>; deliveries: Record<string, number>;
@@ -11,8 +12,10 @@ type Overview = {
 };
 type Event = { id: string; operation: string; resourceId: string; actorId: string | null; actorName: string | null; createdAt: string };
 type AuditPage = { items: Event[]; nextBeforeId: string | null };
-const overview = ref<Overview | null>(null), events = ref<Event[]>([]);
-const busy = ref(false), auditBusy = ref(false), error = ref(""), auditError = ref("");
+type BudgetPolicy = { dailyLimit: number; version: number; maxDailyLimit: number; canEdit: boolean; today: { acceptedDate: string; reserved: number; spent: number; uncertain: number } };
+const overview = ref<Overview | null>(null), events = ref<Event[]>([]), policy = ref<BudgetPolicy | null>(null);
+const busy = ref(false), auditBusy = ref(false), policyBusy = ref(false), error = ref(""), auditError = ref(""), policyError = ref(""), policyNotice = ref("");
+const limitDraft = ref(1);
 const auditForbidden = ref(false), denied = ref(false), nextBefore = ref<string | null>(null), pageNo = ref(1);
 const operation = ref(""), resourceId = ref("");
 let applied = { operation: "", resourceId: "" }, epoch = 0, overviewSequence = 0, auditSequence = 0;
@@ -26,7 +29,7 @@ const auditLabels: Record<string, string> = {
   JOB_RERUN_REQUESTED: "明确重跑", RECOVER_UNKNOWN: "恢复为结果未知", RESULT_READ: "读取结果正文",
   DESTINATION_CREATED: "创建目的地", DESTINATION_ENABLED: "启用目的地", DESTINATION_DISABLED: "停用目的地",
   DESTINATION_KEY_REVEALED: "读取签名密钥", DELIVERY_REPLAY_PREVIEWED: "预览补投", DELIVERY_REPLAY_CONFIRMED: "确认补投",
-  JOB_PAYLOAD_CLEARED: "清理任务正文", DELIVERY_PAYLOAD_CLEARED: "清理交付正文",
+  JOB_PAYLOAD_CLEARED: "清理任务正文", DELIVERY_PAYLOAD_CLEARED: "清理交付正文", BUDGET_POLICY_UPDATED: "调整每日额度",
 };
 const total = (values: Record<string, number>) => Object.values(values).reduce((sum, n) => sum + n, 0);
 const pendingTotal = computed(() => overview.value ? overview.value.aiOutbox.pending + overview.value.deliveryOutbox.pending : 0);
@@ -56,6 +59,35 @@ async function loadOverview() {
     }
   }
 }
+async function loadPolicy() {
+  try {
+    const data = await api<BudgetPolicy>(prefix() + "/budget-policy");
+    policy.value = data; limitDraft.value = data.dailyLimit; policyError.value = "";
+  } catch (ex) {
+    policy.value = null;
+    policyError.value = ex instanceof Error ? ex.message : "每日额度读取失败";
+  }
+}
+async function savePolicy() {
+  if (!policy.value || !props.owner || policyBusy.value || props.disabled) return;
+  const value = Number(limitDraft.value);
+  policyNotice.value = ""; policyError.value = "";
+  if (!Number.isInteger(value) || value < 1 || value > policy.value.maxDailyLimit) {
+    policyError.value = `每日额度需为1至${policy.value.maxDailyLimit}的整数`; return;
+  }
+  policyBusy.value = true;
+  try {
+    const result = await api<{ dailyLimit: number; version: number }>(prefix() + "/budget-policy", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dailyLimit: value, expectedVersion: policy.value.version }),
+    });
+    policy.value = { ...policy.value, dailyLimit: result.dailyLimit, version: result.version };
+    limitDraft.value = result.dailyLimit; policyNotice.value = "每日额度已保存。"; emit("budget-changed");
+  } catch (ex) {
+    policyError.value = ex instanceof Error ? ex.message : "每日额度保存失败";
+    if (ex instanceof ApiError && ex.status === 409) await loadPolicy();
+  } finally { policyBusy.value = false; }
+}
 async function loadAudit(before: string | null = null) {
   if (!props.owner || auditForbidden.value || auditBusy.value || denied.value) return;
   const e = epoch, sequence = ++auditSequence;
@@ -76,7 +108,7 @@ async function loadAudit(before: string | null = null) {
     }
   } finally { if (e === epoch && sequence === auditSequence) auditBusy.value = false; }
 }
-async function refresh() { if (await loadOverview()) await loadAudit(); }
+async function refresh() { if (await loadOverview()) { await Promise.all([loadAudit(), loadPolicy()]); } else { policy.value = null; } }
 async function filterAudit() {
   if (auditBusy.value) return;
   applied = { operation: operation.value.trim(), resourceId: resourceId.value.trim() };
@@ -89,7 +121,7 @@ function visibility() {
 }
 watch(() => [props.workspaceId, props.owner], () => {
   epoch++; overviewSequence++; stop(); controller?.abort(); clearAudit();
-  overview.value = null; busy.value = false; error.value = ""; auditError.value = ""; auditForbidden.value = false; denied.value = false;
+  overview.value = null; policy.value = null; busy.value = false; policyBusy.value = false; error.value = ""; auditError.value = ""; policyError.value = ""; policyNotice.value = ""; auditForbidden.value = false; denied.value = false;
   operation.value = ""; resourceId.value = ""; applied = { operation: "", resourceId: "" };
   void refresh();
 }, { immediate: true });
@@ -140,6 +172,19 @@ onUnmounted(() => { epoch++; stop(); controller?.abort(); auditController?.abort
           </dl>
           <p>自动清理：{{ overview.retention.enabled ? "已启用" : "未启用" }}</p>
           <p class="muted">待清理包含仍需结算的到期责任；记录数量不是执行耗时或恢复SLO。</p>
+        </section>
+        <section class="panel" aria-label="每日调用额度">
+          <div class="section-heading"><h2>每日调用额度</h2><strong v-if="policy">{{ policy.dailyLimit }} 次</strong></div>
+          <p v-if="policy" class="muted">平台调用额度，不是供应商账单。硬上限 {{ policy.maxDailyLimit }} 次，策略版本 {{ policy.version }}。</p>
+          <p v-if="policy" class="muted">今日：预留 {{ policy.today.reserved }} · 已使用 {{ policy.today.spent }} · 不确定 {{ policy.today.uncertain }}</p>
+          <form v-if="policy && owner" class="budget-policy-form" @submit.prevent="savePolicy">
+            <label>每日额度<input v-model.number="limitDraft" type="number" min="1" :max="policy.maxDailyLimit" step="1" :disabled="policyBusy || disabled" /></label>
+            <button class="secondary" :disabled="policyBusy || disabled">保存每日额度</button>
+          </form>
+          <p v-else-if="policy" class="muted">只有空间所有者可以调整每日额度。</p>
+          <p v-if="policyError" role="alert" class="error">{{ policyError }}</p>
+          <p v-if="policyNotice" role="status" class="muted">{{ policyNotice }}</p>
+          <p class="muted">降低额度不能低于今日已预留、已使用和结果未知之和；历史日期不会被改写。</p>
         </section>
       </div>
       <section class="panel audit-panel" aria-label="空间审计">

@@ -308,3 +308,6 @@
 
 - 评测优化完成重复实验：同一数据集/profile/v2/8192下三次独立隔离运行，共60任务57成功；2次MODEL_RESULT_UNKNOWN、1次OUTPUT_TRUNCATED。聚合后稳定通过16/20，单次重复通过56/60（93.33%），findingRecall 98.33%，criterionRecall 100%；不稳定项为rr-001/15缺结果、rr-020截断、rr-017漏GAP。60个模型观测Token 217,091（含截断），平均21.170秒，金额未知。
 - 新增多结果聚合（`--expected-repeats`把缺失结果计为失败）、回归比较器（单次1.0→三次0.8，报告4项回归）、10例人工语义复核（9通过/1失败，confirmedByUser=false）和三次重复基线`2026-11-03-review-compat-v2-3x.json`。评分器/比较器15项测试通过，CI加入比较器与runner dry-run。
+
+- 批次2完成：V8 workspace每日额度/版本；OWNER在1–100硬上限内调整，当天不得低于已占用，历史不改写，审计+版本冲突；受理/策略统一tenant锁，修复workspace排他锁死锁。后端138项、浏览器90项、隔离发布包通过；主库迁移V8且12类hash不变，18080加载新JAR。
+- 评审profile指纹只绑定评审参数并包含提示词版本；普通maxTokens变化不再旋转评审profile。新增断言覆盖。

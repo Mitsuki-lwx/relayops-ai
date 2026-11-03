@@ -11,7 +11,8 @@
 - 复用既有 `schema_version` 列冻结用途，不新增数据库列，不修改 V1–V7。结果版本为 `requirements.review.result.v1`；重跑按来源 `schema_version` 恢复用途并使用当前评审配置。
 - 评审输出摘要、最多6项 `GAP/AMBIGUITY/CONFLICT` 与最多6项 Given/When/Then 草稿。每项必须有精确匹配段落ID与原文子串的引用；`CONFLICT` 至少两条不同引用；结构或引用不合法按现有失败责任结算，不自动重试供应商。
 - 模型不得替用户选择冲突值；缺失只能以问题呈现，新增条件单列 `assumptions`，界面和报告统一标注待人工确认。
-- 评审使用独立提示词与 profile，提示词版本为 `review.compat.v2`。推理型模型可能把内部推理计入输出 token；评审输出上限独立配置为 `RELAYOPS_MODEL_REVIEW_MAX_TOKENS`（默认8192，允许256–16384），普通分析仍使用 `RELAYOPS_MODEL_MAX_TOKENS`（默认4096）。该上限参与评审 profile 指纹，配置变化会生成新 profile。
+- 评审使用独立提示词与 profile，提示词版本为 `review.compat.v2`。推理型模型可能把内部推理计入输出 token；评审输出上限独立配置为 `RELAYOPS_MODEL_REVIEW_MAX_TOKENS`（默认8192，允许256–16384），普通分析仍使用 `RELAYOPS_MODEL_MAX_TOKENS`（默认4096）。
+- 评审 profile 指纹只绑定影响评审调用的参数：地址、模型名、超时、评审上限、token 参数、JSON 模式、提示词版本和提示词内容。普通分析 `maxTokens` 变化不再旋转评审 profile；评审上限或提示词版本变化会生成新 profile。
 - 回调外壳仍为 `relay.webhook.v1`，接收方以 `result.schemaVersion` 区分评审结果；查看、导出、撤权、TTL、SENT/UNKNOWN 与审计规则不变。
 - 前端选择用途时切换配置并丢弃迟到响应；待确认幂等草稿冻结用途并可恢复；VIEWER 无结果/导出入口；Markdown 继续使用纯文本围栏。
 
