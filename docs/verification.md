@@ -362,3 +362,5 @@ API 与协议依据：[Spring AMQP 发布确认与 returns](https://docs.spring.
 - 首轮真实运行11/16，暴露两个rubric问题和一个prompt缺口：修订引入冲突可按ADDED呈现、删除上限可降级为MODIFIED/待确认；模型常省略受影响验收草稿。修正rubric并在提示词要求可测试变化至少一条验收草稿后，单次达到16/16；随后用当前profile完成三次独立运行。
 - 三次共48个任务全部成功；稳定15/16，重复通过47/48=97.92%，changeRecall 100%，criterionRecall 100%，结构失败0；唯一不稳定项`vd-009-injection`：两次正确忽略，一次虽注明“非需求文本”仍把注入段落列为ADDED变化。模型Token合计83,368，平均span 8.528秒，金额未知。
 - 8例人工语义复核7通过/1失败（同`vd-009`），`confirmedByUser=false`；基线`eval/version-diff/baselines/2026-11-03-version-compat-v1-3x.json`。未做模型对照和跨供应商比较。
+
+提交a1c68a8已推送origin/main，18个暂存文件扫描8个本地敏感值0命中；版本对比固定评测集与三次基线已记录。
