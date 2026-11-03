@@ -39,40 +39,43 @@
       }
     },
     "versionDiff": {
-      "promptVersion": "version.compat.v1",
+      "promptVersion": "version.compat.v2",
       "cases": 16,
       "deepseek": {
         "passed": 15,
         "passRate": 0.9375,
         "changeRecall": 1,
         "criterionRecall": 1,
-        "totalTokens": 31523,
-        "averageLatencySeconds": 9.527,
+        "totalTokens": 24283,
+        "averageLatencySeconds": 5.699,
         "succeededTasks": 16,
-        "missingResults": 0
+        "missingResults": 1,
+        "note": "three-repeat stable 15/16, 97.92% repeat; per-run token estimate"
       },
       "qwen": {
-        "passed": 14,
-        "passRate": 0.875,
+        "passed": 16,
+        "passRate": 1,
         "changeRecall": 1,
         "criterionRecall": 1,
-        "totalTokens": 50175,
-        "averageLatencySeconds": 42.777,
-        "succeededTasks": 15,
-        "missingResults": 1
+        "totalTokens": 39835,
+        "averageLatencySeconds": 27.79,
+        "succeededTasks": 16,
+        "missingResults": 0,
+        "note": "single run after prompt v2"
       }
     }
   },
   "observations": [
-    "qwen review timed out once at 180s; one qwen version task failed OUTPUT_INVALID.",
-    "qwen marked paragraph reorder as a semantic change in version diff.",
-    "qwen passes were lower on both single-run sets; latency and token use were higher.",
-    "Deepseek three-repeat stability: review 16/20 stable / 93.33% repeat; version 15/16 stable / 97.92% repeat."
+    "qwen review timed out once at 180s; review quality/latency still below deepseek.",
+    "qwen version diff improved from 14/16 under prompt v1 to 16/16 under prompt v2; only one run, stability not measured.",
+    "qwen version diff average latency 27.79s vs deepseek 5.699s; token use higher.",
+    "Deepseek v2 version diff: 15/16 stable, 97.92% repeat; one repeat OUTPUT_INVALID on reorder."
   ],
   "limitations": [
     "qwen has only one run per set; stability not measured.",
     "Synthetic Chinese samples; not a general model ranking.",
     "Configured timeouts differ because qwen exceeded 60s; latency comparison includes that configuration difference.",
-    "Cost unknown."
+    "Cost unknown.",
+    "qwen version v2 has one run only; deepseek v2 has three repeats. Not a like-for-like stability comparison."
   ]
 }

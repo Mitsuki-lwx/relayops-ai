@@ -34,8 +34,9 @@ node scripts/run-version-diff-eval.mjs --config artifacts/review-eval-<ts>/confi
 运行器只接受独立本地端口（默认18081，拒绝18080/8080），每例单次调用、不自动重试、不建回调目的地；连续基础设施失败达到阈值停止。建议至少三次独立运行后再比较。
 
 ## 基线
-- `baselines/2026-11-03-version-compat-v1-3x.json`：真实兼容模型、`version.compat.v1`、8192上限下三次运行摘要（48任务全成功、稳定15/16、重复通过97.92%、83,368 Token、平均8.528秒）。
-- `manual-review.json`：8例人工语义复核，7通过/1失败（注入样本一次把注入文本列为变化），`confirmedByUser=false`。
+- `baselines/2026-11-03-version-compat-v1-3x.json`：`version.compat.v1` 历史基线（48任务全成功、稳定15/16、重复通过97.92%、83,368 Token、平均8.528秒）。
+- `baselines/2026-11-04-version-compat-v2-3x.json`：当前 `version.compat.v2` 基线（47/48成功、稳定15/16、重复通过97.92%、72,848 Token、平均5.699秒）；唯一失败为一次重排样本输出无效。
+- `manual-review.json` / `manual-review-v2.json`：人工语义复核；v2 7通过/1失败（重排一次无结果），`confirmedByUser=false`。
 
 ## 局限
 - 关键词评分只覆盖预定义关注点；通过不代表变化完整，失败也可能是措辞不同。

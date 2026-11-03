@@ -369,3 +369,8 @@ API 与协议依据：[Spring AMQP 发布确认与 returns](https://docs.spring.
 - 用户限定只对照同供应商`qwen/qwen3.8-flash`。相同端点/提示/schema/单次调用；deepseek超时60秒，qwen因60秒下评审2/3超时改用180秒。
 - 单次需求评审：deepseek 20/20、76,439 Token、平均22.123秒；qwen 17/20（1缺失）、105,801 Token、平均87.501秒，finding 95.24%/criterion 94.74%。单次版本对比：deepseek 15/16、31,523 Token、9.527秒；qwen 14/16（1缺失）、50,175 Token、42.777秒。
 - qwen 还把段落重排误报为MODIFIED，并在版本对比出现一次`OUTPUT_INVALID`；qwen 只有单次运行，稳定性未测。结论：当前固定样本下不把qwen作为默认/替代模型。详见[模型对照](model-comparison.md)及`eval/model-comparison/2026-11-03-qwen-vs-deepseek.json`。
+
+## 版本对比提示v2与qwen复核（2026-11-04）
+- `version.compat.v2`明确忽略段落重排、空白/格式和注入指令文本，不把非需求文本列为变化。三次独立运行47/48成功，稳定15/16、重复通过97.92%、changeRecall 100%、criterionRecall 100%；唯一失败为`vd-005-reorder`一次`OUTPUT_INVALID`，注入样本3/3通过。Token 72,848，平均span 5.699秒。
+- 基线`eval/version-diff/baselines/2026-11-04-version-compat-v2-3x.json`；人工复核v2 7通过/1失败（重排一次无结果），`confirmedByUser=false`。
+- qwen3.8-flash在v2版本对比单次16/16、39,835 Token、平均27.79秒，比v1的14/16改善；但只有单次，稳定性未测，且评审仍17/20、延迟明显更高。暂不替换默认模型。

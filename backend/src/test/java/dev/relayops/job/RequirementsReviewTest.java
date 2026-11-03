@@ -119,7 +119,7 @@ class RequirementsReviewTest {
             var profile = gateway.currentProfile(TaskType.VERSION_DIFF);
             assertNotEquals(gateway.currentProfile().profileId(), profile.profileId());
             assertNotEquals(gateway.currentProfile(TaskType.REQUIREMENTS_REVIEW).profileId(), profile.profileId());
-            assertEquals("version.compat.v1", profile.promptVersion());
+            assertEquals("version.compat.v2", profile.promptVersion());
             var a = List.of(new DocumentResult.Evidence("a0001", "基线要求A。"));
             var b = List.of(new DocumentResult.Evidence("b0001", "修订要求B。"));
             var summary = new DocumentResult.Claim("版本变化", a);
