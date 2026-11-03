@@ -32,6 +32,7 @@ AI 技术文档任务与结果交付平台。当前链路：登录 → 公司与
 - [版本对比决策](docs/adr/0015-version-diff.md)：双版本文本、双侧引用和影响分析。
 - [需求评审决策](docs/adr/0013-requirements-review.md)：用途冻结、评审引用、验收草稿与输出上限。
 - [需求评审固定评测集](eval/requirements-review/README.md)：20个合成样本、确定性评分与比较协议。
+- [同供应商模型对照](docs/model-comparison.md)：deepseek与qwen3.8-flash的固定样本结果。
 - [原理与代码导读](docs/walkthrough.md)：202、事务和 SENT 边界。
 - [验证记录](docs/verification.md)：实际命令、结果及限制。
 

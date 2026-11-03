@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "relayops.model-comparison.v1",
+  "date": "2026-11-03",
+  "supplier": "ClinePass compatible endpoint",
+  "models": {
+    "deepseek": {
+      "id": "cline-pass/deepseek-v4.1-flash-1017",
+      "configuredTimeoutSeconds": 60
+    },
+    "qwen": {
+      "id": "qwen/qwen3.8-flash",
+      "configuredTimeoutSeconds": 180
+    }
+  },
+  "method": "Same prompt/profile logic and fixed eval sets; one task per case. This is a single-run comparison, not a stability comparison for qwen. Deepseek has separate three-repeat baselines.",
+  "results": {
+    "requirementsReview": {
+      "promptVersion": "review.compat.v2",
+      "cases": 20,
+      "deepseek": {
+        "passed": 20,
+        "passRate": 1,
+        "findingRecall": 1,
+        "criterionRecall": 1,
+        "totalTokens": 76439,
+        "averageLatencySeconds": 22.123,
+        "succeededTasks": 20,
+        "missingResults": 0
+      },
+      "qwen": {
+        "passed": 17,
+        "passRate": 0.85,
+        "findingRecall": 0.9524,
+        "criterionRecall": 0.9474,
+        "totalTokens": 105801,
+        "averageLatencySeconds": 87.501,
+        "succeededTasks": 19,
+        "missingResults": 1
+      }
+    },
+    "versionDiff": {
+      "promptVersion": "version.compat.v1",
+      "cases": 16,
+      "deepseek": {
+        "passed": 15,
+        "passRate": 0.9375,
+        "changeRecall": 1,
+        "criterionRecall": 1,
+        "totalTokens": 31523,
+        "averageLatencySeconds": 9.527,
+        "succeededTasks": 16,
+        "missingResults": 0
+      },
+      "qwen": {
+        "passed": 14,
+        "passRate": 0.875,
+        "changeRecall": 1,
+        "criterionRecall": 1,
+        "totalTokens": 50175,
+        "averageLatencySeconds": 42.777,
+        "succeededTasks": 15,
+        "missingResults": 1
+      }
+    }
+  },
+  "observations": [
+    "qwen review timed out once at 180s; one qwen version task failed OUTPUT_INVALID.",
+    "qwen marked paragraph reorder as a semantic change in version diff.",
+    "qwen passes were lower on both single-run sets; latency and token use were higher.",
+    "Deepseek three-repeat stability: review 16/20 stable / 93.33% repeat; version 15/16 stable / 97.92% repeat."
+  ],
+  "limitations": [
+    "qwen has only one run per set; stability not measured.",
+    "Synthetic Chinese samples; not a general model ranking.",
+    "Configured timeouts differ because qwen exceeded 60s; latency comparison includes that configuration difference.",
+    "Cost unknown."
+  ]
+}

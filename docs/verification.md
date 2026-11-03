@@ -364,3 +364,8 @@ API 与协议依据：[Spring AMQP 发布确认与 returns](https://docs.spring.
 - 8例人工语义复核7通过/1失败（同`vd-009`），`confirmedByUser=false`；基线`eval/version-diff/baselines/2026-11-03-version-compat-v1-3x.json`。未做模型对照和跨供应商比较。
 
 提交a1c68a8已推送origin/main，18个暂存文件扫描8个本地敏感值0命中；版本对比固定评测集与三次基线已记录。
+
+## 同供应商模型对照（2026-11-03）
+- 用户限定只对照同供应商`qwen/qwen3.8-flash`。相同端点/提示/schema/单次调用；deepseek超时60秒，qwen因60秒下评审2/3超时改用180秒。
+- 单次需求评审：deepseek 20/20、76,439 Token、平均22.123秒；qwen 17/20（1缺失）、105,801 Token、平均87.501秒，finding 95.24%/criterion 94.74%。单次版本对比：deepseek 15/16、31,523 Token、9.527秒；qwen 14/16（1缺失）、50,175 Token、42.777秒。
+- qwen 还把段落重排误报为MODIFIED，并在版本对比出现一次`OUTPUT_INVALID`；qwen 只有单次运行，稳定性未测。结论：当前固定样本下不把qwen作为默认/替代模型。详见[模型对照](model-comparison.md)及`eval/model-comparison/2026-11-03-qwen-vs-deepseek.json`。

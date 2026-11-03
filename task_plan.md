@@ -7,7 +7,7 @@
 需求评审已完成137后端、88浏览器、4条成功真实评审及Langfuse/报告验证；OpenSpec同步归档、自审凭据扫描和提交推送收尾。
 
 ## Current Phase
-Phase 56 (complete)
+Phase 57 (complete)
 
 ## Phases
 
@@ -286,4 +286,8 @@ Phase 56 (complete)
 
 ### Phase 56: Version diff fixed evaluation
 - [x] 16样本、评分器/运行器/测试/CI；三次48任务稳定15/16、重复通过97.92%，83,368 Token；人工复核7/8。
+- **Status:** complete
+
+### Phase 57: Same-supplier model comparison
+- [x] 仅qwen3.8-flash；相同提示/固定集单次对照，记录超时差异、Token/延迟、失败和重排误报。
 - **Status:** complete
