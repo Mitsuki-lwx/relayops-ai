@@ -317,3 +317,9 @@ API 与协议依据：[Spring AMQP 发布确认与 returns](https://docs.spring.
 - 局限：这是少量合成样本，不构成完整率、准确率或稳定性结论；没有固定质量评测集、重复采样、模型对照、自动执行验收或真实金额核对。
 
 提交60a7e68已推送origin/main，远程SHA与本地一致；41个暂存文件扫描8个本地敏感值0命中，OpenSpec归档后6份主规范严格校验通过。
+
+## 需求评审固定评测集（2026-11-03）
+- 数据集`eval/requirements-review/cases.json`共20个中文合成样本，输入合计2,134字符，单例均≤6,000字符；覆盖干净对照、GAP、歧义、冲突、文档内注入、假设陷阱、单位等价误报和多段长文本。另提供`schema.json`。
+- 评分器`scripts/score-requirements-review-eval.mjs`不调用模型，校验结果schema、精确引用、CONFLICT双引用、必找问题/禁止问题、必找验收草稿和禁止文字；拒绝把原文引用当作生成正文检查，避免把源文本误判为编造。
+- `node --test scripts/score-requirements-review-eval.test.mjs`：10项通过；`--validate-only`：20个样本、版本`relayops.requirements-review.eval.v1`校验通过；用1个合成结果做CLI烟雾，评分器正确输出1通过/19缺失结果、结构失败0。
+- CI `verify.yml`在准备测试环境后增加评分器单测和数据集校验；本批未在CI实际执行、未调用供应商。下一步是在独立schema/vhost中用固定profile逐样本运行并保存原始结果，重复采样和模型对照另批。

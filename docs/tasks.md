@@ -36,3 +36,7 @@
 
 # 需求评审任务（已完成，2026-11-03）
 OpenSpec add-requirements-review共10项已完成：契约→TaskType/DocumentResult→ModelGateway/Fake→JobService/Controller→真实库负例→用途/竞态恢复→评审组件/analysisReport→浏览器三档→接入主流程→端到端验收和推送。V1–V7未修改，使用既有schema_version冻结用途；137后端、88浏览器及4条成功真实评审（另2次失败驱动独立输出上限）通过，详见[验证记录](verification.md)。
+
+
+# 需求评审固定评测集（2026-11-03）
+20个中文合成样本覆盖干净对照、GAP、歧义、冲突、注入、单位等价和多段长文本；确定性评分器检查结构/引用/必找问题/禁止文字，不调用模型。评分器10项单元测试和数据集校验已接入CI；自动调用供应商的评测运行器留待独立环境执行。

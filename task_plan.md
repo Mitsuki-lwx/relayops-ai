@@ -7,7 +7,7 @@
 需求评审已完成137后端、88浏览器、4条成功真实评审及Langfuse/报告验证；OpenSpec同步归档、自审凭据扫描和提交推送收尾。
 
 ## Current Phase
-Phase 52 (complete)
+Phase 53 (complete)
 
 ## Phases
 
@@ -269,4 +269,8 @@ Phase 52 (complete)
 ### Phase 52: Requirements review verification and delivery
 - [x] 隔离后端/浏览器三档/真实模型验收、Langfuse与报告复核。
 - [x] OpenSpec同步归档、自审凭据扫描和推送；提交60a7e68与origin/main一致。
+- **Status:** complete
+
+### Phase 53: Requirements review fixed evaluation set
+- [x] 20个固定合成样本、JSON Schema、确定性评分器、10项单元测试、CLI烟雾与CI接入。
 - **Status:** complete

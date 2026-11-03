@@ -29,6 +29,6 @@ LANGFUSE_SECRET_KEY=填写本地项目SecretKey
 
 通过langfuse-cli@1.2.4读取观测，从本地配置加载认证。当前自托管3.225.15处于v3写模式，指定--api-version 3.225.3，使用observations list及traces list；默认v4读取返回404。未来迁到v4后使用当前observations API。应用始终写OTLP端点及v4格式属性，未使用旧ingestion事件接口，未更改Langfuse部署或项目写模式。
 
-2026-11-02接入验收：127后端测试全通过，零失败/错误/跳过。真实Langfuse读回五阶段及两次回调；模型桩23/11/34用量、Fake未知用量、环境、父子关系、任务session、非公开标记和脱敏均断言通过。随后按用户授权完成[真实模型三样本端到端验收](real-model-verification.md)，与本段协议桩记录分开。固定质量评测集、重复采样稳定性及真实金额评测尚未实施。
+2026-11-02接入验收：127后端测试全通过，零失败/错误/跳过。真实Langfuse读回五阶段及两次回调；模型桩23/11/34用量、Fake未知用量、环境、父子关系、任务session、非公开标记和脱敏均断言通过。随后按用户授权完成[真实模型三样本端到端验收](real-model-verification.md)，与本段协议桩记录分开。固定评测集（20样本/确定性评分器）已建立，尚未在固定真实profile上逐样本运行；重复采样稳定性及真实金额评测仍未实施。
 
 参考：[Java接入建议](https://github.com/langfuse/langfuse-java)、[OTLP映射](https://langfuse.com/integrations/native/opentelemetry)、[版本兼容](https://langfuse.com/docs/compatibility)。
