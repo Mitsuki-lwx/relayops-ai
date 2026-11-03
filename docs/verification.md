@@ -327,6 +327,14 @@ API 与协议依据：[Spring AMQP 发布确认与 returns](https://docs.spring.
 ## 需求评审固定评测集真实运行（2026-11-03）
 - 独立schema/vhost及18081专用服务，真实兼容模型`cline-pass/deepseek-v4.1-flash-1017`，profile`review-compat-ae7e1dd91573833a38ccec90`、提示词`review.compat.v2`、评审上限8192；运行器`scripts/run-requirements-review-eval.mjs`逐例单次调用、无自动重试、无回调目的地。
 - 首轮20个任务全部成功，评分18/20：两个“完整度对照”仍被模型提出GAP/AMBIGUITY。人工复核发现输入确有未闭合范围（方法/失败响应、任务ID归属与内容检测等），严格零问题期望不成立；将两个对照收窄并明确排除项，评分改为允许澄清但禁止CONFLICT和编造值，重跑2例后通过。
-- 最终20个结果：20/20通过，`findingRecall=1`、`criterionRecall=1`、结构失败0、禁止问题/文字0；共21项必找问题、20项必找草稿全部命中。结果基线见`eval/requirements-review/baselines/2026-11-03-review-compat-v2.json`。
+- 单次基线的20个结果：20/20通过，`findingRecall=1`、`criterionRecall=1`、结构失败0、禁止问题/文字0；共21项必找问题、20项必找草稿全部命中。单次基线见`eval/requirements-review/baselines/2026-11-03-review-compat-v2.json`，它不代表重复稳定性。
 - 最终20例模型span平均22.123秒，供应商报告Token合计76,439（输入11,353/输出65,086）；含重跑共24次调用/94,870 Token，金额未知。Langfuse回读`review-eval`环境120条观测、24个模型调用，模型/profile/版本一致，标题和输入片段0泄漏。
-- 注入样本被识别为不可信指令文本，未出现`SYSTEM_OVERRIDE`或注入内容；冲突样本保留两条不同引用并未替用户裁决；重复/单位等价样本未输出CONFLICT。评测仍为单次采样和固定关键词规则，不能推导总体准确率；未做人工全量语义复核、模型对照或稳定性重复采样。
+- 注入样本被识别为不可信指令文本，未出现`SYSTEM_OVERRIDE`或注入内容；冲突样本保留两条不同引用并未替用户裁决；重复/单位等价样本未输出CONFLICT。
+
+### 三次重复稳定性（同日）
+- 在同一数据集、同一真实profile/提示词/上限下完成3次独立隔离运行，共60个任务：57成功、2 `MODEL_RESULT_UNKNOWN`、1 `OUTPUT_TRUNCATED`。按3次期望聚合后稳定通过16/20，单次通过率56/60=93.33%，findingRecall=98.33%，criterionRecall=100%；结构失败和禁止命中均为0。
+- 不稳定项：`rr-001`第2次UNKNOWN、`rr-015`第3次UNKNOWN、`rr-020`第3次截断、`rr-017`第3次只输出冲突而未覆盖“更新后如何失效”的GAP。前三项是供应商/输出上限故障，第四项是真实语义漏项。
+- Langfuse记录60个模型观测，Token合计217,091（输入32,930/输出184,161，含截断调用），平均span 21.170秒；金额未知。三次运行分别20/19/18成功，证明单次20/20不能当作稳定性结论。
+- 10例人工语义复核：9通过、1失败（`rr-017`未覆盖缺失项）；`manual-review.json`明确标记`confirmedByUser=false`，待用户签署。
+- regression比较器将单次基线`1.0`与三次重复`0.8`比较，输出4项回归；这正是重复评测要暴露的信号。三次重复基线见`eval/requirements-review/baselines/2026-11-03-review-compat-v2-3x.json`。
+- 仍未做模型对照、跨供应商比较、完整人工全量复核或质量阈值下的正式发布门禁；固定关键词评分只衡量预定义关注点。

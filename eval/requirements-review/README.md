@@ -8,7 +8,10 @@
 - `schema.json`：数据集 JSON Schema（编辑器和人工校验用）。
 - `../../scripts/score-requirements-review-eval.mjs`：无依赖的确定性评分器。
 - `../../scripts/score-requirements-review-eval.test.mjs`：评分器单元测试。
+- `../../scripts/compare-requirements-review-eval.mjs`：两次评分报告的回归比较。
+- `../../scripts/compare-requirements-review-eval.test.mjs`：比较器单元测试。
 - `../../scripts/run-requirements-review-eval.mjs`：受控的真实API批量运行器。
+- `manual-review.json`：10个样本的人工语义复核清单与当前判定（明确标记待用户确认）。
 
 ## 覆盖范围
 
@@ -58,8 +61,11 @@
 ```powershell
 node scripts/score-requirements-review-eval.mjs --validate-only
 node scripts/score-requirements-review-eval.mjs --results artifacts/review-eval/<run>
-node scripts/score-requirements-review-eval.mjs --results artifacts/review-eval/<run> --json
+node scripts/score-requirements-review-eval.mjs --results <run1> --results <run2> --results <run3> --json
+node scripts/score-requirements-review-eval.mjs --results <run> --manual-review eval/requirements-review/manual-review.json
 ```
+
+传多个 `--results` 时，同一 case 的多次结果会聚合：`pass` 要求全部重复通过，`passRate` 是重复通过比例；汇总同时报告 `repeatPassRate`、`repeatsPerCase` 和每次结构/禁止命中。
 
 结果目录中每个样本一个 `<case-id>.json`，内容可以是结果接口的完整响应 `{data, paragraphs}`，也可以是 `{jobId,status,result:{...}}`。评分器同时检查：
 
@@ -95,9 +101,26 @@ node scripts/run-requirements-review-eval.mjs `
 3. 同一 profile 至少保留一次完整运行；比较提示词版本时，两版各自独立运行，相同 case 不共享幂等键。
 4. 评分后在报告中保留 `profileId`、模型、日期、数据集版本和原始结果目录，避免只留聚合分数。
 
+## 重复与回归比较
+
+- 建议每个 profile 至少 3 次完整运行；每次运行使用独立 schema/vhost/工作空间额度，避免同一日额度互相占用。
+- 单次运行只提交一次任务；三次运行是三次独立任务，不是自动重试。
+- 将三个 `results` 目录同时传给评分器，得到稳定通过率和每次运行明细。
+- 保存两次评分报告（`--json`）后比较：
+
+```powershell
+node scripts/compare-requirements-review-eval.mjs --baseline artifacts/eval-a.json --current artifacts/eval-b.json
+```
+
+默认任何 case 回归、`passRate` 下降或 finding/criterion 召回下降都返回退出码1；只在明确接受回归时使用 `--allow-regressions`。
+- 人工语义复核固定 `manual-review.json` 的 10 个 case；评分器通过 `--manual-review` 输出人工通过数。当前 `confirmedByUser=false`，正式发布前需用户确认或修订判定。
+
 ## 基线
 
-`baselines/2026-11-03-review-compat-v2.json`：真实兼容模型、`review.compat.v2`、8192上限下的20例运行摘要（20/20、76,439 Token、平均22.123秒、每例问题/草稿/引用计数）。这是单次基线和回归参照，不是准确率承诺；重跑或提示词变化后应新建基线，不覆盖旧文件。
+- `baselines/2026-11-03-review-compat-v2.json`：单次运行摘要（20/20、76,439 Token、平均22.123秒）。
+- `baselines/2026-11-03-review-compat-v2-3x.json`：三次重复的权威稳定性基线（60任务57成功、稳定16/20、重复通过93.33%、217,091 Token、人工复核9/10）。
+
+两者都是特定模型/profile/日期下的回归参照，不是准确率承诺；重跑或提示词变化后应新建基线，不覆盖旧文件。
 
 ## 参考
 

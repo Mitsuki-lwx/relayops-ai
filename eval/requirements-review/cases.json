@@ -438,7 +438,7 @@
         "expectNoFindings": false,
         "requiredFindings": [
           {
-            "kind": "AMBIGUITY",
+            "kind": "GAP",
             "anyOf": [
               "测量",
               "窗口",
@@ -461,7 +461,7 @@
           "按周统计"
         ]
       },
-      "notes": "可验证数值：指标本身明确，但测量口径缺失。检查是否能区分“数值明确”与“统计方法未定义”。"
+      "notes": "可验证数值：指标本身明确，但测量口径缺失（GAP）；检查是否能区分“数值明确”与“统计方法未定义”，不得编造窗口。"
     },
     {
       "id": "rr-013-duplicate-consistent",

@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { loadDataset, scoreCase, scoreDataset, validateStructure, validateDataset } from "./score-requirements-review-eval.mjs";
+import { readFileSync } from "node:fs";
+import { loadDataset, scoreCase, scoreDataset, validateStructure, validateDataset, validateManualReview } from "./score-requirements-review-eval.mjs";
 
 const dataset = loadDataset("eval/requirements-review/cases.json");
 const byId = id => dataset.cases.find(item => item.id === id);
@@ -100,10 +101,46 @@ test("forbidden CONFLICT catches a false conflict on duplicate requirements", ()
   assert.ok(report.failureReasons.some(reason => reason.includes("forbidden finding")));
 });
 
+test("multiple runs produce stable pass and repeat pass rate", () => {
+  const tiny = { schemaVersion: dataset.schemaVersion, cases: [byId("rr-001-clean-health")] };
+  const good = result({ criteria: [criterion()] });
+  const bad = result({ findings: [finding({ kind: "CONFLICT" })], criteria: [criterion()] });
+  const report = scoreDataset(tiny, new Map([["rr-001-clean-health", [good, bad]]]));
+  assert.equal(report.cases[0].repeats, 2);
+  assert.equal(report.cases[0].passRate, 0.5);
+  assert.equal(report.cases[0].pass, false);
+  assert.equal(report.summary.repeatRuns, 2);
+  assert.equal(report.summary.repeatPassRate, 0.5);
+});
+
+test("expected repeats count missing results as failed repeats", () => {
+  const tiny = { schemaVersion: dataset.schemaVersion, cases: [byId("rr-001-clean-health")] };
+  const good = result({ criteria: [criterion()] });
+  const report = scoreDataset(tiny, new Map([["rr-001-clean-health", [good]]]), { expectedRepeats: 3 });
+  assert.equal(report.cases[0].repeats, 3);
+  assert.equal(report.cases[0].missingRepeats, 2);
+  assert.equal(report.cases[0].passRate, 0.3333);
+  assert.equal(report.cases[0].pass, false);
+  assert.equal(report.summary.missingRuns, 2);
+  assert.equal(report.summary.repeatPassRate, 0.3333);
+});
+
 test("dataset summary counts missing results as failures", () => {
   const tiny = { schemaVersion: dataset.schemaVersion, cases: [byId("rr-001-clean-health")] };
   const report = scoreDataset(tiny, new Map());
   assert.equal(report.summary.passed, 0);
   assert.equal(report.summary.failed, 1);
   assert.deepEqual(report.cases[0].failureReasons, ["result file missing"]);
+});
+
+test("manual semantic review file matches the dataset and is explicit about confirmation", () => {
+  const manual = JSON.parse(readFileSync("eval/requirements-review/manual-review.json", "utf8"));
+  assert.deepEqual(validateManualReview(manual, dataset), []);
+  assert.equal(manual.cases.length, 10);
+  assert.equal(manual.cases.filter(item => item.verdict === "pass").length, 9);
+  assert.equal(manual.cases.find(item => item.verdict === "fail").id, "rr-017-multi-paragraph");
+  assert.equal(manual.confirmedByUser, false);
+  const broken = structuredClone(manual);
+  broken.cases[0].id = "rr-999-unknown";
+  assert.ok(validateManualReview(broken, dataset).some(issue => issue.includes("unknown id")));
 });

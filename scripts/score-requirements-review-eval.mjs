@@ -62,6 +62,23 @@ export function validateDataset(data) {
   return issues;
 }
 
+export function validateManualReview(data, dataset) {
+  const issues = [];
+  if (data?.schemaVersion !== "relayops.requirements-review.manual-review.v1") issues.push("manual review schemaVersion is invalid");
+  if (typeof data?.confirmedByUser !== "boolean") issues.push("manual review confirmedByUser must be boolean");
+  if (!Array.isArray(data?.cases) || !data.cases.length) return [...issues, "manual review cases must be non-empty"];
+  const known = new Set(dataset.cases.map(item => item.id));
+  const seen = new Set();
+  data.cases.forEach((item, index) => {
+    if (!known.has(item.id)) issues.push(`manual review cases[${index}] has unknown id`);
+    if (seen.has(item.id)) issues.push(`manual review cases[${index}] duplicates ${item.id}`);
+    seen.add(item.id);
+    if (!["pass", "fail"].includes(item.verdict)) issues.push(`manual review cases[${index}] has invalid verdict`);
+    if (!Array.isArray(item.checks) || !item.checks.length) issues.push(`manual review cases[${index}] needs checks`);
+  });
+  return issues;
+}
+
 export function normalizeResult(raw) {
   if (raw?.result?.data) return raw.result;
   if (raw?.data?.review) return raw;
@@ -209,59 +226,100 @@ export function scoreCase(testCase, rawResult) {
   };
 }
 
-export function scoreDataset(dataset, results) {
+export function scoreCaseRuns(testCase, rawResults, expectedRepeats = 0) {
+  const runs = (rawResults ?? []).map(raw => scoreCase(testCase, raw));
+  const total = Math.max(expectedRepeats, runs.length);
+  if (!total) return { id: testCase.id, title: testCase.title, tags: testCase.tags, present: false, repeats: 0, presentRepeats: 0, missingRepeats: 0, pass: false, passRate: 0, structure: ["result file missing"], runs: [], failureReasons: ["result file missing"] };
+  const passed = runs.filter(run => run.pass).length;
+  const missing = Math.max(0, total - runs.length);
+  return {
+    id: testCase.id,
+    title: testCase.title,
+    tags: testCase.tags,
+    present: runs.length > 0,
+    repeats: total,
+    presentRepeats: runs.length,
+    missingRepeats: missing,
+    pass: passed === total,
+    passRate: Number((passed / total).toFixed(4)),
+    structure: runs.flatMap(run => run.structure),
+    runs,
+    failureReasons: [
+      ...(missing ? [`${missing} repeat(s) missing`] : []),
+      ...runs.flatMap((run, index) => run.failureReasons.map(reason => `repeat ${index + 1}: ${reason}`)),
+    ],
+  };
+}
+
+export function scoreDataset(dataset, results, options = {}) {
+  const expectedRepeats = Number.isInteger(options.expectedRepeats) ? options.expectedRepeats : 0;
   const scored = dataset.cases.map(testCase => {
-    const raw = results.get(testCase.id);
-    if (!raw) return { id: testCase.id, title: testCase.title, tags: testCase.tags, present: false, pass: false, structure: ["result file missing"], requiredFindings: [], forbiddenFindings: [], requiredCriteria: [], forbiddenTerms: [], expectNoFindings: { expected: !!testCase.expect.expectNoFindings, actual: null }, failureReasons: ["result file missing"] };
-    return scoreCase(testCase, raw);
+    const value = results.get(testCase.id);
+    const rawResults = Array.isArray(value) ? value : value ? [value] : [];
+    return scoreCaseRuns(testCase, rawResults, expectedRepeats);
   });
   const count = (list, predicate = Boolean) => list.reduce((total, item) => total + (predicate(item) ? 1 : 0), 0);
-  const requiredFindings = scored.reduce((n, item) => n + item.requiredFindings.length, 0);
-  const matchedFindings = scored.reduce((n, item) => n + count(item.requiredFindings, entry => entry.matched), 0);
-  const requiredCriteria = scored.reduce((n, item) => n + item.requiredCriteria.length, 0);
-  const matchedCriteria = scored.reduce((n, item) => n + count(item.requiredCriteria, entry => entry.matched), 0);
+  const allRuns = scored.flatMap(item => item.runs);
+  const requiredFindings = allRuns.reduce((n, item) => n + item.requiredFindings.length, 0);
+  const matchedFindings = allRuns.reduce((n, item) => n + count(item.requiredFindings, entry => entry.matched), 0);
+  const requiredCriteria = allRuns.reduce((n, item) => n + item.requiredCriteria.length, 0);
+  const matchedCriteria = allRuns.reduce((n, item) => n + count(item.requiredCriteria, entry => entry.matched), 0);
   const failed = scored.filter(item => !item.pass);
+  const repeatCounts = scored.map(item => item.repeats);
+  const expectedRuns = scored.reduce((n, item) => n + item.repeats, 0);
+  const missingRuns = scored.reduce((n, item) => n + item.missingRepeats, 0);
   return {
-    dataset: { schemaVersion: dataset.schemaVersion, cases: dataset.cases.length },
+    dataset: { schemaVersion: dataset.schemaVersion, cases: dataset.cases.length, expectedRepeats: expectedRepeats || null },
     summary: {
       passed: scored.length - failed.length,
       failed: failed.length,
       passRate: scored.length ? Number(((scored.length - failed.length) / scored.length).toFixed(4)) : 0,
+      repeatsPerCase: repeatCounts.length ? { min: Math.min(...repeatCounts), max: Math.max(...repeatCounts), mean: Number((repeatCounts.reduce((a, b) => a + b, 0) / repeatCounts.length).toFixed(2)) } : null,
+      expectedRuns,
+      repeatRuns: allRuns.length,
+      missingRuns,
+      repeatPasses: count(allRuns, item => item.pass),
+      repeatPassRate: expectedRuns ? Number((count(allRuns, item => item.pass) / expectedRuns).toFixed(4)) : 0,
       requiredFindings,
       matchedFindings,
       findingRecall: requiredFindings ? Number((matchedFindings / requiredFindings).toFixed(4)) : null,
       requiredCriteria,
       matchedCriteria,
       criterionRecall: requiredCriteria ? Number((matchedCriteria / requiredCriteria).toFixed(4)) : null,
-      structuralFailures: scored.filter(item => item.present && item.structure.length).length,
-      forbiddenFindingHits: scored.reduce((n, item) => n + count(item.forbiddenFindings, entry => entry.matched), 0),
-      forbiddenTermHits: scored.reduce((n, item) => n + count(item.forbiddenTerms, entry => entry.matched), 0),
+      structuralFailures: count(allRuns, item => item.present && item.structure.length),
+      forbiddenFindingHits: allRuns.reduce((n, item) => n + count(item.forbiddenFindings, entry => entry.matched), 0),
+      forbiddenTermHits: allRuns.reduce((n, item) => n + count(item.forbiddenTerms, entry => entry.matched), 0),
     },
     cases: scored,
   };
 }
 
-function loadResults(directory) {
+function loadResults(directories) {
   const map = new Map();
-  if (!existsSync(directory)) return map;
-  for (const name of readdirSync(directory)) {
-    if (!name.endsWith(".json")) continue;
-    const file = join(directory, name);
-    const id = name.slice(0, -5);
-    map.set(id, JSON.parse(readFileSync(file, "utf8")));
+  for (const directory of directories) {
+    if (!existsSync(directory)) continue;
+    for (const name of readdirSync(directory)) {
+      if (!name.endsWith(".json")) continue;
+      const id = name.slice(0, -5);
+      const raw = JSON.parse(readFileSync(join(directory, name), "utf8"));
+      if (!map.has(id)) map.set(id, []);
+      map.get(id).push(raw);
+    }
   }
   return map;
 }
 
 function usage() {
-  return `Usage: node scripts/score-requirements-review-eval.mjs --results <dir> [options]\n\nOptions:\n  --cases <file>       Dataset (default: eval/requirements-review/cases.json)\n  --results <dir>      Directory of <case-id>.json result bodies\n  --json               Print machine-readable JSON only\n  --allow-failures     Exit 0 even when some cases fail\n  --validate-only      Validate the dataset and exit without results\n  --help               Show this help\n`;
+  return `Usage: node scripts/score-requirements-review-eval.mjs --results <dir> [--results <dir> ...] [options]\n\nOptions:\n  --cases <file>       Dataset (default: eval/requirements-review/cases.json)\n  --results <dir>      Directory of <case-id>.json result bodies; repeat for multiple runs\n  --json               Print machine-readable JSON only\n  --allow-failures     Exit 0 even when some cases fail\n  --validate-only      Validate the dataset and exit without results\n  --help               Show this help\n`;
 }
 
 function main(argv) {
-  const args = { cases: "eval/requirements-review/cases.json", results: "", json: false, allowFailures: false, validateOnly: false };
+  const args = { cases: "eval/requirements-review/cases.json", results: [], manualReview: "", expectedRepeats: 0, json: false, allowFailures: false, validateOnly: false };
   for (let i = 0; i <argv.length; i++) {
     if (argv[i] === "--cases") args.cases = argv[++i];
-    else if (argv[i] === "--results") args.results = argv[++i];
+    else if (argv[i] === "--results") args.results.push(argv[++i]);
+    else if (argv[i] === "--manual-review") args.manualReview = argv[++i];
+    else if (argv[i] === "--expected-repeats") args.expectedRepeats = Number(argv[++i]);
     else if (argv[i] === "--json") args.json = true;
     else if (argv[i] === "--allow-failures") args.allowFailures = true;
     else if (argv[i] === "--validate-only") args.validateOnly = true;
@@ -273,17 +331,25 @@ function main(argv) {
     console.log(JSON.stringify({ valid: true, cases: dataset.cases.length, schemaVersion: dataset.schemaVersion }));
     return 0;
   }
-  if (!args.results) { console.error("--results is required unless --validate-only is used\n"); console.error(usage()); return 2; }
-  const report = scoreDataset(dataset, loadResults(resolve(args.results)));
+  if (!Number.isInteger(args.expectedRepeats) || args.expectedRepeats < 0) { console.error("--expected-repeats must be a non-negative integer\n"); return 2; }
+  if (!args.results.length) { console.error("--results is required unless --validate-only is used\n"); console.error(usage()); return 2; }
+  const report = scoreDataset(dataset, loadResults(args.results.map(result => resolve(result))), { expectedRepeats: args.expectedRepeats });
+  if (args.manualReview) {
+    const manual = JSON.parse(readFileSync(resolve(args.manualReview), "utf8"));
+    const issues = validateManualReview(manual, dataset);
+    if (issues.length) throw new Error("Invalid manual review:\n" + issues.join("\n"));
+    const failed = manual.cases.filter(item => item.verdict === "fail");
+    report.manualReview = { file: args.manualReview, confirmedByUser: manual.confirmedByUser, cases: manual.cases.length, passed: manual.cases.length - failed.length, failed: failed.length, failures: failed.map(item => item.id) };
+  }
   if (args.json) console.log(JSON.stringify(report, null, 2));
   else {
     for (const item of report.cases) {
-      console.log(`${item.pass ? "PASS" : "FAIL"} ${item.id}  ${item.title}`);
+      console.log(`${item.pass ? "PASS" : "FAIL"} ${item.id}  ${item.title}  [${item.repeatPasses ?? item.runs?.filter(run => run.pass).length ?? 0}/${item.repeats} repeats]`);
       if (!item.pass) for (const reason of item.failureReasons) console.log(`  - ${reason}`);
     }
-    console.log(JSON.stringify(report.summary));
+    console.log(JSON.stringify(report.manualReview ? { ...report.summary, manualReview: report.manualReview } : report.summary));
   }
-  return !args.allowFailures && report.summary.failed ? 1 : 0;
+  return !args.allowFailures && (report.summary.failed || (report.manualReview?.failed ?? 0)) ? 1 : 0;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {

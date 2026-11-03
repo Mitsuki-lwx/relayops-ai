@@ -273,5 +273,5 @@ Phase 53 (complete)
 
 ### Phase 53: Requirements review fixed evaluation set
 - [x] 20个固定合成样本、JSON Schema、确定性评分器、10项单元测试、CLI烟雾与CI接入。
-- [x] 独立真实模型运行器与基线：20/20通过，76,439 Token，平均22.123秒；首轮对照缺陷已修正重跑。
+- [x] 独立真实模型运行器与基线：单次20/20；三次重复60任务57成功、稳定16/20、重复通过93.33%；2次UNKNOWN、1次截断、1次语义漏项；10例人工复核9通过。
 - **Status:** complete

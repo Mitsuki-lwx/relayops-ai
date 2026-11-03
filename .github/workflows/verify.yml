@@ -24,7 +24,7 @@ jobs:
       - run: pwsh -File scripts/init-local.ps1
       - run: docker compose --project-name relayops -f ops/compose.yml --env-file ops/.env up -d --wait
       - run: pwsh -File scripts/prepare-test-env.ps1
-      - run: node --test scripts/score-requirements-review-eval.test.mjs
+      - run: node --test scripts/score-requirements-review-eval.test.mjs scripts/compare-requirements-review-eval.test.mjs
       - run: node scripts/score-requirements-review-eval.mjs --validate-only
       - run: node scripts/run-requirements-review-eval.mjs --dry-run
       - run: pwsh -File scripts/test-backend.ps1

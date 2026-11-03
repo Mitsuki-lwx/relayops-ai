@@ -1,0 +1,421 @@
+{
+  "date": "2026-11-03",
+  "dataset": {
+    "schemaVersion": "relayops.requirements-review.eval.v1",
+    "cases": 20,
+    "expectedRepeats": 3
+  },
+  "model": "cline-pass/deepseek-v4.1-flash-1017",
+  "profile": "review-compat-ae7e1dd91573833a38ccec90",
+  "promptVersion": "review.compat.v2",
+  "schemaVersion": "requirements.review.result.v1",
+  "mode": "real compatible supplier, three independent isolated runs, one task per case per run",
+  "runner": "scripts/run-requirements-review-eval.mjs",
+  "score": {
+    "passed": 16,
+    "failed": 4,
+    "passRate": 0.8,
+    "repeatsPerCase": {
+      "min": 3,
+      "max": 3,
+      "mean": 3
+    },
+    "expectedRuns": 60,
+    "repeatRuns": 57,
+    "missingRuns": 3,
+    "repeatPasses": 56,
+    "repeatPassRate": 0.9333,
+    "requiredFindings": 60,
+    "matchedFindings": 59,
+    "findingRecall": 0.9833,
+    "requiredCriteria": 57,
+    "matchedCriteria": 57,
+    "criterionRecall": 1,
+    "structuralFailures": 0,
+    "forbiddenFindingHits": 0,
+    "forbiddenTermHits": 0
+  },
+  "manualReview": {
+    "file": "eval/requirements-review/manual-review.json",
+    "confirmedByUser": false,
+    "cases": 10,
+    "passed": 9,
+    "failed": 1,
+    "failures": [
+      "rr-017-multi-paragraph"
+    ]
+  },
+  "runtime": {
+    "calls": 60,
+    "succeeded": 57,
+    "unknown": 2,
+    "failed": 1,
+    "outputTruncated": 1,
+    "observedModelCalls": 60,
+    "inputTokens": 32930,
+    "outputTokens": 184161,
+    "totalTokens": 217091,
+    "averageLatencySeconds": 21.17,
+    "cost": "unknown",
+    "runs": [
+      {
+        "name": "repeat1",
+        "cases": 20,
+        "succeeded": 20,
+        "directory": "artifacts/review-eval-combined"
+      },
+      {
+        "name": "repeat2",
+        "cases": 20,
+        "succeeded": 19,
+        "directory": "artifacts/review-eval-1793695420334/run-repeat2"
+      },
+      {
+        "name": "repeat3",
+        "cases": 20,
+        "succeeded": 18,
+        "directory": "artifacts/review-eval-1793695957570/run-repeat3"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "id": "rr-001-clean-health",
+      "title": "健康检查接口（完整需求）",
+      "pass": false,
+      "passRate": 0.6667,
+      "repeats": 3,
+      "presentRepeats": 2,
+      "missingRepeats": 1,
+      "failureReasons": [
+        "1 repeat(s) missing"
+      ],
+      "findingsAverage": 2.5,
+      "criteriaAverage": 1,
+      "evidenceAverage": 3.5,
+      "tokens": 11106,
+      "averageLatencySeconds": 21.737
+    },
+    {
+      "id": "rr-002-clean-export",
+      "title": "导出文件命名（完整需求）",
+      "pass": true,
+      "passRate": 1,
+      "repeats": 3,
+      "presentRepeats": 3,
+      "missingRepeats": 0,
+      "failureReasons": [],
+      "findingsAverage": 0.67,
+      "criteriaAverage": 1.67,
+      "evidenceAverage": 4,
+      "tokens": 16761,
+      "averageLatencySeconds": 31.518
+    },
+    {
+      "id": "rr-003-gap-upload-limits",
+      "title": "上传限制缺失",
+      "pass": true,
+      "passRate": 1,
+      "repeats": 3,
+      "presentRepeats": 3,
+      "missingRepeats": 0,
+      "failureReasons": [],
+      "findingsAverage": 2.33,
+      "criteriaAverage": 1.67,
+      "evidenceAverage": 4.33,
+      "tokens": 11589,
+      "averageLatencySeconds": 22.612
+    },
+    {
+      "id": "rr-004-gap-error-contract",
+      "title": "失败契约缺失",
+      "pass": true,
+      "passRate": 1,
+      "repeats": 3,
+      "presentRepeats": 3,
+      "missingRepeats": 0,
+      "failureReasons": [],
+      "findingsAverage": 3,
+      "criteriaAverage": 2,
+      "evidenceAverage": 7,
+      "tokens": 9145,
+      "averageLatencySeconds": 17.198
+    },
+    {
+      "id": "rr-005-ambiguity-vague",
+      "title": "不可验证措辞",
+      "pass": true,
+      "passRate": 1,
+      "repeats": 3,
+      "presentRepeats": 3,
+      "missingRepeats": 0,
+      "failureReasons": [],
+      "findingsAverage": 3,
+      "criteriaAverage": 3,
+      "evidenceAverage": 6,
+      "tokens": 9670,
+      "averageLatencySeconds": 17.945
+    },
+    {
+      "id": "rr-006-conflict-timeout",
+      "title": "超时数值冲突",
+      "pass": true,
+      "passRate": 1,
+      "repeats": 3,
+      "presentRepeats": 3,
+      "missingRepeats": 0,
+      "failureReasons": [],
+      "findingsAverage": 2.33,
+      "criteriaAverage": 1.67,
+      "evidenceAverage": 6.67,
+      "tokens": 6149,
+      "averageLatencySeconds": 10.526
+    },
+    {
+      "id": "rr-007-conflict-retention",
+      "title": "保留期限冲突",
+      "pass": true,
+      "passRate": 1,
+      "repeats": 3,
+      "presentRepeats": 3,
+      "missingRepeats": 0,
+      "failureReasons": [],
+      "findingsAverage": 1.67,
+      "criteriaAverage": 1.33,
+      "evidenceAverage": 4.67,
+      "tokens": 7082,
+      "averageLatencySeconds": 13.782
+    },
+    {
+      "id": "rr-008-conflict-scope",
+      "title": "删除权限范围冲突",
+      "pass": true,
+      "passRate": 1,
+      "repeats": 3,
+      "presentRepeats": 3,
+      "missingRepeats": 0,
+      "failureReasons": [],
+      "findingsAverage": 1.33,
+      "criteriaAverage": 1.67,
+      "evidenceAverage": 5,
+      "tokens": 9903,
+      "averageLatencySeconds": 18.187
+    },
+    {
+      "id": "rr-009-mixed-gap-conflict",
+      "title": "分页冲突与失败策略缺失",
+      "pass": true,
+      "passRate": 1,
+      "repeats": 3,
+      "presentRepeats": 3,
+      "missingRepeats": 0,
+      "failureReasons": [],
+      "findingsAverage": 2.33,
+      "criteriaAverage": 2.67,
+      "evidenceAverage": 7,
+      "tokens": 6782,
+      "averageLatencySeconds": 11.547
+    },
+    {
+      "id": "rr-010-injection",
+      "title": "文档内提示注入",
+      "pass": true,
+      "passRate": 1,
+      "repeats": 3,
+      "presentRepeats": 3,
+      "missingRepeats": 0,
+      "failureReasons": [],
+      "findingsAverage": 2.33,
+      "criteriaAverage": 1.67,
+      "evidenceAverage": 4,
+      "tokens": 13989,
+      "averageLatencySeconds": 27.852
+    },
+    {
+      "id": "rr-011-assumption-status",
+      "title": "拒绝行为缺状态码",
+      "pass": true,
+      "passRate": 1,
+      "repeats": 3,
+      "presentRepeats": 3,
+      "missingRepeats": 0,
+      "failureReasons": [],
+      "findingsAverage": 2,
+      "criteriaAverage": 2,
+      "evidenceAverage": 5,
+      "tokens": 14309,
+      "averageLatencySeconds": 27.846
+    },
+    {
+      "id": "rr-012-numeric-verifiable",
+      "title": "可用性与延迟指标",
+      "pass": true,
+      "passRate": 1,
+      "repeats": 3,
+      "presentRepeats": 3,
+      "missingRepeats": 0,
+      "failureReasons": [],
+      "findingsAverage": 2.67,
+      "criteriaAverage": 2.67,
+      "evidenceAverage": 10.33,
+      "tokens": 11164,
+      "averageLatencySeconds": 20.882
+    },
+    {
+      "id": "rr-013-duplicate-consistent",
+      "title": "重复但一致的要求",
+      "pass": true,
+      "passRate": 1,
+      "repeats": 3,
+      "presentRepeats": 3,
+      "missingRepeats": 0,
+      "failureReasons": [],
+      "findingsAverage": 1.33,
+      "criteriaAverage": 2,
+      "evidenceAverage": 3.33,
+      "tokens": 13879,
+      "averageLatencySeconds": 26.736
+    },
+    {
+      "id": "rr-014-privacy-vague",
+      "title": "个人数据清除期限模糊",
+      "pass": true,
+      "passRate": 1,
+      "repeats": 3,
+      "presentRepeats": 3,
+      "missingRepeats": 0,
+      "failureReasons": [],
+      "findingsAverage": 3,
+      "criteriaAverage": 3,
+      "evidenceAverage": 9.33,
+      "tokens": 13038,
+      "averageLatencySeconds": 24.002
+    },
+    {
+      "id": "rr-015-access-control",
+      "title": "空间角色权限（基本完整）",
+      "pass": false,
+      "passRate": 0.6667,
+      "repeats": 3,
+      "presentRepeats": 2,
+      "missingRepeats": 1,
+      "failureReasons": [
+        "1 repeat(s) missing"
+      ],
+      "findingsAverage": 3,
+      "criteriaAverage": 3,
+      "evidenceAverage": 9.5,
+      "tokens": 11114,
+      "averageLatencySeconds": 38.188
+    },
+    {
+      "id": "rr-016-minimal-audit",
+      "title": "单句审计需求",
+      "pass": true,
+      "passRate": 1,
+      "repeats": 3,
+      "presentRepeats": 3,
+      "missingRepeats": 0,
+      "failureReasons": [],
+      "findingsAverage": 1,
+      "criteriaAverage": 1.33,
+      "evidenceAverage": 2.33,
+      "tokens": 7113,
+      "averageLatencySeconds": 14.94
+    },
+    {
+      "id": "rr-017-multi-paragraph",
+      "title": "缓存失效与审计（多段）",
+      "pass": false,
+      "passRate": 0.6667,
+      "repeats": 3,
+      "presentRepeats": 3,
+      "missingRepeats": 0,
+      "failureReasons": [
+        "repeat 3: missing GAP match: 失效 | 刷新 | 更新"
+      ],
+      "findingsAverage": 2.33,
+      "criteriaAverage": 2.67,
+      "evidenceAverage": 7.67,
+      "tokens": 7912,
+      "averageLatencySeconds": 14.661
+    },
+    {
+      "id": "rr-018-equivalent-units",
+      "title": "单位不同但数值等价",
+      "pass": true,
+      "passRate": 1,
+      "repeats": 3,
+      "presentRepeats": 3,
+      "missingRepeats": 0,
+      "failureReasons": [],
+      "findingsAverage": 2.33,
+      "criteriaAverage": 2,
+      "evidenceAverage": 6.67,
+      "tokens": 8610,
+      "averageLatencySeconds": 16.125
+    },
+    {
+      "id": "rr-019-long-release",
+      "title": "发布与恢复清单（长文本）",
+      "pass": true,
+      "passRate": 1,
+      "repeats": 3,
+      "presentRepeats": 3,
+      "missingRepeats": 0,
+      "failureReasons": [],
+      "findingsAverage": 3,
+      "criteriaAverage": 3,
+      "evidenceAverage": 8.67,
+      "tokens": 9764,
+      "averageLatencySeconds": 16.672
+    },
+    {
+      "id": "rr-020-long-spec",
+      "title": "文档网关长文本（多冲突与缺失）",
+      "pass": false,
+      "passRate": 0.6667,
+      "repeats": 3,
+      "presentRepeats": 2,
+      "missingRepeats": 1,
+      "failureReasons": [
+        "1 repeat(s) missing"
+      ],
+      "findingsAverage": 3,
+      "criteriaAverage": 3,
+      "evidenceAverage": 10.5,
+      "tokens": 18012,
+      "averageLatencySeconds": 30.441
+    }
+  ],
+  "failures": [
+    {
+      "id": "rr-001-clean-health",
+      "passRate": 0.6667,
+      "reasons": [
+        "1 repeat(s) missing"
+      ]
+    },
+    {
+      "id": "rr-015-access-control",
+      "passRate": 0.6667,
+      "reasons": [
+        "1 repeat(s) missing"
+      ]
+    },
+    {
+      "id": "rr-017-multi-paragraph",
+      "passRate": 0.6667,
+      "reasons": [
+        "repeat 3: missing GAP match: 失效 | 刷新 | 更新"
+      ]
+    },
+    {
+      "id": "rr-020-long-spec",
+      "passRate": 0.6667,
+      "reasons": [
+        "1 repeat(s) missing"
+      ]
+    }
+  ]
+}
