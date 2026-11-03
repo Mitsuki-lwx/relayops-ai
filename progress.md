@@ -313,3 +313,5 @@
 - 评审profile指纹只绑定评审参数并包含提示词版本；普通maxTokens变化不再旋转评审profile。新增断言覆盖。
 
 - 批次3完成：VERSION_DIFF组合输入/双前缀段落、结果`version.diff.result.v1`、独立profile/提示、双文本框/结果/报告、跨用途重跑和回调。145后端、97浏览器通过；真实2例成功（20/6精确引用），另3次失败暴露data-only包裹及before/after字符串数组，均已修复并加回归。真实Token14,168，金额未知；Edge持久化结果与Markdown下载通过，主服务18080加载最终JAR、V8不变、12类hash不变。
+
+- 版本对比自审/凭据扫描通过：33个暂存文件扫描8个本地敏感值0命中；OpenSpec归档生成version-diff主规范，7份主规范严格校验通过。提交0e92c86已推送origin/main且远程一致；主服务18080健康UP，12类主库hash不变。
