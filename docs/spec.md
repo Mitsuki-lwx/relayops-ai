@@ -142,3 +142,7 @@ RelayOps 为开发者异步处理技术文档，并可靠交付结构化结果�
 
 ## 文档版本对比与影响分析（源码增量）
 `VERSION_DIFF` 接受基线与修订文本（`inputText`/`inputTextB`），分别校验后组合存入现有加密输入，不新增迁移。结果`version.diff.result.v1`含最多8项ADDED/REMOVED/MODIFIED、最多6项受影响约束和6项验收草稿；增/删只引用对应侧，修改必须双侧精确引用。独立提示/profile，复用一次性调用、权限、预算、TTL、回调与脱敏观测；不自动合并、修改需求或执行测试。旧用途和旧结果保持兼容。
+
+
+## 受控外网HTTPS回调（源码增量）
+部署白名单`RELAYOPS_DELIVERY_HTTPS_HOSTS`内的DNS主机可创建`https-allowlist-v1`目的地；端点必须HTTPS、固定`/relayops/events`、无查询/片段/用户信息/非443端口。创建和发送前校验，拒绝私网/环回地址；白名单移除使旧目的地停止。OWNER可在无活跃交付时轮换签名密钥，旧密钥立即失效并审计；不新增数据库迁移。

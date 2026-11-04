@@ -17,6 +17,9 @@ public class DeliveryController {
     @PostMapping("/destinations") ResponseEntity<?> create(Principal p,@PathVariable String workspaceId,@RequestBody DestinationService.Create body) { return ResponseEntity.status(201).body(destinations.create(p.getName(),workspaceId,body)); }
     @PutMapping("/destinations/{id}") Object enable(Principal p,@PathVariable String workspaceId,@PathVariable String id,@RequestBody DestinationService.Enable body) { destinations.enable(p.getName(),workspaceId,id,body);return Map.of("updated",true); }
     public record Reveal(Boolean acknowledgeSecretRead) {}
+    @PostMapping("/destinations/{id}/rotate-key") ResponseEntity<?> rotate(Principal p,@PathVariable String workspaceId,@PathVariable String id,@RequestBody DestinationService.RotateKey body) {
+        return ResponseEntity.ok().header("Cache-Control","no-store").body(destinations.rotateKey(p.getName(),workspaceId,id,body));
+    }
     @PostMapping("/destinations/{id}/reveal-key") ResponseEntity<?> reveal(Principal p,@PathVariable String workspaceId,@PathVariable String id,@RequestBody Reveal body) {
         return ResponseEntity.ok().header("Cache-Control","no-store").body(destinations.reveal(p.getName(),workspaceId,id,body!=null && Boolean.TRUE.equals(body.acknowledgeSecretRead())));
     }

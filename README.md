@@ -30,6 +30,7 @@ AI 技术文档任务与结果交付平台。当前链路：登录 → 公司与
 - [公司组织审计决策](docs/adr/0012-organization-audit.md)：当前ADMIN、租户安全字段与历史分页。
 - [每日额度决策](docs/adr/0014-owner-daily-limit.md)：空间OWNER在部署硬上限内调整额度。
 - [版本对比决策](docs/adr/0015-version-diff.md)：双版本文本、双侧引用和影响分析。
+- [外网回调决策](docs/adr/0016-external-delivery-and-key-rotation.md)：HTTPS白名单与签名密钥轮换。
 - [需求评审决策](docs/adr/0013-requirements-review.md)：用途冻结、评审引用、验收草稿与输出上限。
 - [需求评审固定评测集](eval/requirements-review/README.md)：20个合成样本、确定性评分与比较协议。
 - [同供应商模型对照](docs/model-comparison.md)：deepseek与qwen3.8-flash的固定样本结果。
@@ -76,6 +77,9 @@ RabbitMQ 无需手动下载：Compose 自动拉取锁定摘要的官方镜像并
 
 ## 文档版本对比与影响分析
 新建任务选择“文档版本对比与影响分析”后分别粘贴基线与修订文本。模型输出最多8项新增/删除/修改、受影响约束和受影响验收草稿；新增只引用修订、删除只引用基线、修改两侧都有精确引用。结果和Markdown报告标注生成建议待人工确认，不自动合并或执行测试。重跑保持对比用途；权限、预算、TTL、回调和观测沿用现有边界。
+
+## 外网 HTTPS 回调与密钥轮换
+在`ops/.env`的`RELAYOPS_DELIVERY_HTTPS_HOSTS`填写受控DNS主机（逗号分隔），运行概览的回调目的地即可选择“受控HTTPS接收端”。端点必须为`https://<白名单主机>/relayops/events`、443端口，不接受任意URL、IP、私网/环回、查询或片段。OWNER可在无活跃交付时轮换签名密钥；旧密钥立即失效，接收端需同步更新。未配置白名单时不开放外网目录。
 
 ## 每日额度
 运行概览中的“每日调用额度”显示当天预留、已使用、结果未知和策略版本。空间OWNER可在`RELAYOPS_MAX_DAILY_LIMIT`（默认100）内修改；降低额度不能低于当天已占用，历史日期不改写，变更写安全审计。额度是平台受理次数护栏，不是供应商账单；公司总额度仍是后续范围。
@@ -195,7 +199,7 @@ python scripts/demo-receiver.py
 
 验签与去重测试：`python scripts/test-demo-receiver.py`。`delivery.spec.ts` 为独立接收端浏览器用例，需 Fake 后端和未占用的接收端端口；`scripts/test-browser.ps1` 通过 `RELAYOPS_RECEIVER_PORT` 与 `--relayops.delivery.demo-port` 统一配置（默认18091），避免Windows动态排除端口。默认浏览器命令还包含其他会写任务的用例，不应在真实模型模式运行。本批验收使用隔离测试数据库及专用 vhost，未动演示空间额度。
 
-当前不包含外网 HTTPS 目录、密钥轮换、批量补投、接收端外部业务动作或底层存储安全擦除；两个系统无共享事务，不承诺端到端恰好一次。
+当前源码增量支持部署白名单内的外网 HTTPS 目的地和 OWNER 签名密钥轮换；批量补投、任意URL、接收端外部业务动作、底层存储安全擦除仍未实现。两个系统无共享事务，不承诺端到端恰好一次。
 
 ## 单条交付补投
 

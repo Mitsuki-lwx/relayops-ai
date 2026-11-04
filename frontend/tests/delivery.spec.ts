@@ -195,3 +195,26 @@ for (const {width, mode} of [{width:1440,mode:"retry"},{width:390,mode:"lost"},{
     }
   });
 }
+
+test("external HTTPS destination validates allowlist and rotates its key", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/");
+  await page.getByLabel("账号", { exact: true }).fill("owner.a");
+  await page.getByLabel("密码", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "登录工作台", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "AI 任务工作台", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "回调目的地", exact: true }).click();
+  await page.getByLabel("接收端目录", { exact: true }).selectOption("https-allowlist-v1");
+  const name = `HTTPS 接收端 ${Date.now()}`;
+  await page.getByLabel("目的地名称", { exact: true }).fill(name);
+  await page.getByLabel("HTTPS端点", { exact: true }).fill("https://evil.example/relayops/events");
+  await page.getByRole("button", { name: "创建目的地", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("白名单");
+  await page.getByLabel("目的地名称", { exact: true }).fill(name);
+  await page.getByLabel("HTTPS端点", { exact: true }).fill("https://allowed.example/relayops/events");
+  await page.getByRole("button", { name: "创建目的地", exact: true }).click();
+  await expect(page.getByText("https://allowed.example/relayops/events")).toBeVisible();
+  await page.getByRole("checkbox", { name: /我确认需要读取签名密钥/ }).check();
+  await page.getByRole("button", { name: `轮换 ${name} 签名密钥`, exact: true }).click();
+  await expect(page.locator("[data-secret] code")).toHaveText(/^[A-Za-z0-9+/=]+$/);
+});

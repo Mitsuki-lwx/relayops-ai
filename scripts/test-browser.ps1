@@ -22,6 +22,7 @@ $env:RABBITMQ_VHOST = 'relayops-test'
 $env:RELAYOPS_MODEL_MODE = 'fake'
 $env:RELAYOPS_TRACING_ENABLED = 'false'
 $env:RELAYOPS_RECEIVER_PORT = "$ReceiverPort"
+$env:RELAYOPS_DELIVERY_HTTPS_HOSTS = 'allowed.example'
 $relaySecret = New-Object byte[] 32
 $relayRandom = [Security.Cryptography.RandomNumberGenerator]::Create()
 try { $relayRandom.GetBytes($relaySecret) } finally { $relayRandom.Dispose() }
@@ -33,7 +34,7 @@ $env:RELAYOPS_MODEL_NAME = ''
 $relayArtifact = Join-Path $relayRoot 'artifacts/e2e'
 New-Item -ItemType Directory -Path $relayArtifact -Force | Out-Null
 $relayConfig = Join-Path $relayArtifact 'config.env'
-$relayNames = @('DB_URL','DB_USERNAME','DB_PASSWORD','RELAYOPS_MASTER_KEY','RELAYOPS_DEMO_PASSWORD','RABBITMQ_USERNAME','RABBITMQ_PASSWORD','RABBITMQ_VHOST','RELAYOPS_MODEL_MODE')
+$relayNames = @('DB_URL','DB_USERNAME','DB_PASSWORD','RELAYOPS_MASTER_KEY','RELAYOPS_DEMO_PASSWORD','RABBITMQ_USERNAME','RABBITMQ_PASSWORD','RABBITMQ_VHOST','RELAYOPS_MODEL_MODE','RELAYOPS_DELIVERY_HTTPS_HOSTS')
 [IO.File]::WriteAllLines($relayConfig,@($relayNames | ForEach-Object { $_ + '=' + [Environment]::GetEnvironmentVariable($_) }),[Text.UTF8Encoding]::new($false))
 $env:RELAYOPS_PROVISION_PASSWORD = $env:RELAYOPS_DEMO_PASSWORD
 & (Join-Path $PSScriptRoot 'provision-user.ps1') -Username release.owner -CompanyName '发布验收公司' -Jar $Jar -ConfigFile $relayConfig *> (Join-Path $relayArtifact 'provision-owner.log')

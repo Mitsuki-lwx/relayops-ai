@@ -1,6 +1,7 @@
 package dev.relayops.delivery;
 
 import jakarta.annotation.PreDestroy;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -40,9 +41,21 @@ public class WebhookTransport {
         }
         catch(Exception ignored) {try {return Math.min(3_600_001,Math.max(0,Duration.between(now,ZonedDateTime.parse(value,DateTimeFormatter.RFC_1123_DATE_TIME).toInstant()).toMillis()));}catch(Exception ex){return 0;}}
     }
+    static boolean safeRemoteHost(String host) {
+        try {
+            if (host==null || host.isBlank() || host.equalsIgnoreCase("localhost") || host.endsWith(".local")) return false;
+            for (var address : InetAddress.getAllByName(host)) {
+                if (address.isAnyLocalAddress() || address.isLoopbackAddress() || address.isLinkLocalAddress()
+                        || address.isSiteLocalAddress() || address.isMulticastAddress()) return false;
+            }
+            return true;
+        } catch (Exception ex) { return false; }
+    }
     public Outcome send(String endpoint,String delivery,String run,String attempt,String keyId,String secret,String payload,String hash) {
+        URI target=URI.create(endpoint);
+        if ("https".equalsIgnoreCase(target.getScheme()) && !safeRemoteHost(target.getHost())) return new Outcome(null,"UNSAFE_ENDPOINT",false,0);
         long timestamp=Instant.now().getEpochSecond();
-        var request=HttpRequest.newBuilder(URI.create(endpoint)).timeout(Duration.ofSeconds(timeout))
+        var request=HttpRequest.newBuilder(target).timeout(Duration.ofSeconds(timeout))
             .header("Content-Type","application/json; charset=utf-8").header("X-Relay-Delivery-Id",delivery).header("X-Relay-Run-Id",run).header("X-Relay-Attempt-Id",attempt)
             .header("X-Relay-Key-Id",keyId).header("X-Relay-Timestamp",Long.toString(timestamp)).header("X-Relay-Signature",signature(secret,timestamp,delivery,hash))
             .POST(HttpRequest.BodyPublishers.ofString(payload,StandardCharsets.UTF_8)).build();

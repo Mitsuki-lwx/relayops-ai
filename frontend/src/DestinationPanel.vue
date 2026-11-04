@@ -17,7 +17,9 @@ const props = defineProps<{
 const emit = defineEmits<{ changed: [] }>();
 const items = ref<Destination[]>([]),
   catalog = ref<{ id: string; name: string; endpoint: string }[]>([]),
-  name = ref("");
+  name = ref(""),
+  catalogId = ref(""),
+  externalEndpoint = ref("");
 const busy = ref(false),
   error = ref(""),
   ack = ref(false),
@@ -42,6 +44,7 @@ async function load() {
     if (g === generation) {
       items.value = list;
       catalog.value = directory;
+      if (!directory.some(item => item.id === catalogId.value)) catalogId.value = directory[0]?.id ?? "";
     }
   } catch (ex) {
     if (g === generation)
@@ -73,11 +76,36 @@ async function create() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: name.value,
-        catalogId: catalog.value[0]?.id,
+        catalogId: catalogId.value,
+        ...(catalogId.value === "https-allowlist-v1" ? { endpoint: externalEndpoint.value } : {}),
       }),
     }),
   );
   name.value = "";
+}
+async function rotate(item: Destination) {
+  if (!ack.value || busy.value || props.disabled) return;
+  const g = generation;
+  busy.value = true;
+  error.value = "";
+  secret.value = null;
+  try {
+    const value = await api<{ keyId: string; secret: string; version: number }>(path() + `/destinations/${item.id}/rotate-key`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ acknowledgeSecretRead: true, expectedVersion: item.version }),
+    });
+    if (g === generation) {
+      secret.value = { id: value.keyId, value: value.secret };
+      const target = items.value.find(entry => entry.id === item.id);
+      if (target) target.version = value.version;
+    }
+    emit("changed");
+  } catch (ex) {
+    if (g === generation) error.value = ex instanceof Error ? ex.message : "轮换失败";
+  } finally {
+    if (g === generation) busy.value = false;
+    ack.value = false;
+  }
 }
 async function toggle(item: Destination) {
   await action(() =>
@@ -138,9 +166,21 @@ async function reveal(item: Destination) {
         required
         :disabled="busy || disabled"
       />
-      <p class="muted">
-        {{ catalog[0]?.name ?? "加载目录…" }} · {{ catalog[0]?.endpoint }}
-      </p>
+      <label for="destination-catalog">接收端目录</label
+      ><select id="destination-catalog" v-model="catalogId" :disabled="busy || disabled">
+        <option v-for="entry in catalog" :key="entry.id" :value="entry.id">{{ entry.name }}</option>
+      </select>
+      <p v-if="catalogId === 'https-allowlist-v1'" class="muted">HTTPS端点必须使用部署白名单主机和 /relayops/events 路径。</p>
+      <label v-if="catalogId === 'https-allowlist-v1'" for="destination-endpoint">HTTPS端点</label
+      ><input
+        v-if="catalogId === 'https-allowlist-v1'"
+        id="destination-endpoint"
+        v-model="externalEndpoint"
+        maxlength="200"
+        placeholder="https://hooks.example.com/relayops/events"
+        :disabled="busy || disabled"
+      />
+      <p v-else class="muted">{{ catalog.find(entry => entry.id === catalogId)?.endpoint }}</p>
       <button
         class="primary"
         :disabled="busy || disabled || !name.trim() || !catalog.length"
@@ -171,6 +211,13 @@ async function reveal(item: Destination) {
             @click="reveal(item)"
           >
             读取 {{ item.name }} 签名密钥
+          </button>
+          <button
+            class="quiet"
+            :disabled="busy || disabled || !ack"
+            @click="rotate(item)"
+          >
+            轮换 {{ item.name }} 签名密钥
           </button>
         </div>
         <div v-if="secret?.id === item.id" data-secret class="secret-box">

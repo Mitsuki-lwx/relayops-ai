@@ -374,3 +374,10 @@ API 与协议依据：[Spring AMQP 发布确认与 returns](https://docs.spring.
 - `version.compat.v2`明确忽略段落重排、空白/格式和注入指令文本，不把非需求文本列为变化。三次独立运行47/48成功，稳定15/16、重复通过97.92%、changeRecall 100%、criterionRecall 100%；唯一失败为`vd-005-reorder`一次`OUTPUT_INVALID`，注入样本3/3通过。Token 72,848，平均span 5.699秒。
 - 基线`eval/version-diff/baselines/2026-11-04-version-compat-v2-3x.json`；人工复核v2 7通过/1失败（重排一次无结果），`confirmedByUser=false`。
 - qwen3.8-flash在v2版本对比单次16/16、39,835 Token、平均27.79秒，比v1的14/16改善；但只有单次，稳定性未测，且评审仍17/20、延迟明显更高。暂不替换默认模型。
+
+## 受控外网HTTPS回调与密钥轮换（2026-11-04）
+- 151后端测试通过，0失败/错误/跳过；覆盖白名单主机、HTTPS/固定路径/443、查询/片段/用户信息/IP拒绝、私网/环回地址拒绝、外网目的地创建、冻结，以及无活跃交付时的密钥轮换、版本冲突和`DESTINATION_KEY_ROTATED`审计。
+- 浏览器98项通过（2.9分钟，含新增外网目录创建、非白名单拒绝、签名密钥轮换交互）；既有本机回调、补投、组织、评审/版本对比回归通过。发布包验收继续通过。
+- 无数据库迁移；本机目录和原交付契约保持。白名单配置`RELAYOPS_DELIVERY_HTTPS_HOSTS`默认空，未配置时不显示外网目录。
+- 真实第三方HTTPS证书交付未做端到端验证；本轮验证创建/白名单/SSRF拒绝/本机签名路径和轮换，不宣称第三方接收端兼容或DNS重绑定完全防护。
+- 主服务18080加载最终JAR健康UP；主库12类事实hash不变；临时18081停止。主服务仍以`--relayops.retention-enabled=false`只读启动。

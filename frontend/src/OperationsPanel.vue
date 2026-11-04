@@ -28,7 +28,7 @@ const auditLabels: Record<string, string> = {
   JOB_ACCEPTED: "任务受理", JOB_SUCCEEDED: "任务成功", JOB_FAILED: "任务失败", JOB_CANCELLED: "取消任务",
   JOB_RERUN_REQUESTED: "明确重跑", RECOVER_UNKNOWN: "恢复为结果未知", RESULT_READ: "读取结果正文",
   DESTINATION_CREATED: "创建目的地", DESTINATION_ENABLED: "启用目的地", DESTINATION_DISABLED: "停用目的地",
-  DESTINATION_KEY_REVEALED: "读取签名密钥", DELIVERY_REPLAY_PREVIEWED: "预览补投", DELIVERY_REPLAY_CONFIRMED: "确认补投",
+  DESTINATION_KEY_REVEALED: "读取签名密钥", DESTINATION_KEY_ROTATED: "轮换签名密钥", DELIVERY_REPLAY_PREVIEWED: "预览补投", DELIVERY_REPLAY_CONFIRMED: "确认补投",
   JOB_PAYLOAD_CLEARED: "清理任务正文", DELIVERY_PAYLOAD_CLEARED: "清理交付正文", BUDGET_POLICY_UPDATED: "调整每日额度",
 };
 const total = (values: Record<string, number>) => Object.values(values).reduce((sum, n) => sum + n, 0);

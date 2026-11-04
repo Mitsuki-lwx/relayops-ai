@@ -27,7 +27,7 @@ import tools.jackson.databind.json.JsonMapper;
 import static org.junit.jupiter.api.Assertions.*;
 
 @EnabledIfEnvironmentVariable(named="RELAYOPS_MESSAGING_TESTS",matches="true")
-@SpringBootTest(properties={"relayops.consumer-enabled=false","relayops.relay-enabled=false","relayops.recovery-enabled=false","relayops.delivery.timeout-seconds=1"})
+@SpringBootTest(properties={"relayops.consumer-enabled=false","relayops.relay-enabled=false","relayops.recovery-enabled=false","relayops.delivery.timeout-seconds=1","relayops.delivery.https-hosts=allowed.example"})
 class DeliveryIntegrationTest {
     static final HttpServer receiver;
     static final AtomicInteger calls=new AtomicInteger();
@@ -99,6 +99,29 @@ class DeliveryIntegrationTest {
     ReadyMessage ready(){return envelope("delivery_outbox",run(),"DELIVERY_SEND");}
     String status(){return jdbc.queryForObject("SELECT status FROM delivery_run WHERE id=?",String.class,run());}
     void due(){jdbc.update("UPDATE delivery_run SET next_attempt_at=DATE_SUB(CURRENT_TIMESTAMP(3),INTERVAL 1 SECOND) WHERE id=?",run());worker.recover();}
+
+    @Test void allowlistedHttpsDestinationIsStoredAndInvalidUrlsAreRejected() {
+        var created=destinations.create("owner.a",workspace,new DestinationService.Create("外网接收端","https-allowlist-v1","https://allowed.example/relayops/events"));
+        assertEquals("https-allowlist-v1",created.catalogId());assertEquals("https://allowed.example/relayops/events",created.endpoint());
+        for(String bad:List.of("http://allowed.example/relayops/events","https://other.example/relayops/events","https://allowed.example/other","https://allowed.example/relayops/events?x=1","https://allowed.example:8443/relayops/events","https://127.0.0.1/relayops/events")){
+            assertEquals(422,assertThrows(ApiException.class,()->destinations.create("owner.a",workspace,new DestinationService.Create("坏地址","https-allowlist-v1",bad))).status);
+        }
+    }
+
+    @Test void destinationKeyRotationInvalidatesTheOldSecretAndRequiresNoActiveDelivery() {
+        long version=destinations.list("owner.a",workspace).stream().filter(d->d.id().equals(destination)).findFirst().orElseThrow().version();
+        var rotated=destinations.rotateKey("owner.a",workspace,destination,new DestinationService.RotateKey(true,version));
+        assertEquals(version+1,((Number)rotated.get("version")).longValue());
+        assertEquals(rotated.get("secret"),destinations.reveal("owner.a",workspace,destination,true).get("secret"));
+        assertEquals(409,assertThrows(ApiException.class,()->destinations.rotateKey("owner.a",workspace,destination,new DestinationService.RotateKey(true,version))).status);
+        assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM audit_event WHERE operation='DESTINATION_KEY_ROTATED'",Integer.class));
+    }
+
+    @Test void rotationIsRejectedWhenADeliveryIsStillActive() {
+        create();
+        long version=destinations.list("owner.a",workspace).stream().filter(d->d.id().equals(destination)).findFirst().orElseThrow().version();
+        assertEquals(409,assertThrows(ApiException.class,()->destinations.rotateKey("owner.a",workspace,destination,new DestinationService.RotateKey(true,version))).status);
+    }
 
     @Test void reviewResultKeepsItsSchemaInsideSignedCallback() {
         String job=jobs.create("owner.a",workspace,id(),new JobService.CreateJob(app,"评审回调",ReviewFixtures.INPUT,List.of(destination),"zh-CN",null,"REQUIREMENTS_REVIEW")).jobId();

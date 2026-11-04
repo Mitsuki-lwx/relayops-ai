@@ -66,6 +66,10 @@ relayops:
     review-max-tokens: ${RELAYOPS_MODEL_REVIEW_MAX_TOKENS:8192}
     token-parameter: ${RELAYOPS_MODEL_TOKEN_PARAMETER:max_tokens}
     json-mode: ${RELAYOPS_MODEL_JSON_MODE:true}
+  delivery:
+    demo-port: ${RELAYOPS_DELIVERY_DEMO_PORT:8091}
+    timeout-seconds: ${RELAYOPS_DELIVERY_TIMEOUT_SECONDS:5}
+    https-hosts: ${RELAYOPS_DELIVERY_HTTPS_HOSTS:}
   budget:
     max-daily-limit: ${RELAYOPS_MAX_DAILY_LIMIT:100}
   master-key: ${RELAYOPS_MASTER_KEY}

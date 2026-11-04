@@ -7,7 +7,7 @@
 需求评审已完成137后端、88浏览器、4条成功真实评审及Langfuse/报告验证；OpenSpec同步归档、自审凭据扫描和提交推送收尾。
 
 ## Current Phase
-Phase 58 (complete)
+Phase 59 (complete)
 
 ## Phases
 
@@ -294,4 +294,8 @@ Phase 58 (complete)
 
 ### Phase 58: Version prompt v2 and model recheck
 - [x] 忽略重排/格式/注入指令的version.compat.v2；三次47/48、稳定15/16；qwen v2单次16/16但仅单次；默认模型不变。
+- **Status:** complete
+
+### Phase 59: External HTTPS delivery and key rotation
+- [x] 白名单URL/SSRF、动态目录、轮换API/UI；151后端+98浏览器；真实第三方证书未验。
 - **Status:** complete
