@@ -388,3 +388,7 @@ API 与协议依据：[Spring AMQP 发布确认与 returns](https://docs.spring.
 - `node scripts/test-backup-restore.mjs`：从`relayops_test`备份到新建库，27表、779,666字节；备份976ms、恢复7,037ms、再导出455ms、总计8,680ms；完整有序SQL/密文hash一致，目标库已删除，主库未写。
 - `node scripts/metadata-retention-inventory.mjs --database relayops --days 30 --json`：只读统计终止任务及结果/尝试/预算/幂等/Outbox/目的地/交付/审计依赖；本次主库0行超过30天。脚本无删除路径。
 - 本机逻辑恢复时间不代表生产RTO；未验证跨机传输、磁盘满、网络分区、备份加密/物理擦除。删除式30天元数据清理仍需明确保留字段和独立授权；详见`docs/backup-restore-slo.md`。
+
+## 1.1.0发布候选（2026-11-04）
+- 版本/健康/前端标识升级1.1.0；后端151项、浏览器98项通过；发布包17文件、35,496,347字节、SHA256`4cc8d57fa5814b9aa0efec06afbba6ec3dd22bc226e8fdad14b016246e617d61`，`verify-release.ps1`通过。
+- 主服务18080健康UP/1.1.0，主库V8、12类事实hash不变。未创建tag/Release；真实第三方证书交付、删除式30天清理和公司总额度仍未完成。

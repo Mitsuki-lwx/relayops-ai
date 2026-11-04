@@ -7,7 +7,7 @@
 需求评审已完成137后端、88浏览器、4条成功真实评审及Langfuse/报告验证；OpenSpec同步归档、自审凭据扫描和提交推送收尾。
 
 ## Current Phase
-Phase 60 (complete)
+Phase 61 (complete)
 
 ## Phases
 
@@ -302,4 +302,8 @@ Phase 60 (complete)
 
 ### Phase 60: Backup/restore SLO and retention inventory
 - [x] 恢复演练计时/27表hash；30天只读盘点；SLO文档；未执行删除。
+- **Status:** complete
+
+### Phase 61: 1.1.0 release candidate
+- [x] 版本1.1.0、151后端/98浏览器、17文件包/hash、verify-release、主服务UP；未tag/Release。
 - **Status:** complete

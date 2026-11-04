@@ -27,3 +27,9 @@
 分发历史：33bf4e6的首轮CI虽通过，但Linux清单未覆盖隐藏.env.example（14项/实际15文件）。已复现并拒绝旧包；e977faf加入-Force及完整文件集合核对，第二轮CI产物15项全部通过。旧包未作为正式发布附件。历史失败与修复过程保留在progress.md。
 
 框架用法核对官方[Spring Boot静态资源](https://docs.spring.io/spring-boot/reference/web/servlet.html)、[Spring Security请求授权](https://docs.spring.io/spring-security/reference/servlet/authorization/authorize-http-requests.html)和[Maven资源目录](https://maven.apache.org/plugins/maven-resources-plugin/examples/resource-directory.html)。
+
+## 1.1.0 候选（未发布）
+- 提交`35541f2`；版本1.1.0，包含需求评审、版本对比、OWNER每日额度、受控外网HTTPS回调/密钥轮换、备份SLO/元数据只读盘点。
+- 后端151项、浏览器98项通过；发布包17文件，ZIP 35,496,347字节，SHA256 `4cc8d57fa5814b9aa0efec06afbba6ec3dd22bc226e8fdad14b016246e617d61`；`verify-release.ps1`通过。
+- V1–V7未改；V8 workspace额度策略已包含。主库12类事实hash不变。
+- 未创建tag或GitHub Release；真实第三方HTTPS证书交付、删除式30天清理、公司总额度仍未完成。本候选可运行，但不是已发布版本。
