@@ -381,3 +381,5 @@ API 与协议依据：[Spring AMQP 发布确认与 returns](https://docs.spring.
 - 无数据库迁移；本机目录和原交付契约保持。白名单配置`RELAYOPS_DELIVERY_HTTPS_HOSTS`默认空，未配置时不显示外网目录。
 - 真实第三方HTTPS证书交付未做端到端验证；本轮验证创建/白名单/SSRF拒绝/本机签名路径和轮换，不宣称第三方接收端兼容或DNS重绑定完全防护。
 - 主服务18080加载最终JAR健康UP；主库12类事实hash不变；临时18081停止。主服务仍以`--relayops.retention-enabled=false`只读启动。
+
+提交44c6c16已推送origin/main，27个暂存文件扫描8个本地敏感值0命中；8份主规范严格校验通过。
