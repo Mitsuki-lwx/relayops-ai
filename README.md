@@ -35,6 +35,7 @@ AI 技术文档任务与结果交付平台。当前链路：登录 → 公司与
 - [需求评审固定评测集](eval/requirements-review/README.md)：20个合成样本、确定性评分与比较协议。
 - [同供应商模型对照](docs/model-comparison.md)：deepseek与qwen3.8-flash的固定样本结果。
 - [原理与代码导读](docs/walkthrough.md)：202、事务和 SENT 边界。
+- [备份恢复SLO与元数据盘点](docs/backup-restore-slo.md)：本机RTO观测、恢复步骤与30天只读盘点。
 - [验证记录](docs/verification.md)：实际命令、结果及限制。
 
 ## 本地运行

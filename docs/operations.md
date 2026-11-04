@@ -18,7 +18,10 @@ node scripts/backup-database.mjs relayops artifacts/backups/manual.sql
 
 先禁用worker/consumer/relay/recovery/retention，以只读方式核对。确认配置及目标后再启用执行器：未SENT责任可恢复；SENT且无确定结果必须保留UNKNOWN/UNCERTAIN，禁止人工把它改回QUEUED。回调确认丢失只能按既有稳定deliveryId去重，恢复接收端去重库后再启用交付。恢复数据库不等于消除已发生的供应商或接收端副作用。
 
-源码仓库可运行`node scripts/test-backup-restore.mjs`，仅从relayops_test备份到本次新建的relayops_restore_时间戳库，对比重新导出的完整有序SQL/hash后删除该新库；不接触主库。此演练证明逻辑数据及密文完整，不代表跨机灾难恢复、备份泄漏防护或所有外部副作用都已恢复。
+源码仓库可运行`node scripts/test-backup-restore.mjs`；时间/RTO口径见[备份恢复SLO](backup-restore-slo.md)。，仅从relayops_test备份到本次新建的relayops_restore_时间戳库，对比重新导出的完整有序SQL/hash后删除该新库；不接触主库。此演练证明逻辑数据及密文完整，不代表跨机灾难恢复、备份泄漏防护或所有外部副作用都已恢复。
+
+## 备份与元数据保留
+本机逻辑恢复演练计时和SLO边界见[备份恢复SLO](backup-restore-slo.md)；`node scripts/metadata-retention-inventory.mjs`只读盘点30天以上元数据及依赖，不执行删除。
 
 ## 每日额度策略
 空间OWNER可在运行概览调整每日额度，部署硬上限由`RELAYOPS_MAX_DAILY_LIMIT`（默认100）控制。降低额度不能低于当天`reserved+spent+uncertain`，否则返回422；历史日期不改写。该额度只限制平台受理次数，不是供应商账单，也不限制供应商并发或实际费用。公司总额度、按用户额度尚未实现。

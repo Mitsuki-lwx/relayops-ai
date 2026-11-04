@@ -383,3 +383,8 @@ API 与协议依据：[Spring AMQP 发布确认与 returns](https://docs.spring.
 - 主服务18080加载最终JAR健康UP；主库12类事实hash不变；临时18081停止。主服务仍以`--relayops.retention-enabled=false`只读启动。
 
 提交44c6c16已推送origin/main，27个暂存文件扫描8个本地敏感值0命中；8份主规范严格校验通过。
+
+## 备份恢复SLO与30天元数据盘点（2026-11-04）
+- `node scripts/test-backup-restore.mjs`：从`relayops_test`备份到新建库，27表、779,666字节；备份976ms、恢复7,037ms、再导出455ms、总计8,680ms；完整有序SQL/密文hash一致，目标库已删除，主库未写。
+- `node scripts/metadata-retention-inventory.mjs --database relayops --days 30 --json`：只读统计终止任务及结果/尝试/预算/幂等/Outbox/目的地/交付/审计依赖；本次主库0行超过30天。脚本无删除路径。
+- 本机逻辑恢复时间不代表生产RTO；未验证跨机传输、磁盘满、网络分区、备份加密/物理擦除。删除式30天元数据清理仍需明确保留字段和独立授权；详见`docs/backup-restore-slo.md`。

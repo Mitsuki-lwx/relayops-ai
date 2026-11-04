@@ -7,7 +7,7 @@
 需求评审已完成137后端、88浏览器、4条成功真实评审及Langfuse/报告验证；OpenSpec同步归档、自审凭据扫描和提交推送收尾。
 
 ## Current Phase
-Phase 59 (complete)
+Phase 60 (complete)
 
 ## Phases
 
@@ -298,4 +298,8 @@ Phase 59 (complete)
 
 ### Phase 59: External HTTPS delivery and key rotation
 - [x] 白名单URL/SSRF、动态目录、轮换API/UI；151后端+98浏览器；真实第三方证书未验。
+- **Status:** complete
+
+### Phase 60: Backup/restore SLO and retention inventory
+- [x] 恢复演练计时/27表hash；30天只读盘点；SLO文档；未执行删除。
 - **Status:** complete
