@@ -14,9 +14,9 @@ public class HealthController {
     public ResponseEntity<Map<String,String>> health() {
         try {
             jdbc.queryForObject("SELECT 1",Integer.class);
-            return ResponseEntity.ok().header("Cache-Control","no-store").body(Map.of("status","UP","version","1.0.0"));
+            return ResponseEntity.ok().header("Cache-Control","no-store").body(Map.of("status","UP","version","1.1.0"));
         } catch (RuntimeException ex) {
-            return ResponseEntity.status(503).header("Cache-Control","no-store").body(Map.of("status","DOWN","version","1.0.0"));
+            return ResponseEntity.status(503).header("Cache-Control","no-store").body(Map.of("status","DOWN","version","1.1.0"));
         }
     }
 }

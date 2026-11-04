@@ -1,4 +1,4 @@
-param([string]$Jar = (Join-Path (Split-Path -Parent $PSScriptRoot) 'backend/target/relayops-backend-1.0.0.jar'),
+param([string]$Jar = (Join-Path (Split-Path -Parent $PSScriptRoot) 'backend/target/relayops-backend-1.1.0.jar'),
       [string]$Channel = 'msedge', [ValidateRange(1024,65535)][int]$Port = 18081,
       [ValidateRange(1,65535)][int]$ReceiverPort = 18091,
       [ValidateRange(0,65535)][int]$DatabasePort = 0, [switch]$PackagedOnly)

@@ -32,7 +32,7 @@ const html = await index.text(); assert.ok(!html.includes('/src/main.ts'));
 const asset = html.match(/src="(\/assets\/[^\"]+\.js)"/)[1]; assert.equal((await owner.request(asset)).status,200);
 assert.equal((await owner.request('/fonts/ibm-plex-sans-400.ttf')).status,200);
 const health = await owner.request('/healthz'); assert.equal(health.status,200); assert.equal(health.headers.get('cache-control'),'no-store');
-assert.deepEqual(await health.json(),{status:'UP',version:'1.0.0'});
+assert.deepEqual(await health.json(),{status:'UP',version:'1.1.0'});
 assert.equal((await owner.login('owner.a')).status,401,'release profile must not create demo users');
 assert.equal((await owner.login('release.owner')).status,204);
 const me = await (await owner.request('/api/v1/me')).json(); assert.equal(me.workspaces.length,1);
@@ -65,4 +65,4 @@ const reviewResult = await (await owner.request(prefix+'/jobs/'+reviewJob.jobId+
 assert.equal(reviewResult.data.schemaVersion,'requirements.review.result.v1');
 assert.ok(Array.isArray(reviewResult.data.review.acceptanceCriteria) && reviewResult.data.review.acceptanceCriteria.length===1);
 assert.equal((await member.request(prefix+'/jobs/'+reviewJob.jobId)).status,404);
-console.log(JSON.stringify({version:'1.0.0',sameOriginJar:true,releaseProfileNoDemo:true,provisionedOwnerAndMember:true,anonymousAndCsrf:true,invalidQuery422:true,fakeModelCalls:2,reviewPurpose:true,memberIsolation:true}));
+console.log(JSON.stringify({version:'1.1.0',sameOriginJar:true,releaseProfileNoDemo:true,provisionedOwnerAndMember:true,anonymousAndCsrf:true,invalidQuery422:true,fakeModelCalls:2,reviewPurpose:true,memberIsolation:true}));

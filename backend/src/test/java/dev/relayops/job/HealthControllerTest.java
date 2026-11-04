@@ -12,7 +12,7 @@ class HealthControllerTest {
         var jdbc=mock(JdbcTemplate.class);when(jdbc.queryForObject("SELECT 1",Integer.class)).thenReturn(1);
         var response=new HealthController(jdbc).health();
         assertEquals(200,response.getStatusCode().value());assertEquals("UP",response.getBody().get("status"));
-        assertEquals("1.0.0",response.getBody().get("version"));assertEquals(2,response.getBody().size());assertEquals("no-store",response.getHeaders().getCacheControl());
+        assertEquals("1.1.0",response.getBody().get("version"));assertEquals(2,response.getBody().size());assertEquals("no-store",response.getHeaders().getCacheControl());
     }
     @Test void databaseFailureDoesNotExposeConnectionOrException() {
         var jdbc=mock(JdbcTemplate.class);when(jdbc.queryForObject("SELECT 1",Integer.class)).thenThrow(new DataAccessResourceFailureException("private-db-address/password"));
