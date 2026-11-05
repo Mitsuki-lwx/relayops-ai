@@ -186,6 +186,14 @@ figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.55}
 
 .quote{border-left:3px solid var(--accent);padding:2px 0 2px 15px;color:var(--muted);font-size:15px;margin:16px 0}
 .small-muted{font-size:13px;color:var(--muted)}
+.term{border-bottom:1px dotted var(--accent);cursor:help;text-decoration:none}
+.term:hover,.term:focus{background:var(--accent-soft);outline:none;border-radius:3px}
+.term:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.term-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px;margin:16px 0}
+.term-item{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface)}
+.term-item b{display:block;color:var(--accent);font-size:14px;margin-bottom:2px}
+.term-item span{display:block;color:var(--muted);font-size:13.5px;line-height:1.6}
+@media (max-width:760px){.term-grid{grid-template-columns:1fr}}
 .two-col-list{columns:2;column-gap:30px}
 .two-col-list li{break-inside:avoid}
 .top-link{font-size:12px;color:var(--muted);float:right;font-weight:400;text-decoration:none}
@@ -237,7 +245,7 @@ figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.55}
     <div class="eyebrow">Interview deep dive · 2026-11</div>
     <h1>RelayOps</h1>
     <p class="sub">把“让 AI 处理技术文档”做成一条可靠、可追责、可交付的异步任务链路。</p>
-    <p class="lead">一句话：它不是“上传文档然后调一下模型”的演示页，而是一个把权限、幂等、事务、消息、状态机、引用校验、加密、回调、清理和审计都串起来的单机自托管平台。下面这份文档按“先讲人话，再讲面试深挖”的顺序组织。</p>
+    <p class="lead">一句话：它不是“上传文档然后调一下模型”的演示页，而是一个把权限、幂等、事务、消息、状态机、引用校验、加密、回调、清理和审计都串起来的单机自托管平台。下面这份文档按“先讲人话，再讲面试深挖”的顺序组织；带虚线下划线的技术词，鼠标悬停或键盘聚焦就能看到解释。</p>
     <div class="chips">
       <span class="chip">Java 21</span>
       <span class="chip">Spring Boot 4.1.2</span>
@@ -245,9 +253,10 @@ figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.55}
       <span class="chip">MySQL 8</span>
       <span class="chip">RabbitMQ 4.3</span>
       <span class="chip">26 张业务表</span>
-      <span class="chip">137 后端测试</span>
-      <span class="chip">88 浏览器测试</span>
-      <span class="chip">v1.0.0 已发布</span>
+      <span class="chip">151 后端测试</span>
+      <span class="chip">98 浏览器测试</span>
+      <span class="chip">1.1.0 候选</span>
+      <span class="chip">1.0.0 已发布</span>
     </div>
     <div class="hero-grid">
       <div class="hero-card"><b>先记住 01</b><span>202 不是“做完了”，而是“平台已经把责任写进数据库”。</span></div>
@@ -262,6 +271,7 @@ figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.55}
     <b>目录</b>
     <div class="toc-body">
       <a href="#how-to-use">这份文档怎么用</a>
+      <a href="#terms">先看术语（不懂词点这里）</a>
       <a href="#pitch">1. 一分钟 / 两分钟 / 十分钟</a>
       <a href="#why">2. 为什么不是普通 CRUD</a>
       <a href="#users">3. 用户、公司与权限</a>
@@ -271,6 +281,7 @@ figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.55}
       <a href="#data">7. 数据模型与约束</a>
       <a href="#reliability">8. 可靠性核心</a>
       <a class="sub" href="#idempotency">8.1 幂等</a>
+      <a class="sub" href="#budget-policy">8.1.1 每日额度</a>
       <a class="sub" href="#outbox">8.2 事务 Outbox</a>
       <a class="sub" href="#consumer">8.3 消费者与 ACK</a>
       <a class="sub" href="#sent">8.4 SENT / UNKNOWN</a>
@@ -281,10 +292,10 @@ figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.55}
       <a class="sub" href="#retention">8.9 七天清理</a>
       <a href="#security">9. 安全与权限</a>
       <a href="#frontend">10. 前端工作台</a>
-      <a href="#ai">11. AI 与需求评审</a>
+      <a href="#ai">11. AI 与三种用途</a>
       <a href="#testing">12. 测试与证据</a>
       <a href="#tradeoffs">13. 取舍与边界</a>
-      <a href="#qa">14. 面试问答 50+</a>
+      <a href="#qa">14. 面试问答 76 问</a>
       <a href="#star">15. STAR 故事</a>
       <a href="#resume">16. 简历 bullets</a>
       <a href="#demo">17. 10 分钟演示脚本</a>
@@ -301,7 +312,7 @@ figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.55}
     <section class="section" id="how-to-use">
       <div class="kicker">Read me first</div>
       <h2>这份文档怎么用</h2>
-      <p class="lede">如果你技术背景不强，先只看每节的“人话版”和三个“先记住”。如果你要面试，重点背第 6、8、14 节：一条链路、三个边界、五十个追问。</p>
+      <p class="lede">如果你技术背景不强，先只看每节的“人话版”和三个“先记住”。如果你要面试，重点背第 6、8、14 节：一条链路、三个边界、七十多个追问；遇到不懂的词，先看下一节“先看术语”。</p>
       <div class="grid-3">
         <div class="card"><span class="tag">面试前 10 分钟</span><h4>只看速记</h4><p>第 1 节的三段自我介绍、第 18 节的数字和“不要说的话”。</p></div>
         <div class="card"><span class="tag">面试前 1 小时</span><h4>看链路和边界</h4><p>第 6 节任务一生、第 8 节可靠性、第 14 节 Q&amp;A。能画图讲清楚即可。</p></div>
@@ -317,6 +328,36 @@ figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.55}
       </div>
     </section>
 
+    <section class="section" id="terms">
+      <div class="kicker">Glossary first</div>
+      <h2>先看术语：这些词到底是什么意思</h2>
+      <p class="lede">不用一次背完。正文里带<strong>虚线下划线</strong>的词，鼠标悬停、键盘 Tab 聚焦，或在手机上点一下，会显示一句人话解释；本页只是最常用的 18 个。完整表在附录 C。</p>
+      <div class="term-grid">
+        <div class="term-item"><b>幂等（Idempotency）</b><span>同一个操作做多次，结果和做一次一样。像取号纸：同一张号不会排两次队。</span></div>
+        <div class="term-item"><b>事务（Transaction）</b><span>一组数据库操作要么全成功、要么全失败；不能只写一半。比如任务和待发消息必须一起落库。</span></div>
+        <div class="term-item"><b>Outbox</b><span>和业务数据放在同一个账本里的“待发消息清单”，防止业务写完但消息丢了。</span></div>
+        <div class="term-item"><b>MQ / RabbitMQ</b><span>消息队列，负责把“可以执行了”的通知从一个系统传到另一个系统；它不保存正文。</span></div>
+        <div class="term-item"><b>ACK / confirm</b><span>ACK 是消费者说“我处理完了”；confirm 是队列说“我收到消息了”。两个方向，不能互相替代。</span></div>
+        <div class="term-item"><b>租约（Lease）</b><span>临时工牌：一段时间内你有权干活；过期就换人，旧人不能交结果。</span></div>
+        <div class="term-item"><b>代次（Generation）</b><span>派工单的版本号；旧版通知不能拿来执行新任务。</span></div>
+        <div class="term-item"><b>SENT / UNKNOWN</b><span>SENT 表示“可能已经发给供应商”；UNKNOWN 表示“可能做了，但我拿不到可验证结果”。</span></div>
+        <div class="term-item"><b>CSRF</b><span>防止别的网站借你的登录状态偷偷发请求；写操作必须带一次性令牌。</span></div>
+        <div class="term-item"><b>AES-GCM / AAD</b><span>一种带完整性校验的加密；AAD 是附加标签，比如“这条密文属于哪个空间/任务”，换任务就解不开。</span></div>
+        <div class="term-item"><b>HMAC</b><span>用共享密钥给消息做“防伪签名”，接收方可以验证没被改、不是伪造。</span></div>
+        <div class="term-item"><b>SSRF</b><span>攻击者诱导服务器去访问内网地址。外网回调必须白名单 + 拒绝私网/环回地址。</span></div>
+        <div class="term-item"><b>白名单（Allowlist）</b><span>只允许名单里的主机，其他一律拒绝；比“黑名单”更适合外发场景。</span></div>
+        <div class="term-item"><b>乐观锁 / 版本号</b><span>更新前先比对版本；版本变了就返回 409，让用户刷新，而不是覆盖别人的修改。</span></div>
+        <div class="term-item"><b>游标分页</b><span>记住上一页最后一条的位置，从这里继续查；比“跳过前 N 条”更稳，不会因新增数据重复。</span></div>
+        <div class="term-item"><b>逻辑隔离</b><span>大家共用一个数据库，但每条查询都带公司/空间条件；不是每家一个独立数据库。</span></div>
+        <div class="term-item"><b>RPO / RTO</b><span>RPO 是“最多丢多少数据”，RTO 是“多久能恢复”；当前只有单机逻辑恢复观测，不是生产 SLO。</span></div>
+        <div class="term-item"><b>评测集 / 基线</b><span>一组固定样本 + 评分规则 + 历史结果；用来比较提示词/模型改动，不是准确率证书。</span></div>
+      </div>
+      <div class="note">
+        <b>读法建议</b>
+        <p>第一遍只记“幂等、事务、Outbox、SENT/UNKNOWN、租约/代次”五个；它们串起来就是第 6 节的任务一生。其他词遇到再回来看。</p>
+      </div>
+    </section>
+
     <section class="section" id="pitch">
       <div class="kicker">01 · Pitch</div>
       <h2><span class="num">1.</span>一分钟 / 两分钟 / 十分钟</h2>
@@ -325,9 +366,9 @@ figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.55}
       <div class="quote">RelayOps 是一个面向开发团队的技术文档异步处理平台。用户提交文档后，平台先把任务可靠落库并返回 202，再通过事务 Outbox 和 RabbitMQ 交给后台执行；模型输出必须带可精确定位的原文引用，结果加密保存并按七天保留期清理。它重点解决的是异步调用中的重复扣费、消息丢失、越权读取和“结果不明”问题。</div>
 
       <h3>两分钟版（面试开场）</h3>
-      <p>“我做了一个叫 RelayOps 的单机自托管平台。业务上，它把技术文档转成结构化结论：摘要、关键点、约束、未知项，每条都要能定位到原文；后来又加了需求评审，把疑似缺漏、歧义、冲突整理成澄清问题和 Given/When/Then 验收草稿。</p>
-      <p>技术上，它不是同步调模型。受理请求会在一个数据库事务里写任务、预算、幂等记录、Outbox 和审计，提交后才返回 202。后台发布器把消息发给 RabbitMQ，消费者从数据库重新校验任务和代次，领取后先写 PREPARED，再把尝试标成 SENT、把预算从预留转成已用，然后才在事务外调用模型。只要可能已经发出去，结果不明就进入 UNKNOWN，平台不会自动重试，用户必须明确重跑并确认费用。</p>
-      <p>另外有公司/空间/部门小组的显式授权、AES-GCM 正文加密、七天 TTL 清理、签名回调和单条补投、运行概览和安全审计。验证上，当前源码有 137 个后端测试、88 个浏览器测试，使用真实 MySQL、RabbitMQ 和本机 HTTP 桩；1.0 也做过发布包、恢复演练和真实模型小样本验收。”</p>
+      <p>“我做了一个叫 RelayOps 的单机自托管平台。业务上，它把技术文档转成结构化结论：摘要、关键点、约束、未知项，每条都要能定位到原文；后来又加了需求评审和版本对比：一个把疑似缺漏、歧义、冲突整理成澄清问题和 Given/When/Then 验收草稿，另一个比较基线与修订，输出新增/删除/修改及其影响。”</p>
+      <p>技术上，它不是同步调模型。受理请求会在一个<abbr class="term" tabindex="0" title="事务：一组数据库操作要么全成功、要么全失败，不能只写一半。">数据库事务</abbr>里写任务、预算、幂等记录、<abbr class="term" tabindex="0" title="Outbox：和业务数据放在同一个账本里的待发消息清单，防止业务写完但消息丢了。">Outbox</abbr> 和审计，提交后才返回 202。后台发布器把消息发给 <abbr class="term" tabindex="0" title="RabbitMQ：消息队列，只负责传递“可以执行了”的通知，不保存正文。">RabbitMQ</abbr>，消费者从数据库重新校验任务和代次，领取后先写 PREPARED，再把尝试标成 <abbr class="term" tabindex="0" title="SENT：平台承认“请求可能已经发给供应商”的边界；此后失败只能 UNKNOWN，不能自动重调。">SENT</abbr>、把预算从预留转成已用，然后才在事务外调用模型。只要可能已经发出去，结果不明就进入 <abbr class="term" tabindex="0" title="UNKNOWN：可能已经执行，但平台拿不到可验证结果；不是普通失败，不能自动重来。">UNKNOWN</abbr>，平台不会自动重试，用户必须明确重跑并确认费用。</p>
+      <p>另外有公司/空间/部门小组的显式授权、<abbr class="term" tabindex="0" title="AES-GCM：带完整性校验的加密；改一个字节就解不开。AAD 还会把密文绑定到空间/任务。">AES-GCM</abbr> 正文加密、七天 TTL 清理、签名回调和单条补投、运行概览和安全审计；1.1 候选又加了 OWNER 可调每日额度、受控外网 HTTPS 回调与签名密钥轮换、版本对比和固定评测集。验证上，当前源码有 151 个后端测试、98 个浏览器测试，使用真实 MySQL、RabbitMQ 和本机 HTTP 桩；1.0 已正式发布，1.1 还只是候选，没有创建 Release。</p>
 
       <h3>十分钟版（白板顺序）</h3>
       <ol>
@@ -431,26 +472,36 @@ figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.55}
         <div class="card"><span class="tag">模型</span><h4>Fake 与 OpenAI 兼容</h4><ul><li>默认 Fake，不产生外部费用</li><li>兼容非流式 Chat Completions，显式外发确认</li><li>超时/拒绝/截断/工具调用/伪造引用分类处理</li></ul></div>
         <div class="card"><span class="tag">结果</span><h4>结构化结论 + 原文引用</h4><ul><li>摘要、关键点、约束、未知项</li><li>每条引用必须精确匹配段落 ID 和原文子串</li><li>AES-GCM 加密，七天 TTL，Markdown 报告导出</li></ul></div>
         <div class="card"><span class="tag">生命周期</span><h4>取消、明确重跑、清理</h4><ul><li>QUEUED 可取消，释放原受理日额度</li><li>FAILED/UNKNOWN 可显式重跑，创建新任务</li><li>到期终态载荷分批置空，保留业务元数据</li></ul></div>
-        <div class="card"><span class="tag">交付</span><h4>签名回调与单条补投</h4><ul><li>固定本机目录，HMAC-SHA256，五分钟窗口</li><li>最多 6 次 / 1 小时，2xx 成功，408/429/5xx 重试</li><li>DEAD 交付两分钟预览后补投，保留旧轮次</li></ul></div>
+        <div class="card"><span class="tag">交付</span><h4>签名回调与单条补投</h4><ul><li>1.0 固定本机目录；1.1 候选加白名单 HTTPS</li><li>HMAC-SHA256，五分钟窗口；最多 6 次 / 1 小时</li><li>DEAD 交付两分钟预览后补投，保留旧轮次</li></ul></div>
         <div class="card"><span class="tag">运维</span><h4>概览、审计、历史、发布</h4><ul><li>15 秒刷新运行概览，只读审计</li><li>完整历史：字面搜索 + 状态筛选 + 时间/ID 游标</li><li>同源 JAR、CLI 建号、备份恢复、CI</li></ul></div>
       </div>
 
-      <h3>1.0 之后的源码增量</h3>
+      <h3>1.1.0 候选（源码已实现，未发布附件）</h3>
+      <div class="grid-2">
+        <div class="card"><span class="tag">新用途</span><h4>需求评审与验收草稿</h4><ul><li>最多 6 项 GAP/AMBIGUITY/CONFLICT + 澄清问题</li><li>最多 6 项 Given/When/Then + 待确认假设</li><li>精确引用；冲突至少两条不同引用</li></ul></div>
+        <div class="card"><span class="tag">新用途</span><h4>文档版本对比与影响分析</h4><ul><li>基线与修订双输入，段落 ID 用 <code>a0001</code>/<code>b0001</code></li><li>最多 8 项 ADDED/REMOVED/MODIFIED，修改必须双侧引用</li><li>最多 6 项受影响约束 + 6 项验收草稿；不自动合并</li></ul></div>
+        <div class="card"><span class="tag">额度</span><h4>OWNER 可调每日额度</h4><ul><li>V8 新增 workspace 策略 + 版本号；默认 20</li><li>部署硬上限 <code>RELAYOPS_MAX_DAILY_LIMIT</code> 默认 100</li><li>降额不得低于当天已占用；变更审计、409 版本冲突</li></ul></div>
+        <div class="card"><span class="tag">交付</span><h4>受控外网 HTTPS + 密钥轮换</h4><ul><li>白名单 DNS 主机、固定 <code>/relayops/events</code>、443</li><li>拒绝私网/环回/IP/查询/片段/重定向；发送前再解析</li><li>OWNER 在无活跃交付时轮换 32 字节签名密钥</li></ul></div>
+        <div class="card"><span class="tag">评测</span><h4>固定评测集与模型对照</h4><ul><li>需求评审 20 样本：单次 20/20，三次稳定 16/20</li><li>版本对比 16 样本：v2 三次 47/48 成功，稳定 15/16</li><li>qwen3.8-flash 与 deepseek 单次对照；暂不换默认模型</li></ul></div>
+        <div class="card"><span class="tag">运维</span><h4>备份 SLO 与 30 天盘点</h4><ul><li>本机 27 表逻辑恢复观测 8.68 秒</li><li>30 天元数据只读盘点；不执行删除</li><li>17 文件发布包、35,496,347 字节、SHA256 记录</li></ul></div>
+      </div>
+
+      <h3>仍然没有做的（别在面试里说成已有）</h3>
       <div class="table-wrap">
         <table>
           <thead><tr><th>能力</th><th>状态</th><th>说明</th></tr></thead>
           <tbody>
-            <tr><td>需求评审与验收草稿</td><td><span class="badge b-ok">已实现</span></td><td>新任务用途 <code>REQUIREMENTS_REVIEW</code>，输出疑似 GAP/AMBIGUITY/CONFLICT、澄清问题、Given/When/Then；不自动执行、不替用户选冲突值。</td></tr>
-            <tr><td>固定评测集</td><td><span class="badge b-ok">已建立</span></td><td>20 个中文合成样本、确定性评分器、10 个评分器单测；尚未在真实供应商上批量跑完。</td></tr>
-            <tr><td>Langfuse 观测</td><td><span class="badge b-ok">源码可用</span></td><td>默认关闭；只导出元数据/阶段/usage，不传标题、正文、引用、密钥。已发布 1.0 JAR 不含此增量。</td></tr>
-            <tr><td>外网 HTTPS 回调</td><td><span class="badge b-warn">未实现</span></td><td>当前只允许固定 <code>http://127.0.0.1:8091/relayops/events</code>。</td></tr>
+            <tr><td>真实第三方 HTTPS 证书端到端交付</td><td><span class="badge b-warn">未验证</span></td><td>已验证白名单、SSRF 拒绝、本机签名路径和轮换；未对接真实第三方接收端。</td></tr>
+            <tr><td>DNS 重绑定完全防护</td><td><span class="badge b-warn">未完成</span></td><td>发送前再次解析降低风险，但生产仍需受控主机、网络出口策略和接收端验签。</td></tr>
             <tr><td>批量 / PDF / OCR / RAG</td><td><span class="badge b-warn">未实现</span></td><td>没有装成“已支持”的空接口。</td></tr>
             <tr><td>多实例高可用</td><td><span class="badge b-warn">未实现</span></td><td>单应用实例；多实例会带来会话与恢复竞争。</td></tr>
-            <tr><td>密钥轮换 / 物理擦除 / 30 天元数据清理</td><td><span class="badge b-warn">未实现</span></td><td>当前单主密钥；SQL 置空不等于磁盘页/备份安全擦除。</td></tr>
+            <tr><td>公司总额度 / 按用户额度</td><td><span class="badge b-warn">未实现</span></td><td>额度仍按空间；不是供应商账单。</td></tr>
+            <tr><td>删除式 30 天元数据清理 / 物理擦除</td><td><span class="badge b-warn">未实现</span></td><td>只有只读盘点；SQL 置空不等于磁盘页/备份安全擦除。</td></tr>
+            <tr><td>主密钥轮换 / KMS</td><td><span class="badge b-warn">未实现</span></td><td>轮换的是回调签名密钥，不是正文加密主密钥。</td></tr>
           </tbody>
         </table>
       </div>
-      <p class="small-muted">说明：1.0 发布附件是 2026-11-02 的代码；需求评审、固定评测集、Langfuse 是之后的源码增量。面试时要把“已发布”和“源码已实现”分开说。</p>
+      <p class="small-muted">说明：1.0.0 是 2026-11-02 已发布附件；1.1.0 是 2026-11-04 源码候选（提交 35541f2），尚未创建 tag/Release。面试时要把“已发布”和“候选/源码已实现”分开说，尤其不要说“1.1 已上线”。</p>
     </section>
 
     <section class="section" id="architecture">
@@ -461,7 +512,7 @@ figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.55}
       <figure>
         <svg viewBox="0 0 1000 640" role="img" aria-labelledby="archTitle archDesc">
           <title id="archTitle">RelayOps 总体架构</title>
-          <desc id="archDesc">浏览器工作台通过同源 HTTP 访问 Spring Boot 模块化单体；应用写 MySQL 作为事实源，通过事务 Outbox 发布到 RabbitMQ，消费者执行 AI 任务并调用兼容模型；结果通过独立交付 Outbox 发送到本机签名接收端。</desc>
+          <desc id="archDesc">浏览器工作台通过同源 HTTP 访问 Spring Boot 模块化单体；应用写 MySQL 作为事实源，通过事务 Outbox 发布到 RabbitMQ，消费者执行 AI 任务并调用兼容模型；结果通过独立交付 Outbox 发送到本机或白名单 HTTPS 接收端。</desc>
           <defs>
             <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/></marker>
             <marker id="arrowMuted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--line-strong)"/></marker>
@@ -473,7 +524,7 @@ figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.55}
           <text x="38" y="70" class="diagram-title">Vue 3 工作台</text>
           <text x="38" y="96" class="diagram-small">任务队列 / 详情</text>
           <text x="38" y="116" class="diagram-small">新建 / 组织 / 目的地</text>
-          <text x="38" y="136" class="diagram-small">运行概览 / 历史</text>
+          <text x="38" y="136" class="diagram-small">版本对比 / 运行概览 / 历史</text>
           <text x="38" y="156" class="diagram-small">结果与原文依据 / 导出</text>
           <rect x="38" y="176" width="174" height="34" rx="8" class="diagram-box-accent"/>
           <text x="50" y="198" class="diagram-small">同源 fetch + CSRF + 会话</text>
@@ -505,7 +556,7 @@ figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.55}
           <rect x="290" y="264" width="168" height="70" rx="10" class="diagram-box"/>
           <text x="302" y="288" class="diagram-text">DeliveryWorker</text>
           <text x="302" y="308" class="diagram-small">签名、退避、6 次/1h</text>
-          <text x="302" y="324" class="diagram-small">独立 Outbox</text>
+          <text x="302" y="324" class="diagram-small">本机 / 白名单 HTTPS</text>
 
           <rect x="472" y="264" width="168" height="70" rx="10" class="diagram-box"/>
           <text x="484" y="288" class="diagram-text">Org / Ops / Retention</text>
@@ -530,14 +581,14 @@ figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.55}
           <text x="718" y="222" class="diagram-small">超时 / 拒绝 / 截断 / 未知分类</text>
 
           <rect x="700" y="266" width="280" height="82" rx="12" class="diagram-box"/>
-          <text x="718" y="292" class="diagram-title">本机签名接收端</text>
-          <text x="718" y="314" class="diagram-small">Python + SQLite</text>
+          <text x="718" y="292" class="diagram-title">本机 / 外网接收端</text>
+          <text x="718" y="314" class="diagram-small">Python + SQLite / 白名单 HTTPS</text>
           <text x="718" y="332" class="diagram-small">按 deliveryId + hash 去重</text>
 
           <rect x="700" y="392" width="280" height="70" rx="12" class="diagram-box-accent"/>
           <text x="718" y="418" class="diagram-title">MySQL 8 · 事实源</text>
-          <text x="718" y="440" class="diagram-small">26 张表 · V1–V7 迁移</text>
-          <text x="718" y="456" class="diagram-small">任务 / 预算 / 幂等 / Outbox / 审计</text>
+          <text x="718" y="440" class="diagram-small">26 张表 · V1–V8 迁移</text>
+          <text x="718" y="456" class="diagram-small">任务 / 预算 / 策略 / 幂等 / Outbox</text>
 
           <line x1="230" y1="137" x2="270" y2="137" class="diagram-arrow"/>
           <text x="236" y="128" class="diagram-small">HTTP</text>
@@ -581,7 +632,7 @@ figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.55}
           <thead><tr><th>包</th><th>职责</th><th>关键类</th></tr></thead>
           <tbody>
             <tr><td><code>identity</code></td><td>登录、会话、CSRF、角色计算、宿主机建号</td><td>SecurityConfig、Access、ProvisioningService</td></tr>
-            <tr><td><code>job</code></td><td>受理、幂等、预算、取消/重跑、模型适配、执行</td><td>JobService、JobWorker、ModelGateway、LeaseHeartbeat</td></tr>
+            <tr><td><code>job</code></td><td>受理、幂等、预算/额度策略、三种任务用途、取消/重跑、模型适配、执行</td><td>JobService、JobWorker、ModelGateway、LeaseHeartbeat、TaskType</td></tr>
             <tr><td><code>messaging</code></td><td>Outbox、发布、消费、隔离诊断、Rabbit 拓扑</td><td>OutboxStore、OutboxRelay、AiConsumer、ReadyMessage</td></tr>
             <tr><td><code>delivery</code></td><td>目的地、交付轮次、签名 HTTP、补投</td><td>DeliveryWorker、WebhookTransport、ReplayService</td></tr>
             <tr><td><code>organization</code></td><td>公司、部门/小组、成员、授权、组织审计</td><td>OrganizationService</td></tr>
@@ -602,10 +653,10 @@ figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.55}
       <h3>12 步主链路</h3>
       <ol class="steps">
         <li class="step"><div><h4>登录 + 取 CSRF</h4><p>前端先 GET <code>/auth/csrf</code>，再 POST <code>/auth/login</code>。会话 Cookie 是 HttpOnly、SameSite=Lax；写请求必须带 CSRF token。</p></div></li>
-        <li class="step"><div><h4>提交任务</h4><p>POST <code>/api/v1/workspaces/{workspaceId}/jobs</code>，带 <code>Idempotency-Key</code>。正文、标题、语言、最多三个目的地、是否确认外发、任务用途都在请求里。</p><span class="writes">输入：无数据库写入</span></div></li>
-        <li class="step"><div><h4>受理事务：先鉴权，再规范化</h4><p><code>Access.require</code> 重查当前公司成员、直接成员和组织授权；正文做 NFC、换行归一、长度/控制字符校验；幂等键格式校验；对规范化请求做 SHA-256 指纹。</p><span class="writes">事务开始</span></div></li>
+        <li class="step"><div><h4>提交任务</h4><p>POST <code>/api/v1/workspaces/{workspaceId}/jobs</code>，带 <code>Idempotency-Key</code>。正文、标题、语言、最多三个目的地、是否确认外发、任务用途都在请求里；版本对比还要多带一份 <code>inputTextB</code>。</p><span class="writes">输入：无数据库写入</span></div></li>
+        <li class="step"><div><h4>受理事务：先鉴权，再规范化</h4><p><code>Access.require</code> 重查当前公司成员、直接成员和组织授权；正文做 NFC、换行归一、长度/控制字符校验；版本对比分别校验两份文本，再用 <code>&lt;&lt;&lt;VERSION_A&gt;&gt;&gt;</code>/<code>&lt;&lt;&lt;VERSION_B&gt;&gt;&gt;</code> 组合；幂等键格式校验；对规范化请求做 SHA-256 指纹。</p><span class="writes">事务开始</span></div></li>
         <li class="step"><div><h4>幂等重放检查</h4><p>同 workspace + actor + operation + key 的旧记录：同指纹返回原受理快照；不同指纹返回 409。重放也会重新鉴权，不能用旧成功记录绕过撤权。</p><span class="writes">读 idempotency_record</span></div></li>
-        <li class="step"><div><h4>锁应用与当日预算</h4><p>锁住启用中的 application 行；按 Asia/Shanghai 日期建/锁 <code>budget_account</code>；检查 Outbox 积压上限；尝试 <code>reserved+spent+uncertain &lt; daily_limit</code>，成功才 +1 预留。</p><span class="writes">budget_account.reserved +1</span></div></li>
+        <li class="step"><div><h4>锁应用与当日预算</h4><p>锁住启用中的 application 行；按 Asia/Shanghai 日期建/锁 <code>budget_account</code>；当天额度来自 <code>workspace.daily_limit</code> 策略，OWNER 可在部署硬上限内调整；检查 Outbox 积压上限；尝试 <code>reserved+spent+uncertain &lt; daily_limit</code>，成功才 +1 预留。</p><span class="writes">budget_account.reserved +1</span></div></li>
         <li class="step"><div><h4>同事务写任务、分录、目的地、Outbox、审计、幂等快照</h4><p>插入 <code>ai_job</code>（QUEUED）、<code>budget_entry</code>（RESERVED）、<code>job_destination</code>、<code>outbox_event</code>（generation=1）、<code>audit_event</code>（JOB_ACCEPTED）、<code>idempotency_record</code>（含成功响应 JSON）。任何一步失败全部回滚。</p><span class="writes">6 类事实一次提交</span></div></li>
         <li class="step"><div><h4>事务提交后返回 202</h4><p>Controller 通过 Spring 事务代理返回时，事务已经提交。响应包含 jobId、QUEUED、version=0、payloadExpiresAt。202 的含义是“责任已落库”，不是“模型已完成”。</p><span class="writes">事务提交</span></div></li>
         <li class="step"><div><h4>发布器 claim Outbox</h4><p>每秒扫描 NEW 且到期的记录，<code>FOR UPDATE SKIP LOCKED</code> 领取，写 30 秒发布租约和 claim token。消息只含 8 个字段：schemaVersion、messageId、kind、workspaceId、aggregateId、dispatchGeneration、createdAt、traceId，<strong>不含正文</strong>。</p><span class="writes">outbox_event: NEW → CLAIMED</span></div></li>
@@ -616,6 +667,11 @@ figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.55}
         <li class="step"><div><h4>校验结果 + 保存</h4><p>结构、长度、schema、引用段落 ID、原文精确子串全部通过才保存。结果、SUCCEEDED、审计、Delivery/首 Run/交付 Outbox 在同一事务提交。保存失败只对同一响应重试最多 3 次，<strong>绝不重新请求模型</strong>。</p><span class="writes">ai_result + ai_job SUCCEEDED + delivery</span></div></li>
         <li class="step"><div><h4>ACK 与读取</h4><p>提交成功后手动 ACK。浏览器每 5 秒轮询；任务终态或页面隐藏就停。读正文是独立端点，会重新鉴权、检查 TTL、记录 RESULT_READ 审计。</p><span class="writes">无业务写入（读取审计除外）</span></div></li>
       </ol>
+
+      <div class="plain">
+        <b>三种用途在同一管道里怎么分叉</b>
+        <p><code>EXTRACT</code> 用一份文本；<code>REQUIREMENTS_REVIEW</code> 也用一份文本，但输出结构是 findings + criteria；<code>VERSION_DIFF</code> 用两份文本，服务端组合成一个加密输入，段落 ID 分别加 <code>a</code>/<code>b</code> 前缀。执行、预算、幂等、TTL、授权、回调完全复用，只是 schema、提示词、profile 和校验器不同。</p>
+      </div>
 
       <div class="note">
         <b>面试时可以这样收尾</b>
@@ -665,7 +721,7 @@ figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.55}
           <tbody>
             <tr><td><code>ai_job</code></td><td>一次用户意图的根</td><td>状态 CHECK；<code>parent_job_id</code> 关联重跑来源；<code>lease_token</code>/<code>lease_until</code>；<code>payload_expires_at</code>；<code>payload_deleted_at</code></td></tr>
             <tr><td><code>ai_attempt</code></td><td>一次执行尝试</td><td><code>sent_job_id</code> 是生成列，仅当 <code>sent_at</code> 非空时等于 job_id，并加唯一约束 → 每个任务最多一条 SENT</td></tr>
-            <tr><td><code>budget_account</code></td><td>每空间每日账本</td><td><code>reserved + spent + uncertain &lt;= daily_limit</code>；按 (workspace, accepted_date) 主键</td></tr>
+            <tr><td><code>budget_account</code></td><td>每空间每日账本</td><td><code>reserved + spent + uncertain &lt;= daily_limit</code>；<code>daily_limit</code> 是当天快照，来源于 <code>workspace.daily_limit</code> 策略（V8）</td></tr>
             <tr><td><code>budget_entry</code></td><td>每个任务一条额度分录</td><td>RESERVED / SPENT / UNCERTAIN / RELEASED；取消只释放原受理日</td></tr>
             <tr><td><code>idempotency_record</code></td><td>一次成功受理/命令的快照</td><td>主键 (workspace, actor, operation, key)；<code>request_hash</code>；<code>response_json</code></td></tr>
             <tr><td><code>outbox_event</code></td><td>待发布 AI 就绪责任</td><td><code>UNIQUE(aggregate_id, dispatch_generation)</code>；状态 NEW/CLAIMED/SENT；30 秒 claim_until</td></tr>
@@ -680,7 +736,7 @@ figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.55}
         <li><strong>消息表不存正文</strong>：Outbox 只有 ID、代次、trace。正文在 <code>ai_job</code> 加密列；消息被截获也拿不到文档。</li>
         <li><strong>唯一约束比“代码里判断”可靠</strong>：同一任务最多一条 SENT 由生成列唯一索引兜底；同一代次只有一条 Outbox 由唯一键兜底。</li>
         <li><strong>审计表有 detail_json，但查询 API 不返回</strong>：空间审计只取 id/operation/resourceId/actorId/actorName/createdAt 六列；公司审计同理。原因里可能有用户输入，不能顺手带给前端。</li>
-        <li><strong>V1–V7 已部署后不可改</strong>：后续 schema 变化只能追加迁移；测试会验证旧迁移 checksum 不变。</li>
+        <li><strong>V1–V8 已部署后不可改</strong>：后续 schema 变化只能追加迁移；测试会验证旧迁移 checksum 不变。V8 只加 <code>workspace.daily_limit</code>/<code>budget_version</code>，不改 V1–V7。</li>
         <li><strong>复合外键带 tenant/workspace</strong>：跨公司父部门、跨公司成员、跨空间任务在数据库层就被拒绝，不只靠应用层。</li>
       </ul>
 
@@ -718,6 +774,22 @@ figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.55}
         <p>不能。它保证的是“同一意图不会创建第二个业务根”。真正的执行防重还要靠任务状态、代次、租约和唯一 SENT 约束。幂等键解决用户重复提交；消息去重解决系统重复投递；两者不是一回事。</p>
       </div>
 
+      <h3 id="budget-policy">8.1.1 每日额度：为什么存在，真实业务是否必要</h3>
+      <div class="plain">
+        <b>人话版</b>
+        <p>模型调用要花钱，也可能被脚本刷。平台按“空间 + 自然日”放一个额度阀门：当天最多受理多少次，先预留、再使用、结果不明单独记账。它不是供应商账单，只是平台侧的护栏。</p>
+      </div>
+      <ul>
+        <li>1.0 的额度固定默认 20；1.1 候选改成“空间策略”：OWNER 可在部署硬上限 <code>RELAYOPS_MAX_DAILY_LIMIT</code>（默认 100）内调整。</li>
+        <li><code>workspace.daily_limit</code> 是策略，<code>workspace.budget_version</code> 是乐观锁版本；<code>budget_account.daily_limit</code> 是当天快照。新的一天按策略建行；当天改策略同步当天行，不改历史日期。</li>
+        <li>降低额度不得低于当天 <code>reserved + spent + uncertain</code>，否则 422 <code>LIMIT_BELOW_USAGE</code>；版本冲突 409；变更写 <code>BUDGET_POLICY_UPDATED</code> 审计。</li>
+        <li>额度只控制“平台受理次数”，不控制供应商金额、并发、重试成本；公司总额度、按用户额度、密钥级成本上限仍未实现。</li>
+      </ul>
+      <div class="warn">
+        <b>真实业务真的有必要按日吗？</b>
+        <p>不一定必须“按日”，但必须有某种成本/滥用边界。真实业务更常见的是“按月/按合同额度 + 分钟级限流 + 并发上限 + 全局硬上限/告警”。按日只是当前单机自托管、受控团队下实现简单、语义直观的粗粒度选择；代价是跨午夜取消要释放原受理日额度、日切可能有突发、且不等于供应商账单。</p>
+      </div>
+
       <h3 id="outbox">8.2 事务 Outbox：把“业务”和“要发的消息”写进同一个账本</h3>
       <div class="plain">
         <b>人话版</b>
@@ -727,7 +799,7 @@ figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.55}
         <li>受理事务同时写：<code>ai_job</code>、<code>budget_entry</code>、<code>job_destination</code>、<code>outbox_event</code>、<code>audit_event</code>、<code>idempotency_record</code>。</li>
         <li>发布器每秒跑一次，每批最多 25 条；用 <code>FOR UPDATE SKIP LOCKED</code> 领取，避免多个发布器抢同一条。</li>
         <li>领取后写 30 秒 <code>claim_until</code> 和随机 <code>claim_token</code>；发布在事务外做，不把网络 I/O 放进数据库事务。</li>
-        <li>消息是持久化的，direct exchange 路由到 AI 队列；同时开启 publisher confirm 和 mandatory return。</li>
+        <li>消息是持久化的，direct exchange 路由到 AI 队列；同时开启 <abbr class="term" tabindex="0" title="publisher confirm：Broker 告诉发布者“我收到这条消息了”。">publisher confirm</abbr> 和 <abbr class="term" tabindex="0" title="mandatory return：消息到了 exchange 但没有队列可路由时，Broker 会退回给发布者。">mandatory return</abbr>。</li>
         <li>只有 <strong>confirm ACK 且没有 returned</strong> 才标 SENT；连接失败、确认超时、不可路由都保留重发责任。</li>
         <li>失败退避 1、2、4、8、16、30 秒（封顶 30 秒）再加 0–20% 抖动；同一 messageId 重复发送是允许的。</li>
         <li>每空间未发布 Outbox 默认上限 1000；达到上限时新受理返回 503，但原幂等键重放仍可用。</li>
@@ -739,7 +811,7 @@ figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.55}
 
       <h3 id="consumer">8.3 消费者：先从数据库拿执行权，再调模型</h3>
       <ul>
-        <li>消费端手动 ACK，单消费者、prefetch=1，避免同一实例内并发抢任务。</li>
+        <li>消费端手动 <abbr class="term" tabindex="0" title="ACK：消费者告诉队列“这条我已经处理完了，可以删”。">ACK</abbr>，单消费者、prefetch=1，避免同一实例内并发抢任务。</li>
         <li>先解码并校验信封：最多 4096 字节、字段必须正好 8 个、schemaVersion=1、UUID 规范、kind 只能是 AI_EXECUTE 或 DELIVERY_SEND。</li>
         <li>再校验 Outbox 关联：messageId、workspaceId、aggregateId、generation、traceId 必须与数据库记录完全一致。</li>
         <li>然后锁 <code>ai_job</code>：只允许 <code>status=QUEUED</code>、队列未过期、载荷未过期、generation 等于消息代次。领取成功写 RUNNING、lease_token、lease_until，并插入 PREPARED attempt。</li>
@@ -856,18 +928,20 @@ figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.55}
         <p>模型任务成功，不等于结果已经送到接收方。RelayOps 把“保存结果”和“发回调”拆成两条责任：保存结果时，在同一个事务里建 Delivery、首个 Run 和独立的 Delivery Outbox；之后回调失败只推进交付状态，绝不会再调用模型。</p>
       </div>
       <ul>
-        <li>目的地当前只允许固定本机目录 <code>http://127.0.0.1:8091/relayops/events</code>；OWNER 创建/启停，OPERATOR 选择，VIEWER 只读元数据。</li>
-        <li>受理时冻结目标快照（catalog、endpoint、name），最多 3 个不同目标，排序后参与请求指纹。</li>
+        <li>两个目录：<code>demo-local-v1</code> 固定本机 <code>http://127.0.0.1:8091/relayops/events</code>；<code>https-allowlist-v1</code> 仅在部署配置 <code>RELAYOPS_DELIVERY_HTTPS_HOSTS</code> 非空时出现。</li>
+        <li>外网端点必须是 HTTPS、固定路径 <code>/relayops/events</code>、端口 443，不能带用户信息/查询/片段；主机必须在白名单内。创建时校验 URL 形状和白名单，发送前再解析 DNS 并拒绝 IP、localhost、私网/环回/链路本地/组播地址。</li>
+        <li>OWNER 创建/启停目的地、轮换签名密钥；OPERATOR 选择目标；VIEWER 只读元数据。</li>
+        <li>受理时冻结目标快照（catalog、endpoint、name），最多 3 个不同目标，排序后参与请求指纹；白名单移除或目录变化后旧目的地停止，不静默继续。</li>
         <li>结果载荷是 <code>relay.webhook.v1</code> 外壳，不含输入正文；原始 UTF-8 字节只生成一次，SHA-256 与密文持久化。</li>
         <li>签名：<code>HMAC-SHA256(secret, "v1\n{timestamp}\n{deliveryId}\n{bodyHash}")</code>，小写 hex；带 <code>X-Relay-Delivery-Id</code>、<code>Run-Id</code>、<code>Attempt-Id</code>、<code>Key-Id</code>、<code>Timestamp</code>、<code>Signature</code> 六个头。</li>
-        <li>接收窗口五分钟；重试时重新生成时间戳和签名，但正文和 deliveryId 不变。</li>
-        <li>2xx 成功；408/429/5xx/网络未知可重试；重定向不跟随；其他非 2xx 停止。</li>
-        <li>每个 Run 最多 6 次、总预算 1 小时；退避 1/5/30/120/600 秒 + 抖动；429 的合法 Retry-After 取较晚，但不越预算。</li>
+        <li>接收窗口五分钟；重试时重新生成时间戳和签名，但正文和 deliveryId 不变；重定向不跟随。</li>
+        <li>2xx 成功；408/429/5xx/网络未知可重试；其他非 2xx 停止；每个 Run 最多 6 次、总预算 1 小时；退避 1/5/30/120/600 秒 + 抖动。</li>
         <li>停用目的地、目录变化、TTL 过期、预算耗尽 → DEAD；租约过期 → Attempt UNKNOWN，旧执行器不能回写。</li>
+        <li>密钥轮换：OWNER 要求 <code>acknowledgeSecretRead=true</code> 和 <code>expectedVersion</code>；有 PENDING/IN_FLIGHT/RETRY_WAIT 交付时 409 <code>DESTINATION_BUSY</code>；生成新 32 字节密钥、旧密钥立即失效、版本 +1、审计 <code>DESTINATION_KEY_ROTATED</code>，新密钥只返回一次。</li>
       </ul>
       <div class="bad-note">
-        <b>不要声称“端到端恰好一次”</b>
-        <p>平台与接收端没有共享事务。平台保证“至少一次尝试 + 稳定 deliveryId/字节 + 签名”，接收端用 SQLite 按 <code>deliveryId + hash</code> 原子去重，才能让业务保存只发生一次。两者合起来是“效果上的幂等”，不是分布式事务。</p>
+        <b>不要声称“端到端恰好一次”或“外网回调已完整验证”</b>
+        <p>平台与接收端没有共享事务。平台保证“至少一次尝试 + 稳定 deliveryId/字节 + 签名”，接收端用 SQLite 按 <code>deliveryId + hash</code> 原子去重，才能让业务保存只发生一次。外网只验证了白名单、SSRF 拒绝、本机签名路径和轮换；真实第三方 HTTPS 证书交付未做端到端验证，DNS 重绑定也未完全防护。</p>
       </div>
 
       <h3 id="replay">8.8 单条补投：两分钟预览，确认后才新建轮次</h3>
@@ -917,7 +991,7 @@ figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.55}
           <thead><tr><th>风险</th><th>控制</th><th>代码/数据位置</th></tr></thead>
           <tbody>
             <tr><td>未登录访问</td><td>除静态资源、healthz、csrf、login 外全部要求认证；401 统一 JSON</td><td>SecurityConfig</td></tr>
-            <tr><td>CSRF</td><td>Spring Security CSRF + 显式 <code>/auth/csrf</code>；前端写请求带 token；缺 token 403</td><td>SecurityConfig、api.ts</td></tr>
+            <tr><td><abbr class="term" tabindex="0" title="CSRF：防止别的网站借你的登录状态偷偷发请求；写操作要带一次性令牌。">CSRF</abbr></td><td>Spring Security CSRF + 显式 <code>/auth/csrf</code>；前端写请求带 token；缺 token 403</td><td>SecurityConfig、api.ts</td></tr>
             <tr><td>会话劫持/固定</td><td>HttpOnly、SameSite=Lax、8 小时绝对过期、30 分钟空闲；登录失败统一 401</td><td>application.yml、SecurityConfig</td></tr>
             <tr><td>密码泄露</td><td>BCrypt cost 12；日志/响应不返回密码；演示密码只从本地 .env 读取</td><td>SecurityConfig、LocalSeed</td></tr>
             <tr><td>越权读取（IDOR）</td><td>每个请求按 username + workspace 重查公司成员/直接成员/组织授权；跨空间/跨公司统一 404</td><td>Access.require</td></tr>
@@ -929,6 +1003,8 @@ figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.55}
             <tr><td>密钥进浏览器/日志</td><td>模型 key 只在服务端环境；不返回、不写任务/审计；错误只记固定码和异常类型</td><td>ModelGateway、ApiErrors</td></tr>
             <tr><td>模型请求 SSRF</td><td>只允许完整 HTTPS /chat/completions；拒绝 URL 凭据、query、fragment；重定向不跟随；本机 HTTP 仅测试显式开启</td><td>ModelGateway</td></tr>
             <tr><td>回调伪造/重放</td><td>HMAC-SHA256、五分钟时间窗、稳定 deliveryId、接收端按 ID+hash 去重</td><td>WebhookTransport、demo-receiver.py</td></tr>
+            <tr><td>外网回调 SSRF</td><td>白名单 DNS 主机、HTTPS/443/固定路径、拒绝 IP/私网/环回/查询/片段、发送前再解析、不跟随重定向</td><td>DestinationService、WebhookTransport</td></tr>
+            <tr><td>签名密钥泄露</td><td>OWNER 显式确认读取/轮换、活跃交付时拒绝轮换、旧密钥立即失效、审计</td><td>DestinationService.rotateKey</td></tr>
             <tr><td>报告 XSS/Markdown 逃逸</td><td>所有动态内容放进纯文本代码块；围栏长度大于内容中最长连续反引号；不渲染 HTML/图片/链接</td><td>analysisReport.ts</td></tr>
             <tr><td>日志注入/敏感信息</td><td>不打印 SQL 参数、正文、密钥、供应商响应；异常只记类型；API 错误带随机 traceId</td><td>ApiErrors、JobWorker</td></tr>
           </tbody>
@@ -944,7 +1020,7 @@ AAD   = workspaceId + ":" + jobId + ":input"    // 或 :result / :delivery / :si
       <p>把 AAD 绑定到空间、任务和载荷类型，意味着攻击者即使拿到另一条任务的密文，也不能把它挪过来解密。GCM 同时提供机密性和完整性；密文被改一个字节，解密就失败。</p>
       <div class="warn">
         <b>当前没有做的</b>
-        <p>单主密钥、无 keyRef/轮换、无 KMS/HSM；主密钥丢失，旧密文无法恢复。多租户是共享库逻辑隔离，不是独立密钥/独立库。没有 MFA、SSO、登录限频、公司自助注册。面试时这些都要主动说。</p>
+        <p>正文加密是单主密钥、无 keyRef/轮换、无 KMS/HSM；主密钥丢失，旧密文无法恢复。1.1 的“密钥轮换”只指回调签名密钥，不是正文主密钥。多租户是共享库逻辑隔离，不是独立密钥/独立库。没有 MFA、SSO、登录限频、公司自助注册。面试时这些都要主动说。</p>
       </div>
     </section>
 
@@ -958,10 +1034,10 @@ AAD   = workspaceId + ":" + jobId + ":input"    // 或 :result / :delivery / :si
           <thead><tr><th>视图</th><th>回答的问题</th><th>关键交互</th></tr></thead>
           <tbody>
             <tr><td>任务队列 + 详情</td><td>哪些任务要处理？选中的任务结果可核对吗？</td><td>本地标题/ID 搜索、状态筛选、5 秒轮询、取消/重跑、原文依据展开</td></tr>
-            <tr><td>新建文档</td><td>这次提交的范围、额度、外发风险对不对？</td><td>用途切换（分析/需求评审）、字数/字节计数、目的地选择、外发确认、幂等草稿恢复</td></tr>
+            <tr><td>新建文档</td><td>这次提交的范围、额度、外发风险对不对？</td><td>用途切换（分析/需求评审/版本对比）、字数/字节计数、双文本框、目的地选择、外发确认、幂等草稿恢复</td></tr>
             <tr><td>组织管理</td><td>哪些部门/小组/成员能访问哪个空间？</td><td>建部门/小组、加成员、建空间、显式授权、公司审计展开</td></tr>
-            <tr><td>目的地</td><td>当前空间能把结果发到哪里？</td><td>OWNER 创建/启停、显式确认读签名密钥</td></tr>
-            <tr><td>运行概览</td><td>当前空间整体责任是否积压？</td><td>15 秒刷新、隐藏暂停、最新交付轮次、Outbox、失效租约、清理状态</td></tr>
+            <tr><td>目的地</td><td>当前空间能把结果发到哪里？</td><td>OWNER 创建/启停、选择本机或白名单 HTTPS、显式读/轮换签名密钥</td></tr>
+            <tr><td>运行概览</td><td>当前空间整体责任是否积压？</td><td>15 秒刷新、隐藏暂停、最新交付轮次、Outbox、失效租约、清理状态、OWNER 编辑每日额度</td></tr>
             <tr><td>完整历史</td><td>较早的某个任务怎么找？</td><td>字面搜索、状态筛选、时间/ID 游标向前翻页</td></tr>
           </tbody>
         </table>
@@ -977,7 +1053,7 @@ AAD   = workspaceId + ":" + jobId + ":input"    // 或 :result / :delivery / :si
       <ul>
         <li>结果按纯文本展示；每条 evidence 可展开对应段落，并把精确引用用 <code>&lt;mark&gt;</code> 高亮。</li>
         <li>空集合明确写“未提取到/模型未列出”，不补写模型没给的内容。</li>
-        <li>Markdown 报告每次点击都重新 GET result，不直接用浏览器缓存；服务端重新鉴权、检查 TTL、记 RESULT_READ。</li>
+        <li>Markdown 报告每次点击都重新 GET result，不直接用浏览器缓存；服务端重新鉴权、检查 TTL、记 RESULT_READ。版本对比报告会分别列出基线/修订引用、变化、受影响约束和验收草稿。</li>
         <li>报告动态内容全部进代码块；如果内容里有六个连续反引号，围栏就用七个，防止内容“关掉”围栏变成 HTML/图片/链接。</li>
         <li>文件名只用固定前缀 + 过滤后的任务 ID，不用用户标题；对象 URL 触发下载后释放。</li>
       </ul>
@@ -990,18 +1066,29 @@ AAD   = workspaceId + ":" + jobId + ":input"    // 或 :result / :delivery / :si
       <div class="kicker">11 · AI</div>
       <h2><span class="num">11.</span>AI 只生成候选内容，确定性代码负责边界</h2>
 
-      <h3>两种任务用途</h3>
-      <div class="grid-2">
+      <h3>三种任务用途</h3>
+      <div class="grid-3">
         <div class="card"><span class="tag">EXTRACT</span><h4>技术文档分析</h4><p>输出摘要、关键结论、约束、未知项；每条 claim 1–10 条精确引用。默认用途，旧请求指纹保持兼容。</p></div>
         <div class="card"><span class="tag">REQUIREMENTS_REVIEW</span><h4>需求评审与验收草稿</h4><p>输出最多 6 项 GAP/AMBIGUITY/CONFLICT、澄清问题，以及最多 6 项 Given/When/Then；冲突至少两条不同引用，假设单列并标注待人工确认。</p></div>
+        <div class="card"><span class="tag">VERSION_DIFF</span><h4>版本对比与影响分析</h4><p>基线与修订双输入；最多 8 项 ADDED/REMOVED/MODIFIED，修改必须双侧引用；最多 6 项受影响约束 + 6 项验收草稿。</p></div>
       </div>
+
+      <h3>版本对比的细节</h3>
+      <ul>
+        <li>请求用 <code>inputText</code>（基线）和 <code>inputTextB</code>（修订）；只有 <code>VERSION_DIFF</code> 允许第二份文本，其他用途带了会被 422。</li>
+        <li>两份文本分别按 6000 字符 / 24576 字节限制校验，然后用内部标记 <code>&lt;&lt;&lt;VERSION_A&gt;&gt;&gt;</code>/<code>&lt;&lt;&lt;VERSION_B&gt;&gt;&gt;</code> 组合，存进现有 <code>input_cipher</code>；输入本身含标记直接拒绝。</li>
+        <li>段落 ID 前缀 <code>a0001</code>/<code>b0001</code>；<code>ADDED</code> 只引用修订侧，<code>REMOVED</code> 只引用基线侧，<code>MODIFIED</code> 必须两侧都有精确引用。</li>
+        <li>结果版本 <code>version.diff.result.v1</code>；提示词从 <code>version.compat.v1</code> 升到 <code>version.compat.v2</code>，明确把段落重排/空白/格式/注入文本视为非语义变化。</li>
+        <li>复用评审的 8192 输出上限、一次调用、权限、预算、TTL、回调和脱敏观测；不自动合并、不修改需求、不执行测试。</li>
+        <li>不新增迁移：用现有 <code>schema_version</code> 冻结用途，重跑按来源 schema 恢复；旧 EXTRACT/REVIEW 结果保持兼容。</li>
+      </ul>
 
       <h3>模型适配器</h3>
       <ul>
         <li>只实现非流式 OpenAI 兼容 Chat Completions；system + user 两条消息；user 是包含标题、段落 ID、语言的 JSON。</li>
         <li>模型只生成内容；<code>title</code>、<code>modelProfile</code>、<code>schemaVersion</code> 由服务端赋值，防止模型伪造元数据。</li>
-        <li>普通分析默认 <code>max_tokens=4096</code>；需求评审独立 <code>RELAYOPS_MODEL_REVIEW_MAX_TOKENS=8192</code>，因为推理型模型可能把内部推理计入输出。</li>
-        <li>配置 profile 指纹包含地址、模型名、超时、输出上限、token 参数、JSON 模式、提示词；<strong>不包含密钥</strong>，所以可以轮换密钥而不改变 profile。</li>
+        <li>普通分析默认 <code>max_tokens=4096</code>；需求评审和版本对比复用独立 <code>RELAYOPS_MODEL_REVIEW_MAX_TOKENS=8192</code>，因为推理型模型可能把内部推理计入输出。</li>
+        <li>配置 <abbr class="term" tabindex="0" title="Profile：模型配置指纹，包含地址、模型名、超时、输出上限、提示词版本等；受理时冻结。">profile</abbr> 指纹包含地址、模型名、超时、输出上限、token 参数、JSON 模式、提示词版本和提示词；<strong>不包含密钥</strong>，所以可以轮换密钥而不改变 profile。三种用途各有独立 profile。</li>
         <li>受理时冻结 profile；配置变了，旧兼容任务在 SENT 前失败 <code>MODEL_CONFIG_CHANGED</code> 并释放预留；旧 Fake 任务仍可执行。</li>
         <li>完整响应体上限 128 KiB；总超时包含响应体；不跟随重定向；应用不自动重试。</li>
       </ul>
@@ -1039,6 +1126,9 @@ AAD   = workspaceId + ":" + jobId + ":input"    // 或 :result / :delivery / :si
             <tr><td>首次真实链路</td><td>1 篇短文</td><td>修复信封兼容后成功；引用精确匹配</td><td>当前配置能联通、结构/引用规则生效</td><td>通用质量、费用、其他供应商</td></tr>
             <tr><td>三样本端到端</td><td>3 篇合成技术文本</td><td>3/3 成功，各 1 次调用，44 处引用，3 次签名回调 200，5500+ tokens</td><td>完整链路可用；幂等、回调、Langfuse 可读</td><td>准确率、稳定性、性能 SLO</td></tr>
             <tr><td>需求评审真实复核</td><td>6 个任务 / 6 次调用</td><td>4 成功；1 UNKNOWN、1 OUTPUT_TRUNCATED；4 次回调成功</td><td>评审输出上限需要独立提高；引用/冲突规则可执行</td><td>评审完整率、漏报率</td></tr>
+            <tr><td>版本对比真实复核</td><td>2 条合成双版本文本</td><td>修复 data-only 包裹和字段示例后 2 成功；失败 3 次保留原用量</td><td>双输入、双侧引用、报告链路可用</td><td>版本对比总体准确率</td></tr>
+            <tr><td>固定评测集 3 次</td><td>评审 20 样本 × 3；版本 16 样本 × 3</td><td>评审稳定 16/20、单次 56/60；版本 v2 47/48 成功、稳定 15/16</td><td>能观察稳定性与重复失败</td><td>不是生产准确率/安全基准</td></tr>
+            <tr><td>同供应商模型对照</td><td>deepseek vs qwen3.8-flash，单次</td><td>评审 20/20 vs 17/20；版本 15/16 vs 16/16（v2）；qwen 更慢、Token 更高</td><td>当前样本下不替换默认模型</td><td>qwen 稳定性未测</td></tr>
           </tbody>
         </table>
       </div>
@@ -1047,8 +1137,14 @@ AAD   = workspaceId + ":" + jobId + ":input"    // 或 :result / :delivery / :si
         <p>真实复核暴露了 4096 上限下的 UNKNOWN 和截断，于是把评审输出上限独立成 8192，并纳入 profile 指纹。面试时讲这个“失败驱动设计”，比只讲“我调通了模型”更有说服力。</p>
       </div>
 
-      <h3>固定评测集</h3>
-      <p><code>eval/requirements-review</code> 有 20 个中文合成样本，覆盖干净对照、GAP、歧义、冲突、文档内注入、假设陷阱、单位等价误报、多段长文本。确定性评分器检查：schema、精确引用、CONFLICT 双引用、必找问题、禁止文字、必找验收草稿；<strong>不调用模型</strong>。评分器有 10 个单测，数据集校验和单测已进 CI；但真实供应商逐样本批量评测、重复采样和模型对照还没做。</p>
+      <h3>固定评测集：现在有真实基线，但不是准确率证书</h3>
+      <p><strong>需求评审</strong>：<code>eval/requirements-review</code> 20 个中文合成样本，覆盖干净对照、GAP、歧义、冲突、文档内注入、假设陷阱、单位等价误报、多段长文本。确定性评分器检查 schema、精确引用、CONFLICT 双引用、必找问题、禁止文字、必找验收草稿；不调用模型。评分器有 10 个单测并进 CI。真实运行：单次 20/20，三次共 60 个任务中 57 成功（2 UNKNOWN、1 截断），按三次期望聚合稳定 16/20，单次通过率 56/60 = 93.33%；Token 217,091，金额未知。</p>
+      <p><strong>版本对比</strong>：<code>eval/version-diff</code> 16 个合成样本，覆盖无变化/重排/空白、ADDED、REMOVED、MODIFIED、多变化、注入、单位、冲突引入、长文本。v1 三次 48 任务全成功、稳定 15/16；v2 三次 47/48 成功、稳定 15/16、重复通过 97.92%，唯一失败是一次重排样本输出无效；8 例人工复核 7 通过/1 失败。提示词 v2 明确忽略重排/格式/注入文本。</p>
+      <p><strong>同供应商模型对照</strong>：限定 qwen3.8-flash，与 deepseek 相同端点/提示/schema/单次调用。评审 17/20 vs 20/20，版本 v2 单次 16/16 vs deepseek 15/16；但 qwen 评审延迟约 87.5 秒、版本约 27.8 秒，Token 更高，且只有单次运行。结论是当前不替换默认模型，不是“qwen 更差”的普遍结论。</p>
+      <div class="warn">
+        <b>怎么讲这些数字</b>
+        <p>说“固定样本上的单次/三次稳定结果”，不要说“准确率 93%”。93.33% 是 60 次重复里的通过比例，不是业务准确率；评分器只覆盖预定义关注点，注入只有一种模式，人工复核样本也很少。</p>
+      </div>
     </section>
 
     <section class="section" id="testing">
@@ -1062,11 +1158,11 @@ AAD   = workspaceId + ":" + jobId + ":input"    // 或 :result / :delivery / :si
           <thead><tr><th>层</th><th>用什么</th><th>覆盖什么</th><th>当前证据</th></tr></thead>
           <tbody>
             <tr><td>规则/单测</td><td>JUnit、无数据库</td><td>输入归一、Unicode、引用校验、AES-GCM AAD、模型协议</td><td>DocumentPipelineTest、ModelGatewayTest、TaskTracingTest</td></tr>
-            <tr><td>数据库集成</td><td>真实 MySQL 8 + 专用 schema</td><td>幂等并发、预算、取消竞争、组织隔离、历史分页、清理、补投</td><td>DatabaseTest、JobLifecycleTest、OrganizationTest、OperationsIntegrationTest 等</td></tr>
+            <tr><td>数据库集成</td><td>真实 MySQL 8 + 专用 schema</td><td>幂等并发、预算/额度策略、取消竞争、组织隔离、历史分页、清理、补投、版本对比</td><td>DatabaseTest、JobLifecycleTest、OrganizationTest、OperationsIntegrationTest 等</td></tr>
             <tr><td>消息故障</td><td>真实 RabbitMQ + 专用 vhost</td><td>不可路由、确认丢失、重复消息、ACK 丢失、旧代次、隔离、积压</td><td>MessagingTest、ModelExecutionTest、DeliveryIntegrationTest</td></tr>
-            <tr><td>浏览器</td><td>Playwright + 真实后端/MySQL</td><td>三档布局、权限、取消/重跑、丢响应恢复、报告下载、迟到响应</td><td>88 项当前通过（1.0 发布时 80 项）</td></tr>
+            <tr><td>浏览器</td><td>Playwright + 真实后端/MySQL</td><td>三档布局、权限、取消/重跑、丢响应恢复、报告下载、版本对比、额度编辑、外网目的地、迟到响应</td><td>98 项当前通过</td></tr>
             <tr><td>独立接收端</td><td>Python 标准库 + SQLite</td><td>签名、时间窗、重复 ID 同 hash、同 ID 不同 hash</td><td>2 项通过</td></tr>
-            <tr><td>发布/恢复</td><td>release JAR、原生 MySQL、SQL 备份</td><td>27 表恢复、密文 hash、同源静态、无演示种子、CLI 建号</td><td>1.0 门禁记录</td></tr>
+            <tr><td>发布/恢复</td><td>release JAR、原生 MySQL、SQL 备份</td><td>27 表恢复、密文 hash、同源静态、无演示种子、CLI 建号；1.1 候选 17 文件包</td><td>1.0 门禁 + 1.1 候选记录</td></tr>
           </tbody>
         </table>
       </div>
@@ -1074,26 +1170,28 @@ AAD   = workspaceId + ":" + jobId + ":input"    // 或 :result / :delivery / :si
       <h3>数字怎么讲才不翻车</h3>
       <div class="warn">
         <b>版本要分开</b>
-        <p>“137 后端 / 88 浏览器”是当前源码（含需求评审增量）的记录；“120 后端 / 80 浏览器”是 1.0.0 发布时的记录。不要把它们混成一次运行，也不要说“137 个测试全在 CI 跑过”——本机记录和 CI 记录要分别说。</p>
+        <p>“151 后端 / 98 浏览器”是 1.1.0 候选源码的记录；“120 后端 / 80 浏览器”是 1.0.0 发布时的记录；“137 / 88”是中间需求评审阶段的记录。不要把它们混成一次运行，也不要说“151 个测试全在 CI 跑过”——本机记录和 CI 记录要分别说。</p>
       </div>
       <ul>
-        <li><strong>137 后端</strong>：0 失败/错误/跳过，日志 <code>artifacts/backend-review-final.log</code>；覆盖评审用途冻结、同键改用途 409、失败不自动重试、VIEWER/跨空间、签名回调 schema 等。</li>
-        <li><strong>88 浏览器</strong>：0 跳过，<code>artifacts/e2e/run.log</code>；含 78 项原有用例、7 项评审夹具/纯格式化、1 项持久化评审；覆盖撤权、迟到配置响应、草稿恢复、VIEWER 无入口、Markdown 恶意围栏。</li>
-        <li><strong>20 个评测样本 / 10 个评分器单测</strong>：确定性评分，不调用供应商；真实批量运行尚未执行。</li>
+        <li><strong>151 后端</strong>：0 失败/错误/跳过，日志 <code>artifacts/backend-1.1.log</code> / <code>backend-external.log</code>；覆盖版本对比双输入/双侧引用、OWNER 额度策略、外网白名单/SSRF、密钥轮换、评审用途等。</li>
+        <li><strong>98 浏览器</strong>：0 跳过，<code>artifacts/e2e/run-1.1.log</code> / <code>run-external4.log</code>；含版本对比三档/真实下载、额度编辑、外网目的地创建/拒绝、密钥轮换、撤权、迟到响应、Markdown 恶意围栏。</li>
+        <li><strong>评测集</strong>：需求评审 20 样本 + 版本对比 16 样本；两者都有确定性评分器、单测、真实三次基线和人工复核。真实运行数字见第 11 节。</li>
         <li><strong>2 个接收端测试</strong>：错误 HMAC/过期时间戳拒绝、同 ID 同 hash 幂等、同 ID 换 hash 409。</li>
         <li><strong>1.0 发布门禁</strong>：120 后端、80 Playwright（79 浏览器 + 1 格式化）、27 表恢复、JAR 实际启动、15 文件清单/SHA256、CI 通过。</li>
+        <li><strong>1.1 候选门禁</strong>：151 后端、98 浏览器、17 文件包、35,496,347 字节、SHA256 <code>4cc8d57f...</code>；未创建 tag/Release。</li>
       </ul>
 
       <h3>测试环境的隔离</h3>
       <p>后端测试使用 <code>relayops_test</code>、<code>relayops_messaging_test</code>、<code>relayops_upgrade_test</code> 三个专用数据库和 <code>relayops-test</code> vhost；测试脚本先检查连接确实指向测试库/测试 vhost，拒绝清理演示库。浏览器默认用已安装的 Microsoft Edge，无头运行；业务写入用例启动前检查所有可访问空间都是 Fake，避免真实供应商费用。</p>
-      <p><strong>发布门禁</strong>：OpenSpec <code>release-relayops-1-0</code> 12/12 完成并归档；CI run 41383316056 全部成功；公开 ZIP 与本地验收包 SHA256 一致；发布包 15 文件、JAR 内嵌前端与字体；27 表恢复库与主库密文 hash 一致。</p>
+      <p><strong>发布门禁</strong>：1.0.0 的 OpenSpec <code>release-relayops-1-0</code> 12/12 完成并归档；CI run 41383316056 全部成功；公开 ZIP 与本地验收包 SHA256 一致；发布包 15 文件、JAR 内嵌前端与字体；27 表恢复库与主库密文 hash 一致。1.1.0 候选另有 151 后端 / 98 浏览器 / 17 文件包 / SHA256 记录，但<strong>尚未发布</strong>。</p>
+      <p><strong>恢复观测</strong>：2026-11-04 本机逻辑恢复 27 表、779,666 字节，备份 976ms、恢复 7,037ms、再导出 455ms，总计 8,680ms；这是单机观测，不是生产 RTO。30 天元数据只做只读盘点，未执行删除。</p>
 
       <h3>几个真实排错故事（面试很好用）</h3>
       <div class="grid-2">
         <div class="card"><span class="tag">Unicode</span><h4>中文搜索让 UUID 列转换失败</h4><p>历史搜索首轮 109 项中 3 项失败：ASCII UUID 列与 Unicode 参数比较报错。修复为搜索时 <code>CONVERT(j.id USING utf8mb4)</code>，排序仍用原 ASCII 主键；109 项全过。</p></div>
         <div class="card"><span class="tag">报告</span><h4>模型文本可能“关掉”Markdown 围栏</h4><p>动态内容如果包含连续反引号，可能逃出代码块变成 HTML/图片。实现动态围栏长度 = 内容最长反引号段 + 1，并加 24 项导出格式负例。</p></div>
         <div class="card"><span class="tag">评审</span><h4>4096 上限导致 UNKNOWN / 截断</h4><p>真实复核出现一次 UNKNOWN、一次 OUTPUT_TRUNCATED。没有放宽校验，而是把评审输出上限独立为 8192，并纳入 profile 指纹；失败样本不计为通过。</p></div>
-        <div class="card"><span class="tag">环境</span><h4>测试失败不等于代码失败</h4><p>stage14 日志里 85 个错误是 MySQL 连接失败（端口/服务未起），不是断言失败。先修环境再重跑，最终 137 全过；面试时可讲“先区分环境故障和产品故障”。</p></div>
+        <div class="card"><span class="tag">环境</span><h4>测试失败不等于代码失败</h4><p>stage14 日志里 85 个错误是 MySQL 连接失败（端口/服务未起），不是断言失败。先修环境再重跑，那一批最终 137 全过；1.1 候选已到 151。面试时可讲“先区分环境故障和产品故障”。</p></div>
       </div>
     </section>
 
@@ -1112,8 +1210,9 @@ AAD   = workspaceId + ":" + jobId + ":input"    // 或 :result / :delivery / :si
             <tr><td>UNKNOWN 不自动重试</td><td>供应商可能已经执行；自动重试会重复收费/重复副作用</td><td>用户需要手动重跑；可能留下“没花钱但占额度”的情况</td><td>可加“供应商对账/查询”能力，但不能自动重调</td></tr>
             <tr><td>重跑创建新 Job</td><td>保留原 UNKNOWN 的不确定性；审计链完整</td><td>任务列表会多一条；需要 parent 跳转</td><td>可加批量重跑/模板，但不改来源</td></tr>
             <tr><td>共享库逻辑隔离</td><td>单机自托管、成本低、迁移简单</td><td>不是物理多租户；管理员仍可能通过成员变更提权</td><td>独立 schema/库/密钥；KMS；治理/数据权限分权</td></tr>
-            <tr><td>单主密钥 AES-GCM</td><td>部署简单；AAD 防跨任务挪用</td><td>无轮换；丢失即不可恢复</td><td>keyRef + 信封加密 + KMS/HSM + 轮换</td></tr>
-            <tr><td>固定本机回调目录</td><td>避免 SSRF/任意 URL/出站安全风险；先验证协议</td><td>不能对接真实外部系统</td><td>HTTPS 目录、域名白名单、密钥轮换、出站代理</td></tr>
+            <tr><td>单主密钥 AES-GCM</td><td>部署简单；AAD 防跨任务挪用</td><td>正文主密钥无轮换；丢失即不可恢复；回调签名密钥可轮换不代表主密钥可轮换</td><td>keyRef + 信封加密 + KMS/HSM + 轮换</td></tr>
+            <tr><td>受控本机 + 白名单 HTTPS 回调</td><td>避免 SSRF/任意 URL/出站安全风险；先验证协议</td><td>需部署配置白名单；真实第三方证书未端到端验证；DNS 重绑定未完全防护</td><td>HTTPS 目录、出站代理、TLS 校验、密钥轮换宽限</td></tr>
+            <tr><td>每日额度按空间</td><td>成本/滥用护栏；实现简单、可解释</td><td>不是供应商账单；不控制金额/并发；公司总额度未做</td><td>月度合同额度 + 分钟限流 + 全局硬上限/告警</td></tr>
             <tr><td>七天 TTL + 元数据保留</td><td>控制在线正文风险；审计/账目仍需保留</td><td>备份/日志/接收端副本不受控；30 天元数据清理未做</td><td>分层保留、备份加密、物理擦除、数据地图</td></tr>
             <tr><td>游标分页（created_at,id）</td><td>避免 offset 在插入时重复/漏项；UUID 不代表顺序</td><td>不是跨请求快照；晚提交的旧时间记录可能改变后续页</td><td>需要一致快照时用导出/事务快照，不用于消费</td></tr>
             <tr><td>评审最多 6 项</td><td>控制输出长度和成本；先做可用草稿</td><td>可能漏报；不证明需求完整</td><td>分段评审、覆盖度指标、人工复核、评测集</td></tr>
@@ -1129,7 +1228,7 @@ AAD   = workspaceId + ":" + jobId + ":input"    // 或 :result / :delivery / :si
     </section>
     <section class="section" id="qa">
       <div class="kicker">14 · Interview Q&amp;A</div>
-      <h2><span class="num">14.</span>面试问答 50+：按追问顺序背</h2>
+      <h2><span class="num">14.</span>面试问答 76 问：按追问顺序背</h2>
       <p class="lede">先自己回答，再展开对照。答案不是唯一标准，重点是“边界清楚、有证据、不硬吹”。</p>
 
       <div class="qa-group">A. 项目与业务</div>
@@ -1156,7 +1255,7 @@ AAD   = workspaceId + ":" + jobId + ":input"    // 或 :result / :delivery / :si
       </details>
       <details>
         <summary>Q6. 项目规模多大？</summary>
-        <div class="answer"><p>后端主代码约 3000 行 Java、39 个主类；后端测试约 2500 行、17 个测试类；前端约 4400 行 Vue/TS/CSS、18 个源文件；26 张业务表、7 个 Flyway 迁移；当前 137 个后端测试、88 个浏览器测试。规模不算大，但边界完整、失败路径覆盖多。</p></div>
+        <div class="answer"><p>后端主代码约 3300 行 Java、39 个主类；后端测试约 2700 行、18 个测试类；前端约 4600 行 Vue/TS/CSS、19 个源文件；26 张业务表、8 个 Flyway 迁移；1.1 候选当前 151 个后端测试、98 个浏览器测试。规模不算大，但边界完整、失败路径覆盖多。</p></div>
       </details>
       <details>
         <summary>Q7. 最难的部分是什么？</summary>
@@ -1336,7 +1435,7 @@ AAD   = workspaceId + ":" + jobId + ":input"    // 或 :result / :delivery / :si
       </details>
       <details>
         <summary>Q48. 密钥怎么管理？</summary>
-        <div class="answer"><p>32 字节随机主密钥 Base64 放在本地 <code>ops/.env</code>，不提交、不返回前端、不写日志；发布包校验会排除真实 .env。当前单主密钥、无轮换/KMS；丢失主密钥旧密文无法恢复，这是明确限制。</p></div>
+        <div class="answer"><p>正文加密的 32 字节主密钥 Base64 放在本地 <code>ops/.env</code>，不提交、不返回前端、不写日志；发布包校验会排除真实 .env。正文主密钥当前不可轮换、无 KMS，丢失旧密文无法恢复。1.1 增加的是<strong>回调签名密钥</strong>轮换：OWNER 在无活跃交付时生成新 32 字节密钥，旧密钥立即失效。</p></div>
       </details>
       <details>
         <summary>Q49. 报告导出怎么防 XSS？</summary>
@@ -1363,7 +1462,7 @@ AAD   = workspaceId + ":" + jobId + ":input"    // 或 :result / :delivery / :si
       </details>
       <details>
         <summary>Q54. AI 准确率多少？</summary>
-        <div class="answer"><p>不能给准确率。只做了少量合成样本的真实链路验收：三样本 3/3 成功、44 处引用匹配；需求评审 6 次调用 4 成功、2 失败（UNKNOWN/截断）。这些证明链路和规则可用，不证明总体正确率、稳定性或所有供应商兼容。固定评测集已建立，但真实批量运行还没做。</p></div>
+        <div class="answer"><p>不能给准确率。固定样本上：需求评审单次 20/20，三次 60 个任务 57 成功、稳定 16/20、单次通过 56/60 = 93.33%；版本对比 v2 三次 47/48 成功、稳定 15/16、重复通过 97.92%。同供应商 qwen 对照只有单次。它们证明链路、规则和稳定性基线，不证明业务准确率、所有供应商兼容或生产 SLO。</p></div>
       </details>
       <details>
         <summary>Q55. 怎么防止模型编造引用？</summary>
@@ -1375,7 +1474,7 @@ AAD   = workspaceId + ":" + jobId + ":input"    // 或 :result / :delivery / :si
       </details>
       <details>
         <summary>Q57. 为什么评审输出上限是 8192？</summary>
-        <div class="answer"><p>真实复核在 4096 下出现一次 UNKNOWN 和一次 OUTPUT_TRUNCATED；推理型模型可能把内部推理计入输出。于是评审独立配置 8192，并纳入 profile 指纹；普通分析仍 4096。失败样本没有被算作通过。</p></div>
+        <div class="answer"><p>真实复核在 4096 下出现一次 UNKNOWN 和一次 OUTPUT_TRUNCATED；推理型模型可能把内部推理计入输出。于是评审独立配置 8192，并纳入 profile 指纹；版本对比复用同一上限，普通分析仍 4096。失败样本没有被算作通过。</p></div>
       </details>
       <details>
         <summary>Q58. 模型配置变了，排队任务怎么办？</summary>
@@ -1398,7 +1497,7 @@ AAD   = workspaceId + ":" + jobId + ":input"    // 或 :result / :delivery / :si
       </details>
       <details>
         <summary>Q62. 如果让你重做，会改什么？</summary>
-        <div class="answer"><p>三件事：第一，把待重试草稿的正文从 sessionStorage 拿掉，只存键和元数据；第二，补 30 天元数据清理、密钥轮换和物理擦除；第三，把固定评测集真正跑成可重复的供应商评测，而不是少量样本。架构上不会先拆微服务。</p></div>
+        <div class="answer"><p>三件事：第一，把待重试草稿的正文从 sessionStorage 拿掉，只存键和元数据；第二，补删除式 30 天元数据清理、正文主密钥轮换和物理擦除；第三，补真实第三方 HTTPS 证书交付、公司总额度和并发限流，而不是继续加任务类型。架构上不会先拆微服务。</p></div>
       </details>
       <details>
         <summary>Q63. 这个项目最能体现你什么能力？</summary>
@@ -1408,11 +1507,62 @@ AAD   = workspaceId + ":" + jobId + ":input"    // 或 :result / :delivery / :si
         <summary>Q64. 怎么向非技术同学解释？</summary>
         <div class="answer"><p>“你把文档交给平台，平台先给你一张回执，说明已经登记；后台慢慢处理。处理成功会给你带原文出处的结论；如果中途不确定有没有处理完，平台不会偷偷再交一次，而是标成‘结果未知’，让你决定要不要重新提交。团队里谁能看、谁能改，也由平台按公司和空间检查，不靠页面按钮藏起来。”</p></div>
       </details>
+
+      <div class="qa-group">H. 1.1 新增能力</div>
+
+      <details>
+        <summary>Q65. 版本对比和普通分析、需求评审有什么区别？</summary>
+        <div class="answer"><p>普通分析是单文本 → 摘要/关键点/约束/未知项；需求评审是单文本 → 问题/澄清/验收草稿；版本对比是双文本 → 新增/删除/修改 + 受影响约束 + 受影响验收草稿。三者共用同一条执行管道，但 schema、提示词、profile、校验器不同。版本对比的段落前缀是 <code>a</code>/<code>b</code>，ADDED 只引用修订、REMOVED 只引用基线、MODIFIED 必须双侧引用。</p></div>
+      </details>
+      <details>
+        <summary>Q66. 版本对比为什么把两份文本组合进一个加密列？</summary>
+        <div class="answer"><p>为了不新增迁移，也不复制一套任务表。服务端把两份文本用内部标记组合后存进现有 <code>input_cipher</code>，段落 ID 分别加前缀；读取和 Worker 按 <code>schema_version</code> 选择解析方式。代价是内部格式必须严格，输入里出现保留标记就直接拒绝，不能静默转义。</p></div>
+      </details>
+      <details>
+        <summary>Q67. 版本对比为什么不自动合并或替用户选择？</summary>
+        <div class="answer"><p>它是“影响分析草稿”，不是变更决策器。模型可能漏报、误报、把重排当变化；自动合并会掩盖冲突，自动选版本会替用户做业务决策。所以只输出变化、影响和待确认草稿，明确标注人工确认，不修改需求、不执行测试。</p></div>
+      </details>
+      <details>
+        <summary>Q68. OWNER 可调每日额度，为什么还要部署硬上限？</summary>
+        <div class="answer"><p>OWNER 最了解团队当天要跑多少任务，但平台不能让单个空间无限放大成本/滥用风险。部署级 <code>RELAYOPS_MAX_DAILY_LIMIT</code> 是平台护栏，空间策略只能在上限内调整。降低额度不得低于当天已占用，避免把已预留/已用/未知的账做成负数；版本冲突用 409，变更写审计。</p></div>
+      </details>
+      <details>
+        <summary>Q69. 外网 HTTPS 回调怎么防 SSRF？</summary>
+        <div class="answer"><p>只允许部署配置的白名单 DNS 主机，端点必须 HTTPS、固定 <code>/relayops/events</code>、443，不能带用户信息/查询/片段。创建时校验 URL 形状和白名单；发送前再解析 DNS，拒绝 IP、localhost、私网/环回/链路本地/组播地址；不跟随重定向。白名单移除或目录变化后旧目的地停止。限制是 DNS 重绑定仍未完全防护，生产要配受控主机、网络出口策略和接收端验签。</p></div>
+      </details>
+      <details>
+        <summary>Q70. 回调签名密钥怎么轮换？</summary>
+        <div class="answer"><p>OWNER 提交 <code>acknowledgeSecretRead=true</code> 和当前 <code>expectedVersion</code>；服务端检查没有 PENDING/IN_FLIGHT/RETRY_WAIT 的活跃交付，否则 409 <code>DESTINATION_BUSY</code>；生成新 32 字节密钥、替换密文、version+1、写 <code>DESTINATION_KEY_ROTATED</code> 审计，新密钥只返回一次。旧密钥立即失效，没有宽限窗口，所以接收端要同步更新。</p></div>
+      </details>
+      <details>
+        <summary>Q71. 备份恢复的 RPO/RTO 是多少？</summary>
+        <div class="answer"><p>不能给生产 SLO。当前只做了本机逻辑恢复观测：27 表、779,666 字节，备份 976ms、恢复 7,037ms、再导出 455ms、总计 8,680ms；完整有序 SQL 和密文 hash 一致。RPO 实际是“最近一次成功备份”，没有 binlog/PITR；RTO 不含停机决策、跨机传输、DNS/TLS、主密钥恢复和接收端去重库。跨机、磁盘满、网络分区、备份加密都未验证。</p></div>
+      </details>
+      <details>
+        <summary>Q72. 30 天元数据清理做了吗？</summary>
+        <div class="answer"><p>没有做删除，只做了只读盘点。删除会破坏预算、幂等、交付和审计链，必须先明确哪些字段必须保留、哪些可以删，并获得用户授权。脚本 <code>metadata-retention-inventory.mjs</code> 只统计超过天数的终止任务及依赖行，没有删除路径；本轮主库 0 行超过 30 天。</p></div>
+      </details>
+      <details>
+        <summary>Q73. qwen 和 deepseek 的对照结论是什么？</summary>
+        <div class="answer"><p>同供应商、同提示、同固定样本的单次对照：需求评审 deepseek 20/20，qwen 17/20；版本对比 v2 qwen 16/16，deepseek 15/16。但 qwen 评审平均约 87.5 秒、版本约 27.8 秒，Token 更高，且只有单次运行、稳定性未测。结论是当前不替换默认模型，不是“qwen 全面更差”。</p></div>
+      </details>
+      <details>
+        <summary>Q74. 评测集通过 20/20，能说明什么？</summary>
+        <div class="answer"><p>只能说明“在这个固定样本、这个提示词/配置、这次运行里，评分规则通过”。需求评审单次 20/20，但三次后稳定 16/20；版本对比 v2 三次 47/48 成功、稳定 15/16。评分器只覆盖预定义关注点，注入只有一种模式，人工复核样本也少。正确说法是“固定样本上的基线”，不是“准确率 100%”。</p></div>
+      </details>
+      <details>
+        <summary>Q75. 1.1 已经发布了吗？</summary>
+        <div class="answer"><p>没有。1.0.0 是 2026-11-02 正式发布；1.1.0 是 2026-11-04 的源码候选（提交 35541f2），有 151 后端/98 浏览器、17 文件包和 SHA256 记录，但没有创建 tag/Release。面试时要说“候选/源码已实现”，不能说“1.1 已上线”。</p></div>
+      </details>
+      <details>
+        <summary>Q76. 每日额度真实业务真的有必要按日吗？</summary>
+        <div class="answer"><p>不一定必须按日，但必须有某种成本/滥用边界。真实业务更常见的是“按月/按合同额度 + 分钟级限流 + 并发上限 + 全局硬上限/告警”。按日是当前单机自托管、受控团队下实现简单、语义直观的粗粒度选择；代价是跨午夜取消要释放原受理日额度、日切可能有突发，且不等于供应商账单。</p></div>
+      </details>
     </section>
 
     <section class="section" id="star">
       <div class="kicker">15 · STAR</div>
-      <h2><span class="num">15.</span>四个可以讲 5 分钟的 STAR 故事</h2>
+      <h2><span class="num">15.</span>五个可以讲 5 分钟的 STAR 故事</h2>
 
       <h3>故事 1：SENT 边界与 UNKNOWN</h3>
       <div class="table-wrap">
@@ -1450,14 +1600,14 @@ AAD   = workspaceId + ":" + jobId + ":input"    // 或 :result / :delivery / :si
         </table>
       </div>
 
-      <h3>故事 4：报告 Markdown 围栏逃逸</h3>
+      <h3>故事 5：版本对比真实失败与提示词 v2</h3>
       <div class="table-wrap">
         <table>
           <tbody>
-            <tr><th style="width:90px">Situation</th><td>模型输出是动态文本，可能包含 HTML、图片、链接或连续反引号；如果直接拼进 Markdown，可能逃出代码块变成活动内容。</td></tr>
-            <tr><th>Task</th><td>让报告保留原文，又不让模型文本变成可执行/远程内容。</td></tr>
-            <tr><th>Action</th><td>所有动态内容放入 text 代码块；围栏长度 = 内容中最长连续反引号 + 1；文件名不用用户标题；不调用 Markdown 渲染器；加 24 项导出/格式负例和三档真实下载核对。</td></tr>
-            <tr><th>Result</th><td>HTML/script/图片/iframe/javascript 链接都被当纯文本；中文/emoji/嵌套反引号保留；下载副本边界在页面明确说明。</td></tr>
+            <tr><th style="width:90px">Situation</th><td>版本对比首轮真实运行 11/16；提示词 v1 下模型常把段落重排/格式变化当语义变化，也常省略受影响验收草稿。</td></tr>
+            <tr><th>Task</th><td>区分“评分规则问题”“提示词问题”“模型能力问题”，不能用放宽校验掩盖。</td></tr>
+            <tr><th>Action</th><td>修正 rubric；在 <code>version.compat.v2</code> 明确“重排/空白/格式/注入文本不是语义变化”，要求可测试变化至少给一条验收草稿；保留失败样本和用量，不自动重试；三次独立运行后再比较。</td></tr>
+            <tr><th>Result</th><td>v2 三次 47/48 成功、稳定 15/16、重复通过 97.92%，唯一失败是一次重排样本输出无效；注入样本 3/3 通过。没有把单次 16/16 说成稳定结果。</td></tr>
           </tbody>
         </table>
       </div>
@@ -1469,10 +1619,12 @@ AAD   = workspaceId + ":" + jobId + ":input"    // 或 :result / :delivery / :si
       <ul>
         <li>独立设计并交付 RelayOps 单机自托管 AI 文档任务平台（Java 21 / Spring Boot 4 / Vue 3 / MySQL 8 / RabbitMQ），覆盖受理、异步执行、结果校验、权限、交付、清理与审计全链路。</li>
         <li>设计事务 Outbox + RabbitMQ 至少一次投递方案：任务/预算/幂等/Outbox 同事务提交，发布确认 + mandatory return 才标记 SENT；通过代次、租约和唯一 SENT 约束保证重复消息不重复调用模型。</li>
-        <li>实现“SENT 后结果不明”的 UNKNOWN/UNCERTAIN 责任边界：不自动重试供应商，提供显式重跑与费用确认；用 137 个后端测试和真实 MySQL/RabbitMQ 故障用例验证崩溃、ACK 丢失、旧代次与并发竞争。</li>
+        <li>实现“SENT 后结果不明”的 UNKNOWN/UNCERTAIN 责任边界：不自动重试供应商，提供显式重跑与费用确认；用 151 个后端测试和真实 MySQL/RabbitMQ 故障用例验证崩溃、ACK 丢失、旧代次与并发竞争。</li>
         <li>设计公司/空间/部门小组的多层授权：每请求重查当前角色、跨公司 404、VIEWER 正文隔离、复合外键防跨租户；AES-256-GCM + AAD 加密正文，七天在线载荷清理保留业务元数据。</li>
-        <li>实现 OpenAI 兼容模型适配与结构化引用校验：输出必须匹配真实段落 ID 和原文子串；需求评审支持 GAP/AMBIGUITY/CONFLICT、澄清问题和 Given/When/Then 草稿，建立 20 样本确定性评测集。</li>
-        <li>建立可验证交付流程：同源可执行 JAR、CLI 建号、备份恢复演练、15 文件发布清单/SHA256、CI（后端/浏览器/接收端/恢复），1.0.0 发布门禁全部通过。</li>
+        <li>实现 OpenAI 兼容模型适配与结构化引用校验：输出必须匹配真实段落 ID 和原文子串；支持需求评审（GAP/AMBIGUITY/CONFLICT、澄清问题、Given/When/Then）与版本对比（ADDED/REMOVED/MODIFIED、双侧引用、影响分析）。</li>
+        <li>建立固定评测与模型对照：需求评审 20 样本（三次 56/60 重复通过）、版本对比 16 样本（v2 三次 47/48 成功、稳定 15/16）；qwen3.8-flash 单次对照后暂不替换默认模型。</li>
+        <li>实现 OWNER 每日额度策略（V8 乐观锁/审计/部署硬上限）与受控外网 HTTPS 回调（白名单、SSRF 拒绝、签名密钥轮换、活跃交付保护）。</li>
+        <li>建立可验证交付流程：同源可执行 JAR、CLI 建号、备份恢复 8.68 秒本机观测、15/17 文件发布清单/SHA256、CI（后端/浏览器/接收端/恢复），1.0.0 发布门禁全部通过。</li>
       </ul>
 
       <div class="warn">
@@ -1490,8 +1642,8 @@ AAD   = workspaceId + ":" + jobId + ":input"    // 或 :result / :delivery / :si
         <li class="step"><div><h4>0:00–1:00 登录与运行概览</h4><p>用演示账号登录，打开“运行概览”：说明任务状态、最新交付轮次、Outbox 待发布、失效租约、清理开关都来自数据库，不是前端假数据；15 秒刷新、隐藏暂停。</p></div></li>
         <li class="step"><div><h4>1:00–3:00 提交一篇文档</h4><p>新建任务，粘贴一段包含矛盾/缺失要求的技术文本；指出字数/字节计数、外发确认、目的地选择。提交后立刻看到 202 回执和 QUEUED；说明“这不是完成，是责任已落库”。</p></div></li>
         <li class="step"><div><h4>3:00–5:00 观察状态与结果</h4><p>指出 QUEUED→RUNNING→SUCCEEDED 的变化；打开结果，展开一条“原文依据”，展示段落 ID 和精确引用高亮；说明引用校验失败会 EVIDENCE_INVALID。</p></div></li>
-        <li class="step"><div><h4>5:00–6:30 需求评审</h4><p>切换用途为“需求评审与验收草稿”，提交同一段文本；展示 GAP/AMBIGUITY/CONFLICT、澄清问题、Given/When/Then、待确认假设。强调“模型不替用户选冲突值”。</p></div></li>
-        <li class="step"><div><h4>6:30–8:00 权限与历史</h4><p>切到 VIEWER，展示没有正文/导出入口；切到组织管理，展示部门/小组和显式授权；打开完整历史，搜索旧任务，说明最近 50 条与全量历史的区别。</p></div></li>
+        <li class="step"><div><h4>5:00–6:30 需求评审与版本对比</h4><p>切换用途为“需求评审与验收草稿”，展示 GAP/AMBIGUITY/CONFLICT、澄清问题、Given/When/Then、待确认假设；再切“版本对比”，展示基线/修订双输入、ADDED/REMOVED/MODIFIED 和双侧引用。强调不自动合并、不替用户选冲突值。</p></div></li>
+        <li class="step"><div><h4>6:30–8:00 权限、额度与历史</h4><p>切到 VIEWER，展示没有正文/导出入口；运行概览里展示 OWNER 可调每日额度、策略版本和当天占用；打开组织管理展示部门/小组/显式授权；打开完整历史，搜索旧任务。</p></div></li>
         <li class="step"><div><h4>8:00–9:30 可靠性与交付</h4><p>打开一个 UNKNOWN/DEAD 任务，展示安全错误码、重跑原因/费用确认、交付时间线、下一次重试时间；说明补投是两分钟预览，不重跑模型。</p></div></li>
         <li class="step"><div><h4>9:30–10:00 收尾</h4><p>用一句话收：数据库是事实源，MQ 只是信号；消息允许重复，副作用不重复；不确定就 UNKNOWN，绝不自动再打一次模型。</p></div></li>
       </ol>
@@ -1527,30 +1679,32 @@ AAD   = workspaceId + ":" + jobId + ":input"    // 或 :result / :delivery / :si
         <table>
           <thead><tr><th>项</th><th>值</th><th>备注</th></tr></thead>
           <tbody>
-            <tr><td>业务表</td><td>26 张</td><td>V1–V7 迁移，已部署不可改</td></tr>
-            <tr><td>后端测试</td><td>137</td><td>当前源码，0 失败/错误/跳过</td></tr>
-            <tr><td>浏览器测试</td><td>88</td><td>当前源码，0 跳过；1.0 发布时 80</td></tr>
-            <tr><td>评测集</td><td>20 样本 / 10 单测</td><td>确定性评分，不调用模型</td></tr>
-            <tr><td>输入上限</td><td>6000 字符 / 24576 字节</td><td>NFC、LF、拒绝控制字符</td></tr>
-            <tr><td>每日额度</td><td>默认 20 / 空间 / 日</td><td>reserved + spent + uncertain ≤ limit</td></tr>
+            <tr><td>业务表</td><td>26 张</td><td>V1–V8 迁移，已部署不可改</td></tr>
+            <tr><td>后端测试</td><td>151</td><td>1.1 候选，0 失败/错误/跳过</td></tr>
+            <tr><td>浏览器测试</td><td>98</td><td>1.1 候选，0 跳过；1.0 发布时 80</td></tr>
+            <tr><td>评测集</td><td>20 + 16 样本</td><td>评审/版本对比；确定性评分，不调用模型</td></tr>
+            <tr><td>输入上限</td><td>6000 字符 / 24576 字节</td><td>NFC、LF、拒绝控制字符；版本对比两份各自受限</td></tr>
+            <tr><td>每日额度</td><td>默认 20 / 空间 / 日；硬上限默认 100</td><td>reserved + spent + uncertain ≤ limit；OWNER 可调</td></tr>
             <tr><td>队列/租约</td><td>队列 10 分钟；租约 120 秒；心跳 40 秒</td><td>调用超时默认 60 秒，最大 300 秒</td></tr>
-            <tr><td>输出上限</td><td>分析 4096；评审 8192</td><td>允许 256–16384；响应体上限 128 KiB</td></tr>
+            <tr><td>输出上限</td><td>分析 4096；评审/版本 8192</td><td>允许 256–16384；响应体上限 128 KiB</td></tr>
             <tr><td>正文 TTL</td><td>7 天</td><td>在线密文清理；元数据保留</td></tr>
-            <tr><td>回调</td><td>6 次 / 1 小时；请求 5 秒；签名窗口 5 分钟</td><td>2xx 成功；408/429/5xx/网络未知重试</td></tr>
+            <tr><td>回调</td><td>6 次 / 1 小时；请求 5 秒；签名窗口 5 分钟</td><td>本机或白名单 HTTPS；2xx 成功；408/429/5xx/网络未知重试</td></tr>
             <tr><td>补投预览</td><td>2 分钟</td><td>绑定版本/目标/载荷 hash</td></tr>
-            <tr><td>发布包</td><td>31,243,558 字节 / 15 文件</td><td>v1.0.0，SHA256 已公开核对</td></tr>
+            <tr><td>1.0 发布包</td><td>31,243,558 字节 / 15 文件</td><td>v1.0.0，SHA256 已公开核对</td></tr>
+            <tr><td>1.1 候选包</td><td>35,496,347 字节 / 17 文件</td><td>未创建 tag/Release；SHA256 已记录</td></tr>
           </tbody>
         </table>
       </div>
 
-      <h3>四个不要说的话</h3>
+      <h3>五个不要说的话</h3>
       <div class="bad-note">
         <b>面试避雷</b>
         <ul>
           <li>不要说“端到端 exactly-once”。说“至少一次 + 幂等副作用”。</li>
           <li>不要说“生产级高可用/百万并发”。说“单机自托管、单实例、受控团队”。</li>
-          <li>不要说“AI 准确率 95%”。说“少量真实样本验证了链路和引用规则，准确率未评测”。</li>
+          <li>不要说“AI 准确率 95%”。说“固定样本上的通过率/稳定性，不等于业务准确率”。</li>
           <li>不要说“物理多租户隔离”。说“共享库逻辑隔离 + 复合外键 + 每请求鉴权”。</li>
+          <li>不要说“1.1 已发布/已上线”。说“1.1.0 是源码候选，1.0.0 才是已发布版本”。</li>
         </ul>
       </div>
 
@@ -1579,7 +1733,7 @@ AAD   = workspaceId + ":" + jobId + ":input"    // 或 :result / :delivery / :si
             <tr><td>POST</td><td><code>/auth/logout</code></td><td>退出</td><td>成功 204</td></tr>
             <tr><td>GET</td><td><code>/api/v1/me</code></td><td>当前用户与可访问空间/角色</td><td>已登录</td></tr>
             <tr><td>GET</td><td><code>/api/v1/workspaces/{id}/applications</code></td><td>空间内启用的应用</td><td>空间成员</td></tr>
-            <tr><td>POST</td><td><code>/api/v1/workspaces/{id}/jobs</code></td><td>提交任务</td><td>OWNER/OPERATOR；202；Idempotency-Key</td></tr>
+            <tr><td>POST</td><td><code>/api/v1/workspaces/{id}/jobs</code></td><td>提交任务（EXTRACT/REQUIREMENTS_REVIEW/VERSION_DIFF）</td><td>OWNER/OPERATOR；202；Idempotency-Key；VERSION_DIFF 带 <code>inputTextB</code></td></tr>
             <tr><td>GET</td><td><code>/api/v1/workspaces/{id}/jobs</code></td><td>最近 50 条任务</td><td>空间成员；VIEWER 可看元数据</td></tr>
             <tr><td>GET</td><td><code>/api/v1/workspaces/{id}/jobs/{jobId}</code></td><td>任务元数据</td><td>空间成员；跨空间 404</td></tr>
             <tr><td>GET</td><td><code>/api/v1/workspaces/{id}/jobs/{jobId}/result</code></td><td>正文 + 段落 + 证据</td><td>OWNER/OPERATOR；VIEWER 403；检查 TTL；记 RESULT_READ</td></tr>
@@ -1587,13 +1741,16 @@ AAD   = workspaceId + ":" + jobId + ":input"    // 或 :result / :delivery / :si
             <tr><td>POST</td><td><code>/api/v1/workspaces/{id}/jobs/{jobId}/retry</code></td><td>明确重跑</td><td>FAILED/UNKNOWN；reason + acknowledgeDuplicateCost + expectedVersion + 键；202</td></tr>
             <tr><td>GET</td><td><code>/api/v1/workspaces/{id}/job-history</code></td><td>完整历史</td><td>q/status/beforeCreatedAt/beforeId/limit；只读元数据</td></tr>
             <tr><td>GET</td><td><code>/api/v1/workspaces/{id}/budget</code></td><td>当日额度</td><td>空间成员；只读</td></tr>
+            <tr><td>GET</td><td><code>/api/v1/workspaces/{id}/budget-policy</code></td><td>额度策略/硬上限/当天占用</td><td>空间成员；<code>canEdit</code> 仅 OWNER 为 true</td></tr>
+            <tr><td>PATCH</td><td><code>/api/v1/workspaces/{id}/budget-policy</code></td><td>修改每日额度</td><td>仅 OWNER；<code>dailyLimit + expectedVersion</code>；低于已占用 422；版本冲突 409</td></tr>
             <tr><td>GET</td><td><code>/api/v1/workspaces/{id}/model-profile</code></td><td>当前模型 profile</td><td>空间成员；taskType 可选</td></tr>
             <tr><td>GET</td><td><code>/api/v1/workspaces/{id}/operations</code></td><td>运行概览</td><td>空间成员；只读、RR 快照</td></tr>
             <tr><td>GET</td><td><code>/api/v1/workspaces/{id}/audit-events</code></td><td>空间安全审计</td><td>仅 OWNER；六列白名单；beforeId 游标</td></tr>
             <tr><td>GET</td><td><code>/api/v1/workspaces/{id}/destinations</code></td><td>目的地列表</td><td>空间成员；不返回密钥</td></tr>
-            <tr><td>GET</td><td><code>/api/v1/workspaces/{id}/destination-catalog</code></td><td>受控目录</td><td>空间成员；当前仅本机</td></tr>
-            <tr><td>POST</td><td><code>/api/v1/workspaces/{id}/destinations</code></td><td>创建目的地</td><td>仅 OWNER；生成 32 字节签名密钥</td></tr>
+            <tr><td>GET</td><td><code>/api/v1/workspaces/{id}/destination-catalog</code></td><td>受控目录</td><td>空间成员；本机；配置白名单后出现 HTTPS 目录</td></tr>
+            <tr><td>POST</td><td><code>/api/v1/workspaces/{id}/destinations</code></td><td>创建目的地</td><td>仅 OWNER；本机或白名单 HTTPS；生成 32 字节签名密钥</td></tr>
             <tr><td>PUT</td><td><code>/api/v1/workspaces/{id}/destinations/{destId}</code></td><td>启停</td><td>仅 OWNER；expectedVersion</td></tr>
+            <tr><td>POST</td><td><code>/api/v1/workspaces/{id}/destinations/{destId}/rotate-key</code></td><td>轮换签名密钥</td><td>仅 OWNER；确认 + expectedVersion；有活跃交付 409</td></tr>
             <tr><td>POST</td><td><code>/api/v1/workspaces/{id}/destinations/{destId}/reveal-key</code></td><td>读取签名密钥</td><td>仅 OWNER；显式确认；记审计</td></tr>
             <tr><td>GET</td><td><code>/api/v1/workspaces/{id}/jobs/{jobId}/deliveries</code></td><td>交付详情/轮次/尝试</td><td>空间成员；VIEWER 只读元数据</td></tr>
             <tr><td>POST</td><td><code>/api/v1/workspaces/{id}/deliveries/{deliveryId}/replay-plans</code></td><td>补投预览</td><td>OWNER/OPERATOR；最新 DEAD；2 分钟</td></tr>
@@ -1650,8 +1807,9 @@ AAD   = workspaceId + ":" + jobId + ":input"    // 或 :result / :delivery / :si
             <tr><td>403</td><td><code>FORBIDDEN</code></td><td>角色不足（如 VIEWER 读正文、非 OWNER 看审计）</td></tr>
             <tr><td>404</td><td><code>NOT_FOUND</code></td><td>跨空间/跨公司/资源不存在，统一不泄露存在性</td></tr>
             <tr><td>409</td><td><code>VERSION_CONFLICT</code> / <code>STATE_CONFLICT</code> / <code>IDEMPOTENCY_KEY_REUSED</code></td><td>版本过期、状态不允许、幂等键改请求</td></tr>
+            <tr><td>409</td><td><code>DESTINATION_BUSY</code></td><td>目的地还有 PENDING/IN_FLIGHT/RETRY_WAIT 交付，不能轮换密钥</td></tr>
             <tr><td>410</td><td><code>PAYLOAD_EXPIRED</code> / <code>PLAN_EXPIRED</code></td><td>正文七天到期/已清理；补投预览过期</td></tr>
-            <tr><td>422</td><td><code>VALIDATION_FAILED</code> / <code>INVALID_INPUT</code></td><td>输入、参数、游标、原因、用途不合法</td></tr>
+            <tr><td>422</td><td><code>VALIDATION_FAILED</code> / <code>INVALID_INPUT</code> / <code>LIMIT_BELOW_USAGE</code></td><td>输入/参数/游标/原因/用途不合法；额度降到当天已占用以下</td></tr>
             <tr><td>429</td><td><code>QUOTA_EXCEEDED</code></td><td>本空间当日额度用尽</td></tr>
             <tr><td>503</td><td><code>QUEUE_CAPACITY_EXCEEDED</code> / <code>DEPENDENCY_UNAVAILABLE</code></td><td>Outbox 积压到上限；数据库/依赖异常</td></tr>
             <tr><td>—</td><td><code>MODEL_REJECTED</code></td><td>供应商明确拒绝（401/403/429 等）</td></tr>
@@ -1697,6 +1855,14 @@ AAD   = workspaceId + ":" + jobId + ":input"    // 或 :result / :delivery / :si
             <tr><td>OpenAI 兼容</td><td>按 Chat Completions 的请求/响应格式对接，不代表所有供应商都完全一样。</td></tr>
             <tr><td>证据 / evidence</td><td>结论对应的段落 ID + 原文片段；用来让人核对，不是让模型自证。</td></tr>
             <tr><td>Langfuse</td><td>可选的观测工具；只发阶段/模型/用量等元数据，不发正文。</td></tr>
+            <tr><td>SSRF</td><td>攻击者诱导服务器去访问内网/本机地址；外网回调必须白名单 + 拒绝私网/环回。</td></tr>
+            <tr><td>白名单 / Allowlist</td><td>只允许名单里的主机，其他一律拒绝；比黑名单更适合外发场景。</td></tr>
+            <tr><td>DNS 重绑定</td><td>域名第一次解析到公网、之后解析到内网，试图绕过 URL 检查；发送前再次解析只能降低风险，不能完全消除。</td></tr>
+            <tr><td>乐观锁 / 版本号</td><td>更新前先比对版本；版本变了返回 409，让用户刷新，而不是覆盖别人的修改。</td></tr>
+            <tr><td>RPO / RTO</td><td>RPO 是“最多丢多少数据”，RTO 是“多久能恢复”；当前只有单机逻辑恢复观测，不是生产 SLO。</td></tr>
+            <tr><td>评测集 / 基线</td><td>固定样本 + 评分规则 + 历史结果；用来比较提示词/模型改动，不是准确率证书。</td></tr>
+            <tr><td>Profile</td><td>模型配置指纹：地址、模型名、超时、输出上限、提示词版本等；受理时冻结，配置变了旧任务不会静默换模型。</td></tr>
+            <tr><td>VERSION_DIFF</td><td>版本对比用途：基线与修订双输入，输出新增/删除/修改、受影响约束和验收草稿。</td></tr>
           </tbody>
         </table>
       </div>
@@ -1715,6 +1881,9 @@ AAD   = workspaceId + ":" + jobId + ":input"    // 或 :result / :delivery / :si
             <tr><td>关键决策</td><td><code>docs/adr/0002-outbox-rabbitmq.md</code></td><td>Outbox、confirm、return、代次、隔离</td></tr>
             <tr><td>关键决策</td><td><code>docs/adr/0003-job-lifecycle.md</code></td><td>取消、重跑、锁顺序、原日额度</td></tr>
             <tr><td>关键决策</td><td><code>docs/adr/0004-compatible-model.md</code></td><td>配置冻结、外发确认、超时/心跳、错误分类</td></tr>
+            <tr><td>关键决策</td><td><code>docs/adr/0014-owner-daily-limit.md</code></td><td>OWNER 额度、V8、硬上限、乐观锁、锁序</td></tr>
+            <tr><td>关键决策</td><td><code>docs/adr/0015-version-diff.md</code></td><td>双输入、双侧引用、结果版本、提示词 v2</td></tr>
+            <tr><td>关键决策</td><td><code>docs/adr/0016-external-delivery-and-key-rotation.md</code></td><td>白名单、SSRF、动态目录、密钥轮换</td></tr>
             <tr><td>关键决策</td><td><code>docs/adr/0005-organization-isolation.md</code></td><td>公司/空间/组织授权、撤权、复合外键</td></tr>
             <tr><td>关键决策</td><td><code>docs/adr/0006-controlled-delivery.md</code></td><td>签名、重试、稳定字节、接收端去重</td></tr>
             <tr><td>关键决策</td><td><code>docs/adr/0007-delivery-replay.md</code></td><td>两分钟预览、版本绑定、补投</td></tr>
@@ -1726,13 +1895,15 @@ AAD   = workspaceId + ":" + jobId + ":input"    // 或 :result / :delivery / :si
             <tr><td>关键决策</td><td><code>docs/adr/0013-requirements-review.md</code></td><td>评审用途、独立上限、人工确认</td></tr>
             <tr><td>验证</td><td><code>docs/verification.md</code></td><td>各阶段实际命令、结果、限制</td></tr>
             <tr><td>验收</td><td><code>docs/checklist.md</code></td><td>只勾选有证据的项</td></tr>
-            <tr><td>发布</td><td><code>docs/release-gates.md</code></td><td>1.0 门禁、数字、CI、附件 SHA</td></tr>
+            <tr><td>发布</td><td><code>docs/release-gates.md</code></td><td>1.0 门禁、1.1 候选、数字、CI、附件 SHA</td></tr>
             <tr><td>真实模型</td><td><code>docs/real-model-verification.md</code></td><td>三样本耗时、token、引用、回调</td></tr>
+            <tr><td>模型对照</td><td><code>docs/model-comparison.md</code></td><td>deepseek vs qwen 的固定样本结果与局限</td></tr>
+            <tr><td>备份恢复</td><td><code>docs/backup-restore-slo.md</code></td><td>RPO/RTO 口径、8.68 秒本机观测、30 天只读盘点</td></tr>
             <tr><td>观测</td><td><code>docs/observability.md</code></td><td>Langfuse 只发元数据、故障不影响业务</td></tr>
-            <tr><td>评测</td><td><code>eval/requirements-review/README.md</code></td><td>20 样本、确定性评分、限制</td></tr>
+            <tr><td>评测</td><td><code>eval/requirements-review/README.md</code>、<code>eval/version-diff/README.md</code></td><td>20/16 样本、确定性评分、三次基线、限制</td></tr>
             <tr><td>CI</td><td><code>.github/workflows/verify.yml</code></td><td>MySQL/Rabbit、后端、浏览器、接收端、恢复、打包</td></tr>
-            <tr><td>测试日志</td><td><code>artifacts/backend-review-final.log</code></td><td>137 后端，0 失败/错误/跳过</td></tr>
-            <tr><td>浏览器日志</td><td><code>artifacts/e2e/run.log</code></td><td>88 passed</td></tr>
+            <tr><td>后端日志</td><td><code>artifacts/backend-1.1.log</code></td><td>151 后端，0 失败/错误/跳过</td></tr>
+            <tr><td>浏览器日志</td><td><code>artifacts/e2e/run-1.1.log</code></td><td>98 passed</td></tr>
           </tbody>
         </table>
       </div>
