@@ -27,7 +27,7 @@ LANGFUSE_SECRET_KEY=填写本地项目SecretKey
 
 常规scripts/test-backend.ps1及test-browser.ps1强制关闭导出。专门验收可在工具进程设置RELAYOPS_LANGFUSE_VERIFY=true，再执行test-backend.ps1；只有两项专用案例发送到本机项目，其余测试仍关闭。专用测试库使用本地兼容协议桩及Fake，不调用真实供应商，覆盖一次模型/重复消息和500→200回调。
 
-通过langfuse-cli@1.2.4读取观测，从本地配置加载认证。本机自托管已于2026-11-07从3.225.15升级到4.76.0并完成v4切换（写模式events_only，历史数据回填完成），使用当前observations API（`npx langfuse-cli api observations list`，无需--api-version）；v3的traces/observations读取端点现在返回404。应用始终写OTLP端点及v4格式属性，未使用旧ingestion事件接口。
+通过langfuse-cli@1.2.4读取观测，从本地配置加载认证。当前自托管3.225.15处于v3写模式，指定--api-version 3.225.3，使用observations list及traces list；默认v4读取返回404。未来迁到v4后使用当前observations API。应用始终写OTLP端点及v4格式属性，未使用旧ingestion事件接口，未更改Langfuse部署或项目写模式。
 
 2026-11-02接入验收：127后端测试全通过，零失败/错误/跳过。真实Langfuse读回五阶段及两次回调；模型桩23/11/34用量、Fake未知用量、环境、父子关系、任务session、非公开标记和脱敏均断言通过。随后按用户授权完成[真实模型三样本端到端验收](real-model-verification.md)，与本段协议桩记录分开。固定评测集（20样本/确定性评分器）已建立，尚未在固定真实profile上逐样本运行；重复采样稳定性及真实金额评测仍未实施。
 

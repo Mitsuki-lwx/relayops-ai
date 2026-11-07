@@ -97,8 +97,7 @@
 
 - 正式v1.0.0在2026-11-02发布，指向deac4ff；CI41383316056成功。公开附件下载与本机验收包哈希一致，15文件严格验证通过。OpenSpec四项主规范同步完成，12/12任务归档2026-11-02-release-relayops-1-0；文档收尾与发布代码分开记录。
 
-- 2026-11-07 Langfuse自托管由3.225.15升级到4.76.0：ClickHouse 26.10.3.7已满足v4要求；先切dual写并回填历史（576 traces/2145 observations），再切events_only并删除回填临时表；v3 traces/observations/scores/metrics读取端点返回404，旧表保留未截断以便回退。OTLP HTTP写入正常（`x-langfuse-ingestion-version: 4`直写events_full），CLI1.2.4改用observations list（v2，无需--api-version）；升级前的v3快照曾核验五阶段与回调session。模型usage与实际成本分开，Langfuse自算0不等于已核实免费。完整正文不导出，观测不继承工作台租户权限。
-- 2026-11-07升级期间ClickHouse 26.10.3.7在AsynchronousMetricLogElement::appendToBlock发生一次段错误并自动重启，events_full/traces行数不变、数据无损。已禁用system.asynchronous_metric_log（F:/langfuse/clickhouse-config/disable-async-metric-log.xml，非本仓库文件），重启后该表不再写入。
+- Langfuse当前自托管3.225.15/v3写模式：OTLP HTTP写入正常，最新v4 Observations API返回404。CLI1.2.4需显式--api-version 3.225.3读取observations/traces；已核验五阶段与回调session。模型usage与实际成本分开，Langfuse自算0不等于已核实免费。完整正文不导出，观测不继承工作台租户权限。
 
 - 当前完整ClinePass模型真实3样本成功：信息缺失未捏造参数，10/30秒冲突保留为未知，44处引用均准确匹配；模型span8.686/10.214/13.317秒，供应商报告5557 Token，金额未知。短样本仍有关键点/约束重复，不能据3条估计总体质量或稳定性。
 
